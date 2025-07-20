@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:mysql://127.0.0.1:13306
+    username: tata
+    password: 198623onepiece
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.MySQL8Dialect
+  cloud:
+    config:
+      enabled: false  # 本地環境不連接 Config Server
+
+eureka:
+  client:
+    enabled: false  # 本地環境不使用 Eureka
