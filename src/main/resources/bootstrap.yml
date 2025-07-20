@@ -1,14 +1,19 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: ${SERVER_PORT:5001}
 
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
   application:
-    name: gatewayservice
+    name: nexusbot
 
 logging:
   level:
     root: INFO
   pattern:
     console: "[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%level] [%thread] [%logger{36}] - %msg%n"
+
+line:
+  bot:
+    channel-token: <你的 Channel Access Token>
+    channel-secret: <你的 Channel Secret>

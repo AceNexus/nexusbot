@@ -13,3 +13,8 @@ spring:
 eureka:
   client:
     enabled: false  # 本地環境不使用 Eureka
+
+line:
+  bot:
+    channel-token:  ${Channel Access Toke}
+    channel-secret: ${Channel Secret:local}
