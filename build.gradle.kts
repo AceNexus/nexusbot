@@ -31,20 +31,11 @@ repositories {
 extra["springCloudVersion"] = "2024.0.0"
 
 dependencies {
-    // Spring Boot & Cloud Starters
-    implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-    implementation("org.springframework.cloud:spring-cloud-starter")
-    implementation("org.springframework.cloud:spring-cloud-starter-config")
-    implementation("org.springframework.cloud:spring-cloud-starter-gateway")
-    implementation("org.springframework.cloud:spring-cloud-starter-loadbalancer")
-    implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")
+    implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-bootstrap")
 
-    // JWT (jjwt)
-    implementation("io.jsonwebtoken:jjwt-api:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-impl:0.11.5")
-    runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.11.5")
+    // line-bot
+    implementation("com.linecorp.bot:line-bot-spring-boot:5.0.1")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")
@@ -54,9 +45,6 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-
-    // openfeign
-    implementation ("org.springframework.cloud:spring-cloud-starter-openfeign")
 }
 
 dependencyManagement {
