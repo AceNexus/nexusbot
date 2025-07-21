@@ -1,11 +1,17 @@
 spring:
   datasource:
-    url: jdbc:mysql://127.0.0.1:13306
-    username: tata
-    password: 198623onepiece
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   cloud:
     config:
       enabled: false  # 本地環境不連接 Config Server
@@ -16,5 +22,5 @@ eureka:
 
 line:
   bot:
-    channel-token:  ${Channel Access Toke}
-    channel-secret: ${Channel Secret:local}
+    channel-token: dvqS3RJtN07Wqg6EXvWgnSdR3X+koAaL1GbDZWCnjHToBqw7IykTO2JNBjKi9UkOKuxI6Z90MdXCx/32j/NrcAbpx1RRIl+s2Yt6f0XuNP8WMuuXkfEcPyDXW4AV5ewQJtCG3jF+XRC08gP7zPDZvQdB04t89/1O/w1cDnyilFU=
+    channel-secret: 74f953573423fb9d4602b581a1af138d

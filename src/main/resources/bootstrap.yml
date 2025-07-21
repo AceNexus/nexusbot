@@ -12,8 +12,3 @@ logging:
     root: INFO
   pattern:
     console: "[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%level] [%thread] [%logger{36}] - %msg%n"
-
-line:
-  bot:
-    channel-token: <你的 Channel Access Token>
-    channel-secret: <你的 Channel Secret>

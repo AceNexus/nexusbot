@@ -32,10 +32,16 @@ extra["springCloudVersion"] = "2024.0.0"
 
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.cloud:spring-cloud-starter-bootstrap")
 
-    // line-bot
-    implementation("com.linecorp.bot:line-bot-spring-boot:5.0.1")
+    // DataBase
+    implementation("com.mysql:mysql-connector-j:8.3.0")
+    runtimeOnly("com.h2database:h2")
+
+    // LINE Bot SDK
+    implementation("com.linecorp.bot:line-bot-spring-boot-web:9.8.0")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")
@@ -43,8 +49,6 @@ dependencies {
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
-    testImplementation("io.projectreactor:reactor-test")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 dependencyManagement {
