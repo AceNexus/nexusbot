@@ -41,7 +41,9 @@ dependencies {
     runtimeOnly("com.h2database:h2")
 
     // LINE Bot SDK
-    implementation("com.linecorp.bot:line-bot-spring-boot-web:9.8.0")
+    implementation("com.linecorp.bot:line-bot-messaging-api-client:9.8.0")
+    implementation("com.linecorp.bot:line-bot-webhook:9.8.0")
+    implementation("com.linecorp.bot:line-bot-spring-boot-webmvc:9.8.0")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")
