@@ -24,3 +24,6 @@ line:
   bot:
     channel-token:  ${Channel Access Toke}
     channel-secret: ${Channel Secret:local}
+    handler:
+      enabled: true
+      path: /webhook
