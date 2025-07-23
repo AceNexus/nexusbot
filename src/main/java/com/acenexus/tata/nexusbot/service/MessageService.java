@@ -20,20 +20,19 @@ public class MessageService {
 
     public void sendReply(String replyToken, String messageText) {
         try {
-            // 檢查參數有效性
             if (replyToken == null || replyToken.trim().isEmpty()) {
-                log.warn("ReplyToken 為空，無法發送回覆訊息");
+                log.warn("ReplyToken is empty, cannot send reply message");
                 return;
             }
 
             if (messageText == null || messageText.trim().isEmpty()) {
-                log.warn("訊息內容為空，不發送回覆");
+                log.warn("Message content is empty, not sending reply");
                 return;
             }
 
             // 檢查訊息長度限制
             if (isMessageTooLong(messageText)) {
-                log.warn("訊息長度 {} 超過限制，自動分割", messageText.length());
+                log.warn("Message length {} exceeds limit, auto-splitting", messageText.length());
                 List<String> splitMessages = splitLongMessage(messageText);
                 sendMultipleReplies(replyToken, splitMessages);
                 return;
@@ -41,26 +40,19 @@ public class MessageService {
 
             // 發送訊息
             TextMessage textMessage = new TextMessage(messageText);
-            ReplyMessageRequest request = new ReplyMessageRequest(
-                    replyToken,
-                    List.of(textMessage),
-                    false // notificationDisabled
-            );
+            ReplyMessageRequest request = new ReplyMessageRequest(replyToken, List.of(textMessage), false);
 
             messagingApiClient.replyMessage(request);
-            log.info("成功回覆訊息給用戶，內容長度: {} 字元", messageText.length());
+            log.info("Successfully replied to user, message length: {} characters", messageText.length());
 
         } catch (Exception e) {
             // 記錄錯誤但不拋出異常，避免影響 webhook 的 200 回應
-            log.error("回覆訊息時發生錯誤，ReplyToken: {}, 錯誤: {}", replyToken, e.getMessage(), e);
+            log.error("Error sending reply message, ReplyToken: {}, Error: {}", replyToken, e.getMessage(), e);
         }
     }
 
     /**
      * 回覆多則訊息給用戶
-     *
-     * @param replyToken   LINE 平台提供的回覆權杖
-     * @param messageTexts 要回覆的多則文字內容
      */
     public void sendMultipleReplies(String replyToken, List<String> messageTexts) {
         try {
@@ -68,26 +60,19 @@ public class MessageService {
                     .map(text -> (Message) new TextMessage(text))
                     .toList();
 
-            ReplyMessageRequest request = new ReplyMessageRequest(
-                    replyToken,
-                    textMessages,
-                    false
-            );
+            ReplyMessageRequest request = new ReplyMessageRequest(replyToken, textMessages, false);
 
             messagingApiClient.replyMessage(request);
-            log.info("成功回覆 {} 則訊息給用戶", messageTexts.size());
+            log.info("Successfully sent {} messages to user", messageTexts.size());
 
         } catch (Exception e) {
-            log.error("回覆多則訊息時發生錯誤: {}", e.getMessage(), e);
+            log.error("Error sending multiple messages: {}", e.getMessage(), e);
         }
     }
 
     /**
      * 檢查訊息長度是否超過 LINE 限制
      * LINE Bot 單則訊息最大長度為 5000 字元
-     *
-     * @param message 要檢查的訊息
-     * @return 是否超過長度限制
      */
     public boolean isMessageTooLong(String message) {
         return message.length() > 5000;
@@ -95,9 +80,6 @@ public class MessageService {
 
     /**
      * 將過長的訊息拆分成多則較短的訊息
-     *
-     * @param longMessage 過長的訊息
-     * @return 拆分後的訊息列表
      */
     public List<String> splitLongMessage(String longMessage) {
         List<String> messages = new ArrayList<>();
