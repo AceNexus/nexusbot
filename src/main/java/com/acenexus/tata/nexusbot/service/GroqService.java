@@ -17,12 +17,12 @@ public class GroqService {
 
     @Value("${groq.api-key:}")
     private String apiKey;
-    
+
     @Value("${groq.model:llama-3.1-8b-instant}")
     private String model;
 
-    private WebClient webClient;
-    private boolean isConfigured = false;
+    private volatile WebClient webClient;
+    private volatile boolean isConfigured = false;
 
     @PostConstruct
     public void init() {
@@ -43,7 +43,7 @@ public class GroqService {
         if (!isConfigured) {
             return null;
         }
-        
+
         if (message == null || message.trim().isEmpty()) {
             return null;
         }
@@ -75,12 +75,12 @@ public class GroqService {
             return null;
         }
     }
-    
+
     private String extractContent(Map<?, ?> response) {
         if (response == null) {
             return null;
         }
-        
+
         try {
             var choices = (java.util.List<?>) response.get("choices");
             if (choices != null && !choices.isEmpty()) {
@@ -92,7 +92,7 @@ public class GroqService {
         } catch (Exception e) {
             log.error("Failed to parse Groq response: {}", e.getMessage());
         }
-        
+
         return null;
     }
 }
