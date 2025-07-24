@@ -2,7 +2,6 @@ package com.acenexus.tata.nexusbot.constants;
 
 public class BotMessages {
 
-    public static final String GREETING = "你好！我是 NexusBot，很高興為您服務！";
     public static final String ABOUT = "我是 NexusBot v1.0，一個智能 LINE 機器人助手。";
 
     public static final String WELCOME_MESSAGE =

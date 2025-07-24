@@ -44,6 +44,10 @@ dependencies {
     implementation("com.linecorp.bot:line-bot-messaging-api-client:9.8.0")
     implementation("com.linecorp.bot:line-bot-webhook:9.8.0")
     implementation("com.linecorp.bot:line-bot-spring-boot-webmvc:9.8.0")
+    
+    // HTTP Client for Groq API
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("com.fasterxml.jackson.core:jackson-databind")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")

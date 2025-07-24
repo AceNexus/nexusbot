@@ -23,7 +23,10 @@ eureka:
 line:
   bot:
     channel-token:  ${Channel Access Toke}
-    channel-secret: ${Channel Secret:local}
+    channel-secret: ${Channel Secret}
     handler:
       enabled: true
       path: /webhook
+
+groq:
+  api-key: ${api key}

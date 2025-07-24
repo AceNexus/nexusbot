@@ -11,18 +11,26 @@ import org.springframework.stereotype.Service;
 public class MessageProcessorService {
 
     private final MessageService messageService;
+    private final GroqService groqService;
 
     public void processTextMessage(String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
+
         String response = switch (normalizedText) {
-            case "hello", "hi", "你好" -> BotMessages.GREETING;
-            case "help", "幫助", "?" -> BotMessages.getHelpMessage();
             case "menu", "選單" -> BotMessages.getMenuMessage();
-            case "about", "關於" -> BotMessages.ABOUT;
-            default -> BotMessages.getDefaultTextResponse(messageText);
+            default -> handleDefaultMessage(messageText);
         };
+
         log.debug("Text message processed from user {}: {}", userId, normalizedText);
         messageService.sendReply(replyToken, response);
+    }
+
+    private String handleDefaultMessage(String messageText) {
+        String aiResponse = groqService.chat(messageText);
+        if (aiResponse != null && !aiResponse.trim().isEmpty()) {
+            return aiResponse;
+        }
+        return BotMessages.getDefaultTextResponse(messageText);
     }
 
     public void processImageMessage(String userId, String messageId, String replyToken) {
