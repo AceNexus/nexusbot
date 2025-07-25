@@ -23,31 +23,25 @@ public class LineBotController {
 
     @PostMapping("/webhook")
     public ResponseEntity<String> handleWebhook(@RequestBody String payload,
-                                                @RequestHeader(value = "X-Line-Signature", required = false) String signature) {
+                                                @RequestHeader(value = "X-Line-Signature", required = false) String signature) throws Exception {
 
-        try {
-            log.info("Received LINE webhook request, payload size: {} bytes", payload.length());
+        log.info("Received LINE webhook request, payload size: {} bytes", payload.length());
 
-            if (signature != null && !signatureValidator.validate(payload, signature)) {
-                log.warn("Invalid webhook signature");
-                return ResponseEntity.ok("OK"); // LINE requires 200 even for invalid requests
-            }
-
-            JsonNode requestBody = objectMapper.readTree(payload);
-            JsonNode events = requestBody.get("events");
-
-            if (events != null && events.isArray() && !events.isEmpty()) {
-                log.info("Processing {} events", events.size());
-                eventHandlerService.processEvents(events);
-            } else {
-                log.info("Received empty events array");
-            }
-
+        if (signature != null && !signatureValidator.validate(payload, signature)) {
+            log.warn("Invalid webhook signature");
             return ResponseEntity.ok("OK");
-
-        } catch (Exception e) {
-            log.error("Error processing webhook: {}", e.getMessage(), e);
-            return ResponseEntity.ok("OK"); // LINE requires 200 even on errors
         }
+
+        JsonNode requestBody = objectMapper.readTree(payload);
+        JsonNode events = requestBody.get("events");
+
+        if (events != null && events.isArray() && !events.isEmpty()) {
+            log.info("Processing {} events", events.size());
+            eventHandlerService.processEvents(events);
+        } else {
+            log.info("Received empty events array");
+        }
+
+        return ResponseEntity.ok("OK");
     }
 }
