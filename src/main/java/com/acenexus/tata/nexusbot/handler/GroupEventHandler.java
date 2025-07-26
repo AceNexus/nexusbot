@@ -4,14 +4,14 @@ import com.acenexus.tata.nexusbot.constants.BotMessages;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class GroupEventHandler {
-
+    private static final Logger logger = LoggerFactory.getLogger(GroupEventHandler.class);
     private final MessageService messageService;
 
     public void handle(JsonNode event) {
@@ -22,7 +22,7 @@ public class GroupEventHandler {
             case "leave" -> handleLeave(event);
             case "memberJoined" -> handleMemberJoined(event);
             case "memberLeft" -> handleMemberLeft(event);
-            default -> log.warn("Unsupported group event type: {}", eventType);
+            default -> logger.warn("Unsupported group event type: {}", eventType);
         }
     }
 
@@ -36,12 +36,12 @@ public class GroupEventHandler {
             messageService.sendReply(replyToken, joinMessage);
 
         } catch (Exception e) {
-            log.error("Error processing group join event: {}", e.getMessage(), e);
+            logger.error("Error processing group join event: {}", e.getMessage(), e);
         }
     }
 
     private void handleLeave(JsonNode event) {
-        log.info("Bot left group/room");
+        logger.info("Bot left group/room");
     }
 
     private void handleMemberJoined(JsonNode event) {
@@ -53,11 +53,11 @@ public class GroupEventHandler {
             messageService.sendReply(replyToken, welcomeMessage);
 
         } catch (Exception e) {
-            log.error("Error processing member joined event: {}", e.getMessage(), e);
+            logger.error("Error processing member joined event: {}", e.getMessage(), e);
         }
     }
 
     private void handleMemberLeft(JsonNode event) {
-        log.info("Group member left");
+        logger.info("Group member left");
     }
 }

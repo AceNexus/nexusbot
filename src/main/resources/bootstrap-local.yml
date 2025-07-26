@@ -1,6 +1,3 @@
-server:
-  port: 5002
-
 spring:
   datasource:
     url: jdbc:h2:mem:testdb
@@ -25,8 +22,8 @@ eureka:
 
 line:
   bot:
-    channel-token: dvqS3RJtN07Wqg6EXvWgnSdR3X+koAaL1GbDZWCnjHToBqw7IykTO2JNBjKi9UkOKuxI6Z90MdXCx/32j/NrcAbpx1RRIl+s2Yt6f0XuNP8WMuuXkfEcPyDXW4AV5ewQJtCG3jF+XRC08gP7zPDZvQdB04t89/1O/w1cDnyilFU=
-    channel-secret: 74f953573423fb9d4602b581a1af138d
+    channel-token: ${Channel Access Toke}
+    channel-secret: ${Channel Secret}
 
 groq:
-  api-key: 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
+  api-key: ${api key}

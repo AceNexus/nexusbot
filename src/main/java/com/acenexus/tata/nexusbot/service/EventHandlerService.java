@@ -6,14 +6,14 @@ import com.acenexus.tata.nexusbot.handler.MessageEventHandler;
 import com.acenexus.tata.nexusbot.handler.PostbackEventHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class EventHandlerService {
-
+    private static final Logger logger = LoggerFactory.getLogger(EventHandlerService.class);
     private final MessageEventHandler messageEventHandler;
     private final PostbackEventHandler postbackEventHandler;
     private final FollowEventHandler followEventHandler;
@@ -28,7 +28,7 @@ public class EventHandlerService {
     private void processEvent(JsonNode event) {
         try {
             String eventType = event.get("type").asText();
-            log.debug("Processing event type: {}", eventType);
+            logger.debug("Processing event type: {}", eventType);
 
             switch (eventType) {
                 case "message" -> messageEventHandler.handle(event);
@@ -39,11 +39,11 @@ public class EventHandlerService {
                 case "leave" -> groupEventHandler.handle(event);
                 case "memberJoined" -> groupEventHandler.handle(event);
                 case "memberLeft" -> groupEventHandler.handle(event);
-                default -> log.info("Unhandled event type: {}", eventType);
+                default -> logger.info("Unhandled event type: {}", eventType);
             }
 
         } catch (Exception e) {
-            log.error("Error processing event: {}", e.getMessage(), e);
+            logger.error("Error processing event: {}", e.getMessage(), e);
         }
     }
 }

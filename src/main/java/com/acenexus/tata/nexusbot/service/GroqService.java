@@ -1,7 +1,8 @@
 package com.acenexus.tata.nexusbot.service;
 
 import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -11,9 +12,9 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.time.Duration;
 import java.util.Map;
 
-@Slf4j
 @Service
 public class GroqService {
+    private static final Logger logger = LoggerFactory.getLogger(GroqService.class);
 
     @Value("${groq.api-key:}")
     private String apiKey;
@@ -33,9 +34,9 @@ public class GroqService {
                     .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                     .build();
             isConfigured = true;
-            log.info("GroqService initialized with model: {}", model);
+            logger.info("GroqService initialized with model: {}", model);
         } else {
-            log.warn("Groq API key not configured, AI responses disabled");
+            logger.warn("Groq API key not configured, AI responses disabled");
         }
     }
 
@@ -71,7 +72,7 @@ public class GroqService {
             return extractContent(response);
 
         } catch (Exception e) {
-            log.error("Groq API call failed: {}", e.getMessage());
+            logger.error("Groq API call failed: {}", e.getMessage());
             return null;
         }
     }
@@ -90,7 +91,7 @@ public class GroqService {
                 return (content != null) ? content.trim() : null;
             }
         } catch (Exception e) {
-            log.error("Failed to parse Groq response: {}", e.getMessage());
+            logger.error("Failed to parse Groq response: {}", e.getMessage());
         }
 
         return null;

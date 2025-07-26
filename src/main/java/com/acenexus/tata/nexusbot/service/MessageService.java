@@ -5,34 +5,34 @@ import com.linecorp.bot.messaging.model.Message;
 import com.linecorp.bot.messaging.model.ReplyMessageRequest;
 import com.linecorp.bot.messaging.model.TextMessage;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageService {
-
+    private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
     private final MessagingApiClient messagingApiClient;
 
     public void sendReply(String replyToken, String messageText) {
         try {
             if (replyToken == null || replyToken.trim().isEmpty()) {
-                log.warn("ReplyToken is empty, cannot send reply message");
+                logger.warn("ReplyToken is empty, cannot send reply message");
                 return;
             }
 
             if (messageText == null || messageText.trim().isEmpty()) {
-                log.warn("Message content is empty, not sending reply");
+                logger.warn("Message content is empty, not sending reply");
                 return;
             }
 
             // 檢查訊息長度限制
             if (isMessageTooLong(messageText)) {
-                log.warn("Message length {} exceeds limit, auto-splitting", messageText.length());
+                logger.warn("Message length {} exceeds limit, auto-splitting", messageText.length());
                 List<String> splitMessages = splitLongMessage(messageText);
                 sendMultipleReplies(replyToken, splitMessages);
                 return;
@@ -43,11 +43,11 @@ public class MessageService {
             ReplyMessageRequest request = new ReplyMessageRequest(replyToken, List.of(textMessage), false);
 
             messagingApiClient.replyMessage(request);
-            log.info("Successfully replied to user, message length: {} characters", messageText.length());
+            logger.info("Successfully replied to user, message length: {} characters", messageText.length());
 
         } catch (Exception e) {
             // 記錄錯誤但不拋出異常，避免影響 webhook 的 200 回應
-            log.error("Error sending reply message, ReplyToken: {}, Error: {}", replyToken, e.getMessage(), e);
+            logger.error("Error sending reply message, ReplyToken: {}, Error: {}", replyToken, e.getMessage(), e);
         }
     }
 
@@ -63,10 +63,10 @@ public class MessageService {
             ReplyMessageRequest request = new ReplyMessageRequest(replyToken, textMessages, false);
 
             messagingApiClient.replyMessage(request);
-            log.info("Successfully sent {} messages to user", messageTexts.size());
+            logger.info("Successfully sent {} messages to user", messageTexts.size());
 
         } catch (Exception e) {
-            log.error("Error sending multiple messages: {}", e.getMessage(), e);
+            logger.error("Error sending multiple messages: {}", e.getMessage(), e);
         }
     }
 
