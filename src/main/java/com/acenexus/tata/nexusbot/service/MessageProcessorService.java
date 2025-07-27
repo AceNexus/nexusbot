@@ -18,31 +18,48 @@ public class MessageProcessorService {
     public void processTextMessage(String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
 
+        // 處理預定義指令
+        if (handlePredefinedCommand(normalizedText, userId, replyToken)) {
+            return;
+        }
+
+        // 2. 非同步處理 AI 對話
+        handleAIMessage(userId, messageText, replyToken);
+    }
+
+    private boolean handlePredefinedCommand(String normalizedText, String userId, String replyToken) {
         String response = switch (normalizedText) {
             case "menu", "選單" -> BotMessages.getMenuMessage();
-            default -> {
-                // 只有 AI 調用非同步處理
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        String aiResponse = groqService.chat(messageText);
-                        String finalResponse = (aiResponse != null && !aiResponse.trim().isEmpty()) ? aiResponse : BotMessages.getDefaultTextResponse(messageText);
-                        messageService.sendReply(replyToken, finalResponse);
-                        logger.info("AI response sent to user {}", userId);
-                    } catch (Exception e) {
-                        logger.error("AI processing error for user {}: {}", userId, e.getMessage());
-                        messageService.sendReply(replyToken, BotMessages.getDefaultTextResponse(messageText));
-                    }
-                });
-                yield null; // 不立即回應
-            }
+            default -> null;
         };
 
         if (response != null) {
-            logger.info("Quick response for user {}: {}", userId, normalizedText);
-            messageService.sendReply(replyToken, response);
+            try {
+                messageService.sendReply(replyToken, response);
+                logger.info("Quick response for user {}: {}", userId, normalizedText);
+                return true;
+            } catch (Exception e) {
+                logger.error("Error sending predefined response to user {}: {}", userId, e.getMessage());
+                return false; // 讓它繼續走 AI 處理
+            }
         }
+
+        return false;
     }
 
+    private void handleAIMessage(String userId, String messageText, String replyToken) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                String aiResponse = groqService.chat(messageText);
+                String finalResponse = (aiResponse != null && !aiResponse.trim().isEmpty()) ? aiResponse : BotMessages.getDefaultTextResponse(messageText);
+                messageService.sendReply(replyToken, finalResponse);
+                logger.info("AI response sent to user {}", userId);
+            } catch (Exception e) {
+                logger.error("AI processing error for user {}: {}", userId, e.getMessage());
+                messageService.sendReply(replyToken, BotMessages.getDefaultTextResponse(messageText));
+            }
+        });
+    }
 
     public void processImageMessage(String userId, String messageId, String replyToken) {
         String response = BotMessages.getImageResponse(messageId);
