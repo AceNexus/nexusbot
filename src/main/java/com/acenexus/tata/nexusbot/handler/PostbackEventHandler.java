@@ -25,8 +25,6 @@ public class PostbackEventHandler {
                 logger.info("User {} clicked button: {}", userId, data);
 
                 String response = switch (data) {
-                    case "action_help" -> BotMessages.getHelpMessage();
-                    case "action_menu" -> BotMessages.getMenuMessage();
                     case "action_about" -> BotMessages.ABOUT;
                     default -> BotMessages.getPostbackResponse(data);
                 };

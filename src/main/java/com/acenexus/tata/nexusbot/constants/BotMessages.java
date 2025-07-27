@@ -5,37 +5,19 @@ public class BotMessages {
     public static final String ABOUT = "我是 NexusBot v1.0，一個智能 LINE 機器人助手。";
 
     public static final String WELCOME_MESSAGE =
-            "🎉 歡迎加入 NexusBot！\n\n" +
+            "歡迎加入 NexusBot！\n\n" +
                     "感謝您的支持，我將為您提供最佳的服務體驗。\n\n" +
                     "✨ 可用功能：\n" +
-                    "• 輸入 'help' 查看指令\n" +
                     "• 輸入 'menu' 查看選單\n" +
-                    "• 發送圖片、影片、位置等多媒體內容\n\n" +
                     "如有任何問題，請隨時與我互動！";
 
-    public static String getHelpMessage() {
-        return "📖 NexusBot 使用說明\n\n" +
-                "🔤 文字指令：\n" +
-                "• hello / hi / 你好 - 打招呼\n" +
-                "• help / 幫助 - 顯示此說明\n" +
-                "• menu / 選單 - 顯示功能選單\n" +
-                "• about / 關於 - 關於機器人\n\n" +
-                "❓ 如有其他問題，請直接輸入訊息與我互動！";
-    }
-
     public static String getMenuMessage() {
-        return "🎛️ NexusBot 功能選單\n\n" +
-                "📋 主要功能：\n" +
-                "1️⃣ 文字訊息處理\n" +
-                "2️⃣ 多媒體內容支援\n" +
-                "3️⃣ 位置資訊服務\n" +
-                "4️⃣ 檔案處理功能\n" +
-                "5️⃣ 互動式按鈕\n\n" +
-                "💡 試試發送不同類型的訊息給我，看看我如何回應！";
+        return "NexusBot 功能選單\n" +
+                "AI 回應開關";
     }
 
     public static String getDefaultTextResponse(String messageText) {
-        return "收到您的訊息：" + messageText + "\n請輸入 'help' 查看可用指令。";
+        return "我們已收到您的訊息：「" + messageText + "」\n輸入 menu 查看支援的指令。";
     }
 
     public static String getImageResponse(String messageId) {
@@ -73,8 +55,8 @@ public class BotMessages {
     public static final String UNKNOWN_MESSAGE_TYPE = "收到您的訊息，但目前無法識別此類型。";
 
     public static String getGroupJoinMessage(String sourceType) {
-        return "🎉 Hello everyone! I'm NexusBot!\nHappy to join this " + 
-               ("group".equals(sourceType) ? "group" : "room") + "!";
+        return "🎉 Hello everyone! I'm NexusBot!\nHappy to join this " +
+                ("group".equals(sourceType) ? "group" : "room") + "!";
     }
 
     public static String getMemberJoinedMessage(int memberCount) {
