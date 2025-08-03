@@ -1,6 +1,5 @@
 package com.acenexus.tata.nexusbot.service;
 
-import com.acenexus.tata.nexusbot.constants.BotMessages;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +13,7 @@ public class MessageProcessorService {
     private static final Logger logger = LoggerFactory.getLogger(MessageProcessorService.class);
     private final MessageService messageService;
     private final GroqService groqService;
-    private final FlexMenuService flexMenuService;
+    private final MessageTemplateService messageTemplateService;
 
     public void processTextMessage(String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
@@ -32,7 +31,7 @@ public class MessageProcessorService {
         try {
             switch (normalizedText) {
                 case "menu", "選單" -> {
-                    messageService.sendMessage(replyToken, flexMenuService.createMenuFlexMessage());
+                    messageService.sendMessage(replyToken, messageTemplateService.mainMenu());
                     return true;
                 }
                 default -> {
@@ -49,54 +48,55 @@ public class MessageProcessorService {
         CompletableFuture.runAsync(() -> {
             try {
                 String aiResponse = groqService.chat(messageText);
-                String finalResponse = (aiResponse != null && !aiResponse.trim().isEmpty()) ? aiResponse : BotMessages.getDefaultTextResponse(messageText);
+                String finalResponse = (aiResponse != null && !aiResponse.trim().isEmpty()) ?
+                        aiResponse : messageTemplateService.defaultTextResponse(messageText);
                 messageService.sendReply(replyToken, finalResponse);
                 logger.info("AI response sent to user {}", userId);
             } catch (Exception e) {
                 logger.error("AI processing error for user {}: {}", userId, e.getMessage());
-                messageService.sendReply(replyToken, BotMessages.getDefaultTextResponse(messageText));
+                messageService.sendReply(replyToken, messageTemplateService.defaultTextResponse(messageText));
             }
         });
     }
 
     public void processImageMessage(String userId, String messageId, String replyToken) {
-        String response = BotMessages.getImageResponse(messageId);
+        String response = messageTemplateService.imageResponse(messageId);
         logger.info("Image message processed from user {}: messageId={}", userId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processStickerMessage(String userId, String packageId, String stickerId, String replyToken) {
-        String response = BotMessages.getStickerResponse(packageId, stickerId);
+        String response = messageTemplateService.stickerResponse(packageId, stickerId);
         logger.info("Sticker message processed from user {}: packageId={}, stickerId={}", userId, packageId, stickerId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processVideoMessage(String userId, String messageId, String replyToken) {
-        String response = BotMessages.getVideoResponse(messageId);
+        String response = messageTemplateService.videoResponse(messageId);
         logger.info("Video message processed from user {}: messageId={}", userId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processAudioMessage(String userId, String messageId, String replyToken) {
-        String response = BotMessages.getAudioResponse(messageId);
+        String response = messageTemplateService.audioResponse(messageId);
         logger.info("Audio message processed from user {}: messageId={}", userId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processFileMessage(String userId, String messageId, String fileName, long fileSize, String replyToken) {
-        String response = BotMessages.getFileResponse(fileName, fileSize);
+        String response = messageTemplateService.fileResponse(fileName, fileSize);
         logger.info("File message processed from user {}: fileName={}, size={}, messageId={}", userId, fileName, fileSize, messageId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processLocationMessage(String userId, String title, String address, double latitude, double longitude, String replyToken) {
-        String response = BotMessages.getLocationResponse(title, address, latitude, longitude);
+        String response = messageTemplateService.locationResponse(title, address, latitude, longitude);
         logger.info("Location message processed from user {}: title={}, address={}, lat={}, lon={}", userId, title, address, latitude, longitude);
         messageService.sendReply(replyToken, response);
     }
 
     public void processDefaultMessage(String userId, String replyToken) {
-        String response = BotMessages.UNKNOWN_MESSAGE_TYPE;
+        String response = messageTemplateService.unknownMessage();
         logger.warn("Default message handler used for user {}", userId);
         messageService.sendReply(replyToken, response);
     }

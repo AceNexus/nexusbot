@@ -1,7 +1,7 @@
 package com.acenexus.tata.nexusbot.handler;
 
-import com.acenexus.tata.nexusbot.constants.BotMessages;
 import com.acenexus.tata.nexusbot.service.MessageService;
+import com.acenexus.tata.nexusbot.service.MessageTemplateService;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class FollowEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(FollowEventHandler.class);
     private final MessageService messageService;
+    private final MessageTemplateService messageTemplateService;
 
     public void handle(JsonNode event) {
         String eventType = event.get("type").asText();
@@ -30,7 +31,7 @@ public class FollowEventHandler {
             String userId = event.get("source").get("userId").asText();
 
             logger.info("User {} followed the bot", userId);
-            messageService.sendReply(replyToken, BotMessages.WELCOME_MESSAGE);
+            messageService.sendMessage(replyToken, messageTemplateService.welcome());
 
         } catch (Exception e) {
             logger.error("Error processing follow event: {}", e.getMessage(), e);

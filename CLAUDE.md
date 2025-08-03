@@ -23,7 +23,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Uses H2 in-memory database by default (local profile)
 - H2 Console available at: `http://localhost:5001/h2-console`
 - Application runs on port 5001 (configurable via `SERVER_PORT`)
-- **Java Environment**: Requires Java 17+ (tested with Java 17 and 21)
+- **Java Environment**: Requires Java 17+ (configured for Java 17, tested with Java 21)
 - **Windows Development**: May need to set JAVA_HOME for Gradle: 
   ```bash
   export JAVA_HOME="/c/Program Files/Java/jdk-17"
@@ -56,7 +56,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - `GroqService` - AI chat integration (llama-3.1-8b-instant model)
 - `MessageProcessorService` - orchestrates message processing with two-tier approach (predefined commands → AI fallback)
 - `FlexMenuService` - creates Flex Message interactive menus using factory pattern
-- `MenuActionService` - handles button actions using strategy pattern (simple switch logic)
+- `EventHandlerService` - routes events to specific handlers based on event type
 
 ### Configuration Management
 
@@ -124,7 +124,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 
 **Flex Message System** - Single service approach using design patterns:
 - **Factory Pattern**: `FlexMenuService.createMenu(MenuType)` creates different menu types
-- **Strategy Pattern**: `MenuActionService.handleAction()` processes button clicks
+- **Direct Handler Processing**: `PostbackEventHandler` directly processes button clicks
 - **Material Design Theme**: Consistent color scheme across all menus
 - **Menu Types**: Main menu, AI settings, medication management, help menu
 - **Postback Actions**: Structured data format (`action=toggle_ai`, `action=back_to_menu`)
@@ -133,12 +133,12 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ```
 PostbackEventHandler
 ├── Parse action from postback data
-├── Route to MenuActionService OR
+├── Process action directly OR
 └── Return appropriate Flex menu via FlexMenuService
 ```
 
 **Key Design Decisions**:
-- Removed complex MenuManager/MenuActionHandler pattern for simplicity
-- Direct switch statement routing in handlers
+- Direct switch statement routing in handlers for simplicity
 - Single responsibility services with clear boundaries
 - No state management - stateless operation throughout
+- Simplified architecture without complex abstractions
