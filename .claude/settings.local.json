@@ -30,7 +30,9 @@
       "Bash(\"C:\\Program Files\\Java\\jdk-17\\bin\\java.exe\" -version)",
       "Bash(set JAVA_HOME=C:Program FilesJavajdk-17)",
       "Bash(git add:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(mv:*)"
     ],
     "deny": []
   }

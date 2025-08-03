@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. It integrates with LINE Messaging API (SDK 6.0.0) to handle various message types and provides AI-powered responses through the Groq API. Features both text-based and Flex Message interactive menus.
+NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. It integrates with LINE Messaging API (SDK 6.0.0) to handle various message types and provides AI-powered responses through the Groq API. Features a simplified architecture with Flex Message interactive menus.
 
 ## Common Development Commands
 
@@ -51,12 +51,12 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
    - Falls back to AI processing via `GroqService`
    - Async processing with fallback responses
 
-**Service Layer**:
+**Service Layer** (Simplified Architecture):
 - `MessageService` - handles LINE API communication (SDK 6.0.0)
 - `GroqService` - AI chat integration (llama-3.1-8b-instant model)
-- `MessageProcessorService` - orchestrates message processing logic
-- `FlexMenuService` - creates Flex Message interactive menus with card-style UI
-- `InteractiveMenuService` - creates text-based menus as fallback option
+- `MessageProcessorService` - orchestrates message processing with two-tier approach (predefined commands → AI fallback)
+- `FlexMenuService` - creates Flex Message interactive menus using factory pattern
+- `MenuActionService` - handles button actions using strategy pattern (simple switch logic)
 
 ### Configuration Management
 
@@ -90,10 +90,12 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ## Development Guidelines
 
 ### Code Structure
-- Follow existing package structure: `config`, `controller`, `service`, `handler`, `constants`
+- Follow existing package structure: `config`, `controller`, `service`, `handler`, `constants`, `enums`
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
+- **Simplicity over complexity**: Prefer direct switch statements over complex abstractions
+- **Single responsibility**: Each service should have one clear purpose
 
 ### Configuration
 - Add new configuration properties to appropriate `Properties` classes
@@ -118,13 +120,25 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - JAR versioning based on Git tags
 - Uses `./gradlew bootJar` for executable JAR creation
 
-### Interactive Features
-- **Flex Message System**: Beautiful card-style menus using LINE Bot SDK 6.0.0
-  - Main menu with `menu` or `選單` command triggers `FlexMenuService.createMenuFlexMessage()`
-  - Category submenus for different function groups (info, learn, life, ai)
-  - PostbackAction buttons with structured data handling
-  - Material Design color theme for consistent UI
-- **Text-based Fallback**: Traditional text menus via `InteractiveMenuService`
-  - Available with `text_menu` command for compatibility
-  - Number shortcuts (1-7) and letter shortcuts (A-D) supported
-- **Dual Menu System**: Both Flex and text menus coexist for different user preferences
+### Simplified Menu Architecture
+
+**Flex Message System** - Single service approach using design patterns:
+- **Factory Pattern**: `FlexMenuService.createMenu(MenuType)` creates different menu types
+- **Strategy Pattern**: `MenuActionService.handleAction()` processes button clicks
+- **Material Design Theme**: Consistent color scheme across all menus
+- **Menu Types**: Main menu, AI settings, medication management, help menu
+- **Postback Actions**: Structured data format (`action=toggle_ai`, `action=back_to_menu`)
+
+**Event Processing Flow** (Simplified):
+```
+PostbackEventHandler
+├── Parse action from postback data
+├── Route to MenuActionService OR
+└── Return appropriate Flex menu via FlexMenuService
+```
+
+**Key Design Decisions**:
+- Removed complex MenuManager/MenuActionHandler pattern for simplicity
+- Direct switch statement routing in handlers
+- Single responsibility services with clear boundaries
+- No state management - stateless operation throughout
