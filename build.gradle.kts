@@ -20,7 +20,7 @@ version = gitVersion
 
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(17)
     }
 }
 
@@ -41,9 +41,9 @@ dependencies {
     runtimeOnly("com.h2database:h2")
 
     // LINE Bot SDK
-    implementation("com.linecorp.bot:line-bot-messaging-api-client:9.8.0")
-    implementation("com.linecorp.bot:line-bot-webhook:9.8.0")
-    implementation("com.linecorp.bot:line-bot-spring-boot-webmvc:9.8.0")
+    implementation("com.linecorp.bot:line-bot-spring-boot:6.0.0")
+    implementation("com.linecorp.bot:line-bot-api-client:6.0.0")
+    implementation("com.linecorp.bot:line-bot-model:6.0.0")
     
     // HTTP Client for Groq API
     implementation("org.springframework.boot:spring-boot-starter-webflux")

@@ -11,11 +11,6 @@ public class BotMessages {
                     "• 輸入 'menu' 查看選單\n" +
                     "如有任何問題，請隨時與我互動！";
 
-    public static String getMenuMessage() {
-        return "NexusBot 功能選單\n" +
-                "AI 回應開關";
-    }
-
     public static String getDefaultTextResponse(String messageText) {
         return "我們已收到您的訊息：「" + messageText + "」\n輸入 menu 查看支援的指令。";
     }

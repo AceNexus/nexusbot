@@ -14,6 +14,7 @@ public class MessageProcessorService {
     private static final Logger logger = LoggerFactory.getLogger(MessageProcessorService.class);
     private final MessageService messageService;
     private final GroqService groqService;
+    private final FlexMenuService flexMenuService;
 
     public void processTextMessage(String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
@@ -28,23 +29,20 @@ public class MessageProcessorService {
     }
 
     private boolean handlePredefinedCommand(String normalizedText, String userId, String replyToken) {
-        String response = switch (normalizedText) {
-            case "menu", "選單" -> BotMessages.getMenuMessage();
-            default -> null;
-        };
-
-        if (response != null) {
-            try {
-                messageService.sendReply(replyToken, response);
-                logger.info("Quick response for user {}: {}", userId, normalizedText);
-                return true;
-            } catch (Exception e) {
-                logger.error("Error sending predefined response to user {}: {}", userId, e.getMessage());
-                return false; // 讓它繼續走 AI 處理
+        try {
+            switch (normalizedText) {
+                case "menu", "選單" -> {
+                    messageService.sendMessage(replyToken, flexMenuService.createMenuFlexMessage());
+                    return true;
+                }
+                default -> {
+                    return false;
+                }
             }
+        } catch (Exception e) {
+            logger.error("Error sending predefined response to user {}: {}", userId, e.getMessage());
+            return false; // 讓它繼續走 AI 處理
         }
-
-        return false;
     }
 
     private void handleAIMessage(String userId, String messageText, String replyToken) {

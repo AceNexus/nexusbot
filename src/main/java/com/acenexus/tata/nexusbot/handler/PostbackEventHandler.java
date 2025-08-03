@@ -24,8 +24,9 @@ public class PostbackEventHandler {
 
                 logger.info("User {} clicked button: {}", userId, data);
 
+                // 處理功能回應
                 String response = switch (data) {
-                    case "action_about" -> BotMessages.ABOUT;
+                    case "action=toggle_ai" -> "AI 回應功能目前已啟用，您可以直接與我對話！";
                     default -> BotMessages.getPostbackResponse(data);
                 };
 

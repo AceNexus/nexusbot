@@ -1,7 +1,7 @@
 package com.acenexus.tata.nexusbot.config;
 
 import com.acenexus.tata.nexusbot.config.properties.LineBotProperties;
-import com.linecorp.bot.messaging.client.MessagingApiClient;
+import com.linecorp.bot.client.LineMessagingClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -15,7 +15,7 @@ public class LineBotConfig {
     }
 
     @Bean
-    public MessagingApiClient messagingApiClient() {
-        return MessagingApiClient.builder(lineBotProperties.getChannelToken()).build();
+    public LineMessagingClient lineMessagingClient() {
+        return LineMessagingClient.builder(lineBotProperties.getChannelToken()).build();
     }
 }

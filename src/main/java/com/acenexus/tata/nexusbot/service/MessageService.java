@@ -1,9 +1,9 @@
 package com.acenexus.tata.nexusbot.service;
 
-import com.linecorp.bot.messaging.client.MessagingApiClient;
-import com.linecorp.bot.messaging.model.Message;
-import com.linecorp.bot.messaging.model.ReplyMessageRequest;
-import com.linecorp.bot.messaging.model.TextMessage;
+import com.linecorp.bot.client.LineMessagingClient;
+import com.linecorp.bot.model.ReplyMessage;
+import com.linecorp.bot.model.message.Message;
+import com.linecorp.bot.model.message.TextMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +16,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class MessageService {
     private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
-    private final MessagingApiClient messagingApiClient;
+    private final LineMessagingClient lineMessagingClient;
 
     public void sendReply(String replyToken, String messageText) {
         try {
@@ -38,11 +38,11 @@ public class MessageService {
                 return;
             }
 
-            // 發送訊息
+            // 發送文字訊息
             TextMessage textMessage = new TextMessage(messageText);
-            ReplyMessageRequest request = new ReplyMessageRequest(replyToken, List.of(textMessage), false);
+            ReplyMessage replyMessage = new ReplyMessage(replyToken, List.of(textMessage));
 
-            messagingApiClient.replyMessage(request);
+            lineMessagingClient.replyMessage(replyMessage);
             logger.info("Successfully replied to user, message length: {} characters", messageText.length());
 
         } catch (Exception e) {
@@ -60,9 +60,9 @@ public class MessageService {
                     .map(text -> (Message) new TextMessage(text))
                     .toList();
 
-            ReplyMessageRequest request = new ReplyMessageRequest(replyToken, textMessages, false);
+            ReplyMessage replyMessage = new ReplyMessage(replyToken, textMessages);
 
-            messagingApiClient.replyMessage(request);
+            lineMessagingClient.replyMessage(replyMessage);
             logger.info("Successfully sent {} messages to user", messageTexts.size());
 
         } catch (Exception e) {
@@ -91,5 +91,26 @@ public class MessageService {
         }
 
         return messages;
+    }
+
+    public void sendMessage(String replyToken, Message message) {
+        try {
+            if (replyToken == null || replyToken.trim().isEmpty()) {
+                logger.warn("ReplyToken is empty, cannot send message");
+                return;
+            }
+
+            if (message == null) {
+                logger.warn("Message is null, not sending reply");
+                return;
+            }
+
+            ReplyMessage replyMessage = new ReplyMessage(replyToken, List.of(message));
+            lineMessagingClient.replyMessage(replyMessage);
+            logger.info("Successfully sent message to user");
+
+        } catch (Exception e) {
+            logger.error("Error sending message, ReplyToken: {}, Error: {}", replyToken, e.getMessage(), e);
+        }
     }
 }
