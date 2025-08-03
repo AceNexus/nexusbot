@@ -1,4 +1,5 @@
-# Gateway Service
+# Nexus Bot
+
 
 ![Spring Boot Version](https://img.shields.io/badge/Spring%20Boot-3.4.3-brightgreen.svg)
 ![Spring Cloud Version](https://img.shields.io/badge/Spring%20Cloud-2024.0.0-blue.svg)
