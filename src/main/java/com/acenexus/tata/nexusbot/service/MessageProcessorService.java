@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.service;
 
+import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,20 +15,28 @@ public class MessageProcessorService {
     private final MessageService messageService;
     private final GroqService groqService;
     private final MessageTemplateService messageTemplateService;
+    private final ChatRoomService chatRoomService;
 
-    public void processTextMessage(String userId, String messageText, String replyToken) {
+    public void processTextMessage(String roomId, String sourceType, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
+        ChatRoom.RoomType roomType = chatRoomService.determineRoomType(sourceType);
 
         // 處理預定義指令
-        if (handlePredefinedCommand(normalizedText, userId, replyToken)) {
+        if (handlePredefinedCommand(normalizedText, roomId, replyToken)) {
             return;
         }
 
-        // 2. 非同步處理 AI 對話
-        handleAIMessage(userId, messageText, replyToken);
+        // 檢查 AI 是否啟用
+        if (!chatRoomService.isAiEnabled(roomId, roomType)) {
+            logger.info("AI disabled for room: {} (type: {}), skipping AI processing", roomId, roomType);
+            return;
+        }
+
+        // 非同步處理 AI 對話
+        handleAIMessage(roomId, messageText, replyToken);
     }
 
-    private boolean handlePredefinedCommand(String normalizedText, String userId, String replyToken) {
+    private boolean handlePredefinedCommand(String normalizedText, String roomId, String replyToken) {
         try {
             switch (normalizedText) {
                 case "menu", "選單" -> {
@@ -39,65 +48,65 @@ public class MessageProcessorService {
                 }
             }
         } catch (Exception e) {
-            logger.error("Error sending predefined response to user {}: {}", userId, e.getMessage());
+            logger.error("Error sending predefined response to room {}: {}", roomId, e.getMessage());
             return false; // 讓它繼續走 AI 處理
         }
     }
 
-    private void handleAIMessage(String userId, String messageText, String replyToken) {
+    private void handleAIMessage(String roomId, String messageText, String replyToken) {
         CompletableFuture.runAsync(() -> {
             try {
                 String aiResponse = groqService.chat(messageText);
                 String finalResponse = (aiResponse != null && !aiResponse.trim().isEmpty()) ?
                         aiResponse : messageTemplateService.defaultTextResponse(messageText);
                 messageService.sendReply(replyToken, finalResponse);
-                logger.info("AI response sent to user {}", userId);
+                logger.info("AI response sent to room {}", roomId);
             } catch (Exception e) {
-                logger.error("AI processing error for user {}: {}", userId, e.getMessage());
+                logger.error("AI processing error for room {}: {}", roomId, e.getMessage());
                 messageService.sendReply(replyToken, messageTemplateService.defaultTextResponse(messageText));
             }
         });
     }
 
-    public void processImageMessage(String userId, String messageId, String replyToken) {
+    public void processImageMessage(String roomId, String messageId, String replyToken) {
         String response = messageTemplateService.imageResponse(messageId);
-        logger.info("Image message processed from user {}: messageId={}", userId, messageId);
+        logger.info("Image message processed from room {}: messageId={}", roomId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
-    public void processStickerMessage(String userId, String packageId, String stickerId, String replyToken) {
+    public void processStickerMessage(String roomId, String packageId, String stickerId, String replyToken) {
         String response = messageTemplateService.stickerResponse(packageId, stickerId);
-        logger.info("Sticker message processed from user {}: packageId={}, stickerId={}", userId, packageId, stickerId);
+        logger.info("Sticker message processed from room {}: packageId={}, stickerId={}", roomId, packageId, stickerId);
         messageService.sendReply(replyToken, response);
     }
 
-    public void processVideoMessage(String userId, String messageId, String replyToken) {
+    public void processVideoMessage(String roomId, String messageId, String replyToken) {
         String response = messageTemplateService.videoResponse(messageId);
-        logger.info("Video message processed from user {}: messageId={}", userId, messageId);
+        logger.info("Video message processed from room {}: messageId={}", roomId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
-    public void processAudioMessage(String userId, String messageId, String replyToken) {
+    public void processAudioMessage(String roomId, String messageId, String replyToken) {
         String response = messageTemplateService.audioResponse(messageId);
-        logger.info("Audio message processed from user {}: messageId={}", userId, messageId);
+        logger.info("Audio message processed from room {}: messageId={}", roomId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
-    public void processFileMessage(String userId, String messageId, String fileName, long fileSize, String replyToken) {
+    public void processFileMessage(String roomId, String messageId, String fileName, long fileSize, String replyToken) {
         String response = messageTemplateService.fileResponse(fileName, fileSize);
-        logger.info("File message processed from user {}: fileName={}, size={}, messageId={}", userId, fileName, fileSize, messageId);
+        logger.info("File message processed from room {}: fileName={}, size={}, messageId={}", roomId, fileName, fileSize, messageId);
         messageService.sendReply(replyToken, response);
     }
 
-    public void processLocationMessage(String userId, String title, String address, double latitude, double longitude, String replyToken) {
+    public void processLocationMessage(String roomId, String title, String address, double latitude, double longitude, String replyToken) {
         String response = messageTemplateService.locationResponse(title, address, latitude, longitude);
-        logger.info("Location message processed from user {}: title={}, address={}, lat={}, lon={}", userId, title, address, latitude, longitude);
+        logger.info("Location message processed from room {}: title={}, address={}, lat={}, lon={}", roomId, title, address, latitude, longitude);
         messageService.sendReply(replyToken, response);
     }
 
-    public void processDefaultMessage(String userId, String replyToken) {
+    public void processDefaultMessage(String roomId, String replyToken) {
         String response = messageTemplateService.unknownMessage();
-        logger.warn("Default message handler used for user {}", userId);
+        logger.warn("Default message handler used for room {}", roomId);
         messageService.sendReply(replyToken, response);
     }
 }

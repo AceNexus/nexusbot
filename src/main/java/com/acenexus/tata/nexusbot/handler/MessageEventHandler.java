@@ -18,53 +18,57 @@ public class MessageEventHandler {
             JsonNode message = event.get("message");
             String messageType = message.get("type").asText();
             String replyToken = event.get("replyToken").asText();
-            String userId = event.get("source").get("userId").asText();
+
+            // 獲取來源資訊
+            JsonNode source = event.get("source");
+            String sourceType = source.get("type").asText();
+            String roomId = sourceType.equals("group") ? source.get("groupId").asText() : source.get("userId").asText();
 
             switch (messageType) {
                 case "text" -> {
                     String userText = message.get("text").asText();
-                    logger.info("User {} sent text message: {}", userId, userText);
-                    messageProcessorService.processTextMessage(userId, userText, replyToken);
+                    logger.info("Room {} (type: {}) sent text message: {}", roomId, sourceType, userText);
+                    messageProcessorService.processTextMessage(roomId, sourceType, userText, replyToken);
                 }
                 case "image" -> {
                     String messageId = message.get("id").asText();
-                    logger.info("User {} sent image", userId);
-                    messageProcessorService.processImageMessage(userId, messageId, replyToken);
+                    logger.info("Room {} sent image", roomId);
+                    messageProcessorService.processImageMessage(roomId, messageId, replyToken);
                 }
                 case "sticker" -> {
                     String packageId = message.get("packageId").asText();
                     String stickerId = message.get("stickerId").asText();
-                    logger.info("User {} sent sticker", userId);
-                    messageProcessorService.processStickerMessage(userId, packageId, stickerId, replyToken);
+                    logger.info("Room {} sent sticker", roomId);
+                    messageProcessorService.processStickerMessage(roomId, packageId, stickerId, replyToken);
                 }
                 case "video" -> {
                     String messageId = message.get("id").asText();
-                    logger.info("User {} sent video", userId);
-                    messageProcessorService.processVideoMessage(userId, messageId, replyToken);
+                    logger.info("Room {} sent video", roomId);
+                    messageProcessorService.processVideoMessage(roomId, messageId, replyToken);
                 }
                 case "audio" -> {
                     String messageId = message.get("id").asText();
-                    logger.info("User {} sent audio", userId);
-                    messageProcessorService.processAudioMessage(userId, messageId, replyToken);
+                    logger.info("Room {} sent audio", roomId);
+                    messageProcessorService.processAudioMessage(roomId, messageId, replyToken);
                 }
                 case "file" -> {
                     String messageId = message.get("id").asText();
                     String fileName = message.get("fileName").asText();
                     long fileSize = message.get("fileSize").asLong();
-                    logger.info("User {} sent file: {}", userId, fileName);
-                    messageProcessorService.processFileMessage(userId, messageId, fileName, fileSize, replyToken);
+                    logger.info("Room {} sent file: {}", roomId, fileName);
+                    messageProcessorService.processFileMessage(roomId, messageId, fileName, fileSize, replyToken);
                 }
                 case "location" -> {
                     String title = message.has("title") ? message.get("title").asText() : null;
                     String address = message.has("address") ? message.get("address").asText() : null;
                     double latitude = message.get("latitude").asDouble();
                     double longitude = message.get("longitude").asDouble();
-                    logger.info("User {} sent location", userId);
-                    messageProcessorService.processLocationMessage(userId, title, address, latitude, longitude, replyToken);
+                    logger.info("Room {} sent location", roomId);
+                    messageProcessorService.processLocationMessage(roomId, title, address, latitude, longitude, replyToken);
                 }
                 default -> {
-                    logger.info("User {} sent unhandled message type: {}", userId, messageType);
-                    messageProcessorService.processDefaultMessage(userId, replyToken);
+                    logger.info("Room {} sent unhandled message type: {}", roomId, messageType);
+                    messageProcessorService.processDefaultMessage(roomId, replyToken);
                 }
             }
         } catch (Exception e) {

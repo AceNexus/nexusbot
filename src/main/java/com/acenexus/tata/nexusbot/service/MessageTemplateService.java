@@ -27,7 +27,6 @@ public class MessageTemplateService {
     private static final String PRIMARY_COLOR = "#1976D2";
     private static final String SUCCESS_COLOR = "#4CAF50";
     private static final String INFO_COLOR = "#2196F3";
-    private static final String WARNING_COLOR = "#FF9800";
     private static final String ERROR_COLOR = "#F44336";
     private static final String SECONDARY_COLOR = "#0288D1";
 
@@ -38,9 +37,9 @@ public class MessageTemplateService {
                                                 
                         感謝您的支持，我將為您提供最佳的服務體驗。
                                                 
-                        ✨ 可用功能：
-                        • 輸入 'menu' 查看選單
-                        • AI 智能對話
+                        可用功能：
+                        - 輸入 'menu' 查看選單
+                        - AI 智能對話
                                                 
                         如有任何問題，請隨時與我互動！
                         """)
@@ -50,10 +49,10 @@ public class MessageTemplateService {
     public Message about() {
         return TextMessage.builder()
                 .text("""
-                        🤖 NexusBot v2.0
+                        NexusBot v2.0
                                                 
                         我是您的智能助手，具備以下功能：
-                        • AI 智能對話回應
+                        - AI 智能對話回應
                                                 
                         技術支援：Spring Boot 3.4.3 + LINE Bot SDK 6.0.0
                         """)
@@ -62,7 +61,13 @@ public class MessageTemplateService {
 
     public Message success(String message) {
         return TextMessage.builder()
-                .text("✅ " + message)
+                .text(message)
+                .build();
+    }
+
+    public Message error(String message) {
+        return TextMessage.builder()
+                .text(message)
                 .build();
     }
 
@@ -71,34 +76,26 @@ public class MessageTemplateService {
                 "NexusBot 功能選單",
                 "請選擇一項功能開始操作",
                 Arrays.asList(
-                        createButton("🤖 AI 回應開關", "action=toggle_ai", PRIMARY_COLOR),
-                        createButton("💊 用藥管理", "action=medication_menu", SUCCESS_COLOR),
-                        createButton("❓ 說明與支援", "action=help_menu", INFO_COLOR)
+                        createButton("AI 回應開關", "action=toggle_ai", PRIMARY_COLOR),
+                        createButton("說明與支援", "action=help_menu", INFO_COLOR)
                 )
         );
     }
 
     public Message aiSettingsMenu() {
-        return createFlexMenu(
-                "AI 回應設定",
-                "管理 AI 功能相關設定",
-                Arrays.asList(
-                        createButton("✅ 開啟 AI 回應", "action=enable_ai", SUCCESS_COLOR),
-                        createButton("❌ 關閉 AI 回應", "action=disable_ai", ERROR_COLOR),
-                        createButton("🔙 返回主選單", "action=main_menu", SECONDARY_COLOR)
-                )
-        );
+        return aiSettingsMenu(false); // 預設狀態為關閉
     }
 
-    public Message medicationMenu() {
+    public Message aiSettingsMenu(boolean currentStatus) {
+        String statusText = currentStatus ? "目前狀態：已開啟" : "目前狀態：已關閉";
+
         return createFlexMenu(
-                "用藥管理系統",
-                "管理您的用藥提醒與記錄",
+                "AI 回應設定",
+                "管理 AI 功能相關設定\n" + statusText,
                 Arrays.asList(
-                        createButton("📋 查看用藥清單", "action=view_medications", INFO_COLOR),
-                        createButton("➕ 新增用藥提醒", "action=add_medication", SUCCESS_COLOR),
-                        createButton("⏰ 設定提醒時間", "action=set_reminder", WARNING_COLOR),
-                        createButton("🔙 返回主選單", "action=main_menu", SECONDARY_COLOR)
+                        createButton("開啟 AI 回應", "action=enable_ai", SUCCESS_COLOR),
+                        createButton("關閉 AI 回應", "action=disable_ai", ERROR_COLOR),
+                        createButton("返回主選單", "action=main_menu", SECONDARY_COLOR)
                 )
         );
     }
@@ -108,34 +105,34 @@ public class MessageTemplateService {
                 "說明與支援",
                 "瞭解如何使用 NexusBot",
                 Arrays.asList(
-                        createButton("ℹ️ 關於 NexusBot", "action=about", SECONDARY_COLOR),
-                        createButton("🔙 返回主選單", "action=main_menu", SECONDARY_COLOR)
+                        createButton("關於 NexusBot", "action=about", SECONDARY_COLOR),
+                        createButton("返回主選單", "action=main_menu", SECONDARY_COLOR)
                 )
         );
     }
 
     public String imageResponse(String messageId) {
-        return "收到您的圖片！\n圖片ID: " + messageId;
+        return "收到您的圖片\n圖片ID: " + messageId;
     }
 
     public String stickerResponse(String packageId, String stickerId) {
-        return String.format("很可愛的貼圖！😊\n貼圖包ID: %s\n貼圖ID: %s", packageId, stickerId);
+        return String.format("很可愛的貼圖\n貼圖包ID: %s\n貼圖ID: %s", packageId, stickerId);
     }
 
     public String videoResponse(String messageId) {
-        return "收到您的影片！\n影片ID: " + messageId;
+        return "收到您的影片\n影片ID: " + messageId;
     }
 
     public String audioResponse(String messageId) {
-        return "收到您的音檔！\n音檔ID: " + messageId;
+        return "收到您的音檔\n音檔ID: " + messageId;
     }
 
     public String fileResponse(String fileName, long fileSize) {
-        return String.format("收到您的檔案！\n檔名: %s\n大小: %d bytes", fileName, fileSize);
+        return String.format("收到您的檔案\n檔名: %s\n大小: %d bytes", fileName, fileSize);
     }
 
     public String locationResponse(String title, String address, double latitude, double longitude) {
-        StringBuilder response = new StringBuilder("收到您的位置資訊！");
+        StringBuilder response = new StringBuilder("收到您的位置資訊");
         if (title != null && !title.trim().isEmpty()) {
             response.append("\n地點名稱: ").append(title);
         }
@@ -161,12 +158,12 @@ public class MessageTemplateService {
     }
 
     public String groupJoinMessage(String sourceType) {
-        return "🎉 Hello everyone! I'm NexusBot!\nHappy to join this " +
+        return "Hello everyone! I'm NexusBot!\nHappy to join this " +
                 ("group".equals(sourceType) ? "group" : "room") + "!";
     }
 
     public String memberJoinedMessage(int memberCount) {
-        return "🎊 Welcome new members!\n" + memberCount + " new friends joined the group!";
+        return "Welcome new members!\n" + memberCount + " new friends joined the group!";
     }
 
     private FlexMessage createFlexMenu(String title, String subtitle, List<Button> buttons) {
