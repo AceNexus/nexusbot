@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. It integrates with the LINE Messaging API to handle various message types and provides AI-powered responses through the Groq API.
+NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. It integrates with LINE Messaging API (SDK 6.0.0) to handle various message types and provides AI-powered responses through the Groq API. Features both text-based and Flex Message interactive menus.
 
 ## Common Development Commands
 
@@ -23,6 +23,12 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Uses H2 in-memory database by default (local profile)
 - H2 Console available at: `http://localhost:5001/h2-console`
 - Application runs on port 5001 (configurable via `SERVER_PORT`)
+- **Java Environment**: Requires Java 17+ (tested with Java 17 and 21)
+- **Windows Development**: May need to set JAVA_HOME for Gradle: 
+  ```bash
+  export JAVA_HOME="/c/Program Files/Java/jdk-17"
+  export PATH="/c/Program Files/Java/jdk-17/bin:$PATH"
+  ```
 
 ## Architecture Overview
 
@@ -46,11 +52,11 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
    - Async processing with fallback responses
 
 **Service Layer**:
-- `MessageService` - handles LINE API communication
+- `MessageService` - handles LINE API communication (SDK 6.0.0)
 - `GroqService` - AI chat integration (llama-3.1-8b-instant model)
 - `MessageProcessorService` - orchestrates message processing logic
-- `FlexMenuService` - creates text-based menu displays
-- `InteractiveMenuService` - creates interactive menus with quick reply options
+- `FlexMenuService` - creates Flex Message interactive menus with card-style UI
+- `InteractiveMenuService` - creates text-based menus as fallback option
 
 ### Configuration Management
 
@@ -61,7 +67,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - `bootstrap-prod.yml` - production environment
 
 **Key Configuration Classes**:
-- `LineBotConfig` - LINE Bot SDK configuration
+- `LineBotConfig` - LINE Bot SDK 6.0.0 configuration with `LineMessagingClient`
 - `ConfigValidator` - validates configuration on startup
 - Properties classes in `config.properties` package
 
@@ -94,6 +100,13 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Validate critical configuration in `ConfigValidator`
 - Use profile-specific files for environment differences
 
+### LINE Bot SDK Considerations
+- **Current Version**: 6.0.0 (downgraded from 9.8.0 for stability)
+- **API Changes**: Uses `LineMessagingClient` instead of `MessagingApiClient`
+- **Flex Message Support**: Full Flex Message capabilities with SDK 6.x APIs
+- **Import Paths**: Use `com.linecorp.bot.model.*` instead of `com.linecorp.bot.messaging.*`
+- **Message Construction**: Uses `ReplyMessage` class for sending responses
+
 ### Testing
 - Tests located in `src/test/java`
 - Use `application-test.yml` for test configuration
@@ -106,8 +119,12 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Uses `./gradlew bootJar` for executable JAR creation
 
 ### Interactive Features
-- LINE Bot SDK 9.8.0 with interactive message templates
-- Quick Reply buttons for rapid user interaction
-- Buttons Template, Carousel Template, and Confirm Template support
-- Comprehensive interactive button guide available in `INTERACTIVE_BUTTONS_GUIDE.md`
-- PostbackEventHandler processes button interactions with structured data
+- **Flex Message System**: Beautiful card-style menus using LINE Bot SDK 6.0.0
+  - Main menu with `menu` or `選單` command triggers `FlexMenuService.createMenuFlexMessage()`
+  - Category submenus for different function groups (info, learn, life, ai)
+  - PostbackAction buttons with structured data handling
+  - Material Design color theme for consistent UI
+- **Text-based Fallback**: Traditional text menus via `InteractiveMenuService`
+  - Available with `text_menu` command for compatibility
+  - Number shortcuts (1-7) and letter shortcuts (A-D) supported
+- **Dual Menu System**: Both Flex and text menus coexist for different user preferences
