@@ -15,19 +15,7 @@ public class GroupEventHandler {
     private final MessageService messageService;
     private final MessageTemplateProvider messageTemplateProvider;
 
-    public void handle(JsonNode event) {
-        String eventType = event.get("type").asText();
-
-        switch (eventType) {
-            case "join" -> handleJoin(event);
-            case "leave" -> handleLeave(event);
-            case "memberJoined" -> handleMemberJoined(event);
-            case "memberLeft" -> handleMemberLeft(event);
-            default -> logger.warn("Unsupported group event type: {}", eventType);
-        }
-    }
-
-    private void handleJoin(JsonNode event) {
+    public void handleJoin(JsonNode event) {
         try {
             String replyToken = event.get("replyToken").asText();
             JsonNode source = event.get("source");
@@ -41,11 +29,11 @@ public class GroupEventHandler {
         }
     }
 
-    private void handleLeave(JsonNode event) {
+    public void handleLeave(JsonNode event) {
         logger.info("Bot left group/room");
     }
 
-    private void handleMemberJoined(JsonNode event) {
+    public void handleMemberJoined(JsonNode event) {
         try {
             String replyToken = event.get("replyToken").asText();
             int memberCount = event.get("joined").get("members").size();
@@ -58,7 +46,7 @@ public class GroupEventHandler {
         }
     }
 
-    private void handleMemberLeft(JsonNode event) {
+    public void handleMemberLeft(JsonNode event) {
         logger.info("Group member left");
     }
 }

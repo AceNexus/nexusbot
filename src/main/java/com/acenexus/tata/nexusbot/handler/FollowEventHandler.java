@@ -15,17 +15,7 @@ public class FollowEventHandler {
     private final MessageService messageService;
     private final MessageTemplateProvider messageTemplateProvider;
 
-    public void handle(JsonNode event) {
-        String eventType = event.get("type").asText();
-
-        switch (eventType) {
-            case "follow" -> handleFollow(event);
-            case "unfollow" -> handleUnfollow(event);
-            default -> logger.warn("Unsupported follow event type: {}", eventType);
-        }
-    }
-
-    private void handleFollow(JsonNode event) {
+    public void handleFollow(JsonNode event) {
         try {
             String replyToken = event.get("replyToken").asText();
             String userId = event.get("source").get("userId").asText();
@@ -38,7 +28,7 @@ public class FollowEventHandler {
         }
     }
 
-    private void handleUnfollow(JsonNode event) {
+    public void handleUnfollow(JsonNode event) {
         try {
             String userId = event.get("source").get("userId").asText();
             logger.info("User {} unfollowed the bot", userId);

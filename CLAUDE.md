@@ -51,12 +51,16 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
    - Falls back to AI processing via `GroqService`
    - Async processing with fallback responses
 
-**Service Layer** (Simplified Architecture):
-- `MessageService` - handles LINE API communication (SDK 6.0.0)
-- `GroqService` - AI chat integration (llama-3.1-8b-instant model)
-- `MessageProcessorService` - orchestrates message processing with two-tier approach (predefined commands → AI fallback)
-- `FlexMenuService` - creates Flex Message interactive menus using factory pattern
-- `EventHandlerService` - routes events to specific handlers based on event type
+**Domain-Driven Package Structure**:
+- `ai/` - AI service interface (`AIService`) and Groq implementation (`AIServiceImpl`)
+- `chatroom/` - Chat room management (`ChatRoomManager` interface, `ChatRoomManagerImpl`)
+- `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
+- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`)
+
+**Service Layer Architecture**:
+- All major services follow interface-implementation pattern with `Impl` suffix
+- `MessageProcessorService` orchestrates message processing (predefined commands → AI fallback)
+- Dependency injection uses interfaces for loose coupling and testability
 
 ### Configuration Management
 
@@ -75,7 +79,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Text messages (with AI responses)
 - Images, stickers, videos, audio files
 - File uploads, location sharing
-- All responses defined in `BotMessages` constants class
+- All responses handled by `MessageTemplateProvider` implementations
 
 ### Security & Validation
 - `SignatureValidator` - validates LINE webhook signatures
@@ -90,24 +94,25 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ## Development Guidelines
 
 ### Code Structure
-- Follow existing package structure: `config`, `controller`, `service`, `handler`, `constants`, `enums`
+- **Domain-based packages**: `ai/`, `chatroom/`, `template/` for domain logic; `service/`, `handler/`, `controller/` for technical concerns
+- **Interface-implementation pattern**: All major services have interfaces with `Impl` suffix implementations
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
 - **Simplicity over complexity**: Prefer direct switch statements over complex abstractions
-- **Single responsibility**: Each service should have one clear purpose
+- **Interface segregation**: Keep interfaces focused on specific domain responsibilities
 
 ### SOLID Principles
 
 **S - Single Responsibility Principle (SRP)**
 - Each class should have only one reason to change
-- Examples: `MessageService` only handles LINE API communication, `GroqService` only handles AI integration
+- Examples: `MessageService` only handles LINE API communication, `AIServiceImpl` only handles AI integration
 - Event handlers focus solely on routing, business logic stays in services
 
 **O - Open/Closed Principle (OCP)**
 - Classes should be open for extension, closed for modification
-- Use interfaces for external integrations (e.g., `GroqService` can be extended for different AI providers)
-- Factory pattern in `FlexMenuService` allows adding new menu types without changing existing code
+- Use interfaces for external integrations (e.g., `AIService` can have different implementations beyond Groq)
+- Template method pattern in `MessageTemplateProviderImpl` allows extending message types without modification
 
 **L - Liskov Substitution Principle (LSP)**
 - Derived classes must be substitutable for their base classes
@@ -148,25 +153,33 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - JAR versioning based on Git tags
 - Uses `./gradlew bootJar` for executable JAR creation
 
-### Simplified Menu Architecture
+### Database Design
 
-**Flex Message System** - Single service approach using design patterns:
-- **Factory Pattern**: `FlexMenuService.createMenu(MenuType)` creates different menu types
-- **Direct Handler Processing**: `PostbackEventHandler` directly processes button clicks
+**Entity Structure**:
+- `ChatRoom` - Per-room AI settings with lazy record creation
+  - Tracks AI enabled/disabled state for each LINE user/group
+  - Supports both individual and group conversations
+- `ConversationHistory` - Multi-turn conversation tracking (planned)
+
+**Data Access**:
+- JPA/Hibernate with `@Entity` annotations
+- Repository pattern with `ChatRoomRepository`
+- H2 in-memory database for local development
+- Automatic schema generation via `ddl-auto: update`
+
+### Menu Architecture
+
+**Flex Message System** - Template-based approach:
+- **Template Pattern**: `MessageTemplateProvider` creates different message types
+- **Direct Handler Processing**: `PostbackEventHandler` processes button interactions
 - **Material Design Theme**: Consistent color scheme across all menus
-- **Menu Types**: Main menu, AI settings, medication management, help menu
-- **Postback Actions**: Structured data format (`action=toggle_ai`, `action=back_to_menu`)
+- **Menu Types**: Main menu, AI settings, help menu
+- **Postback Actions**: Structured data format (`action=toggle_ai`, `action=main_menu`)
 
-**Event Processing Flow** (Simplified):
+**Event Processing Flow**:
 ```
 PostbackEventHandler
 ├── Parse action from postback data
-├── Process action directly OR
-└── Return appropriate Flex menu via FlexMenuService
+├── Delegate to ChatRoomManager for state changes
+└── Return appropriate template via MessageTemplateProvider
 ```
-
-**Key Design Decisions**:
-- Direct switch statement routing in handlers for simplicity
-- Single responsibility services with clear boundaries
-- No state management - stateless operation throughout
-- Simplified architecture without complex abstractions

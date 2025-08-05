@@ -33,12 +33,12 @@ public class EventHandlerService {
             switch (eventType) {
                 case "message" -> messageEventHandler.handle(event);
                 case "postback" -> postbackEventHandler.handle(event);
-                case "follow" -> followEventHandler.handle(event);
-                case "unfollow" -> followEventHandler.handle(event);
-                case "join" -> groupEventHandler.handle(event);
-                case "leave" -> groupEventHandler.handle(event);
-                case "memberJoined" -> groupEventHandler.handle(event);
-                case "memberLeft" -> groupEventHandler.handle(event);
+                case "follow" -> followEventHandler.handleFollow(event);
+                case "unfollow" -> followEventHandler.handleUnfollow(event);
+                case "join" -> groupEventHandler.handleJoin(event);
+                case "leave" -> groupEventHandler.handleLeave(event);
+                case "memberJoined" -> groupEventHandler.handleMemberJoined(event);
+                case "memberLeft" -> groupEventHandler.handleMemberLeft(event);
                 default -> logger.info("Unhandled event type: {}", eventType);
             }
 
