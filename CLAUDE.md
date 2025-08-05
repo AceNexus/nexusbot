@@ -97,6 +97,34 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **Simplicity over complexity**: Prefer direct switch statements over complex abstractions
 - **Single responsibility**: Each service should have one clear purpose
 
+### SOLID Principles
+
+**S - Single Responsibility Principle (SRP)**
+- Each class should have only one reason to change
+- Examples: `MessageService` only handles LINE API communication, `GroqService` only handles AI integration
+- Event handlers focus solely on routing, business logic stays in services
+
+**O - Open/Closed Principle (OCP)**
+- Classes should be open for extension, closed for modification
+- Use interfaces for external integrations (e.g., `GroqService` can be extended for different AI providers)
+- Factory pattern in `FlexMenuService` allows adding new menu types without changing existing code
+
+**L - Liskov Substitution Principle (LSP)**
+- Derived classes must be substitutable for their base classes
+- All service implementations should honor their interface contracts
+- Mock services in tests should behave identically to production services
+
+**I - Interface Segregation Principle (ISP)**
+- Clients should not depend on interfaces they don't use
+- Keep service interfaces focused and specific to their domain
+- Avoid monolithic service interfaces with unrelated methods
+
+**D - Dependency Inversion Principle (DIP)**
+- High-level modules should not depend on low-level modules - both should depend on abstractions
+- Use Spring's dependency injection with `@RequiredArgsConstructor`
+- Depend on interfaces, not concrete implementations where possible
+- Example: Services depend on Repository interfaces, not JPA implementations
+
 ### Configuration
 - Add new configuration properties to appropriate `Properties` classes
 - Validate critical configuration in `ConfigValidator`

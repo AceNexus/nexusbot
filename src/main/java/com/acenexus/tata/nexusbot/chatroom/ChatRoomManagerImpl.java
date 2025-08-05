@@ -1,4 +1,4 @@
-package com.acenexus.tata.nexusbot.service;
+package com.acenexus.tata.nexusbot.chatroom;
 
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.repository.ChatRoomRepository;
@@ -16,9 +16,9 @@ import java.time.LocalDateTime;
  */
 @Service
 @RequiredArgsConstructor
-public class ChatRoomService {
+public class ChatRoomManagerImpl implements ChatRoomManager {
 
-    private static final Logger logger = LoggerFactory.getLogger(ChatRoomService.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChatRoomManagerImpl.class);
 
     private final ChatRoomRepository chatRoomRepository;
 

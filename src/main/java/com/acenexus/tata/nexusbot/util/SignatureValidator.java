@@ -20,8 +20,7 @@ public class SignatureValidator {
     public boolean validate(String payload, String signature) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secretKeySpec = new SecretKeySpec(
-                    channelSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            SecretKeySpec secretKeySpec = new SecretKeySpec(channelSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             mac.init(secretKeySpec);
 
             byte[] digest = mac.doFinal(payload.getBytes(StandardCharsets.UTF_8));

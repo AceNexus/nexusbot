@@ -1,4 +1,4 @@
-package com.acenexus.tata.nexusbot.service;
+package com.acenexus.tata.nexusbot.ai;
 
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -13,8 +13,8 @@ import java.time.Duration;
 import java.util.Map;
 
 @Service
-public class GroqService {
-    private static final Logger logger = LoggerFactory.getLogger(GroqService.class);
+public class AIServiceImpl implements AIService {
+    private static final Logger logger = LoggerFactory.getLogger(AIServiceImpl.class);
 
     @Value("${groq.api-key:}")
     private String apiKey;

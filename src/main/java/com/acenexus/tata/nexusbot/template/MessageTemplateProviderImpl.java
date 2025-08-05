@@ -1,4 +1,4 @@
-package com.acenexus.tata.nexusbot.service;
+package com.acenexus.tata.nexusbot.template;
 
 import com.linecorp.bot.model.action.PostbackAction;
 import com.linecorp.bot.model.message.FlexMessage;
@@ -21,7 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 
 @Service
-public class MessageTemplateService {
+public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
     // 顏色配置
     private static final String PRIMARY_COLOR = "#1976D2";

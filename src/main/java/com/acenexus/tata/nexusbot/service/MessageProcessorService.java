@@ -1,6 +1,9 @@
 package com.acenexus.tata.nexusbot.service;
 
+import com.acenexus.tata.nexusbot.ai.AIService;
+import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,13 +16,13 @@ import java.util.concurrent.CompletableFuture;
 public class MessageProcessorService {
     private static final Logger logger = LoggerFactory.getLogger(MessageProcessorService.class);
     private final MessageService messageService;
-    private final GroqService groqService;
-    private final MessageTemplateService messageTemplateService;
-    private final ChatRoomService chatRoomService;
+    private final AIService aiService;
+    private final MessageTemplateProvider messageTemplateProvider;
+    private final ChatRoomManager chatRoomManager;
 
     public void processTextMessage(String roomId, String sourceType, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
-        ChatRoom.RoomType roomType = chatRoomService.determineRoomType(sourceType);
+        ChatRoom.RoomType roomType = chatRoomManager.determineRoomType(sourceType);
 
         // 處理預定義指令
         if (handlePredefinedCommand(normalizedText, roomId, replyToken)) {
@@ -27,7 +30,7 @@ public class MessageProcessorService {
         }
 
         // 檢查 AI 是否啟用
-        if (!chatRoomService.isAiEnabled(roomId, roomType)) {
+        if (!chatRoomManager.isAiEnabled(roomId, roomType)) {
             logger.info("AI disabled for room: {} (type: {}), skipping AI processing", roomId, roomType);
             return;
         }
@@ -40,7 +43,7 @@ public class MessageProcessorService {
         try {
             switch (normalizedText) {
                 case "menu", "選單" -> {
-                    messageService.sendMessage(replyToken, messageTemplateService.mainMenu());
+                    messageService.sendMessage(replyToken, messageTemplateProvider.mainMenu());
                     return true;
                 }
                 default -> {
@@ -56,56 +59,56 @@ public class MessageProcessorService {
     private void handleAIMessage(String roomId, String messageText, String replyToken) {
         CompletableFuture.runAsync(() -> {
             try {
-                String aiResponse = groqService.chat(messageText);
+                String aiResponse = aiService.chat(messageText);
                 String finalResponse = (aiResponse != null && !aiResponse.trim().isEmpty()) ?
-                        aiResponse : messageTemplateService.defaultTextResponse(messageText);
+                        aiResponse : messageTemplateProvider.defaultTextResponse(messageText);
                 messageService.sendReply(replyToken, finalResponse);
                 logger.info("AI response sent to room {}", roomId);
             } catch (Exception e) {
                 logger.error("AI processing error for room {}: {}", roomId, e.getMessage());
-                messageService.sendReply(replyToken, messageTemplateService.defaultTextResponse(messageText));
+                messageService.sendReply(replyToken, messageTemplateProvider.defaultTextResponse(messageText));
             }
         });
     }
 
     public void processImageMessage(String roomId, String messageId, String replyToken) {
-        String response = messageTemplateService.imageResponse(messageId);
+        String response = messageTemplateProvider.imageResponse(messageId);
         logger.info("Image message processed from room {}: messageId={}", roomId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processStickerMessage(String roomId, String packageId, String stickerId, String replyToken) {
-        String response = messageTemplateService.stickerResponse(packageId, stickerId);
+        String response = messageTemplateProvider.stickerResponse(packageId, stickerId);
         logger.info("Sticker message processed from room {}: packageId={}, stickerId={}", roomId, packageId, stickerId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processVideoMessage(String roomId, String messageId, String replyToken) {
-        String response = messageTemplateService.videoResponse(messageId);
+        String response = messageTemplateProvider.videoResponse(messageId);
         logger.info("Video message processed from room {}: messageId={}", roomId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processAudioMessage(String roomId, String messageId, String replyToken) {
-        String response = messageTemplateService.audioResponse(messageId);
+        String response = messageTemplateProvider.audioResponse(messageId);
         logger.info("Audio message processed from room {}: messageId={}", roomId, messageId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processFileMessage(String roomId, String messageId, String fileName, long fileSize, String replyToken) {
-        String response = messageTemplateService.fileResponse(fileName, fileSize);
+        String response = messageTemplateProvider.fileResponse(fileName, fileSize);
         logger.info("File message processed from room {}: fileName={}, size={}, messageId={}", roomId, fileName, fileSize, messageId);
         messageService.sendReply(replyToken, response);
     }
 
     public void processLocationMessage(String roomId, String title, String address, double latitude, double longitude, String replyToken) {
-        String response = messageTemplateService.locationResponse(title, address, latitude, longitude);
+        String response = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
         logger.info("Location message processed from room {}: title={}, address={}, lat={}, lon={}", roomId, title, address, latitude, longitude);
         messageService.sendReply(replyToken, response);
     }
 
     public void processDefaultMessage(String roomId, String replyToken) {
-        String response = messageTemplateService.unknownMessage();
+        String response = messageTemplateProvider.unknownMessage();
         logger.warn("Default message handler used for room {}", roomId);
         messageService.sendReply(replyToken, response);
     }

@@ -32,7 +32,9 @@
       "Bash(git add:*)",
       "Bash(git push:*)",
       "Bash(git commit:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(mkdir:*)",
+      "Bash(git restore:*)"
     ],
     "deny": []
   }

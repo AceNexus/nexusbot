@@ -1,7 +1,7 @@
 package com.acenexus.tata.nexusbot.handler;
 
 import com.acenexus.tata.nexusbot.service.MessageService;
-import com.acenexus.tata.nexusbot.service.MessageTemplateService;
+import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 public class GroupEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(GroupEventHandler.class);
     private final MessageService messageService;
-    private final MessageTemplateService messageTemplateService;
+    private final MessageTemplateProvider messageTemplateProvider;
 
     public void handle(JsonNode event) {
         String eventType = event.get("type").asText();
@@ -33,7 +33,7 @@ public class GroupEventHandler {
             JsonNode source = event.get("source");
             String sourceType = source.get("type").asText();
 
-            String joinMessage = messageTemplateService.groupJoinMessage(sourceType);
+            String joinMessage = messageTemplateProvider.groupJoinMessage(sourceType);
             messageService.sendReply(replyToken, joinMessage);
 
         } catch (Exception e) {
@@ -50,7 +50,7 @@ public class GroupEventHandler {
             String replyToken = event.get("replyToken").asText();
             int memberCount = event.get("joined").get("members").size();
 
-            String welcomeMessage = messageTemplateService.memberJoinedMessage(memberCount);
+            String welcomeMessage = messageTemplateProvider.memberJoinedMessage(memberCount);
             messageService.sendReply(replyToken, welcomeMessage);
 
         } catch (Exception e) {

@@ -1,9 +1,9 @@
 package com.acenexus.tata.nexusbot.handler;
 
+import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
-import com.acenexus.tata.nexusbot.service.ChatRoomService;
 import com.acenexus.tata.nexusbot.service.MessageService;
-import com.acenexus.tata.nexusbot.service.MessageTemplateService;
+import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +16,8 @@ import org.springframework.stereotype.Component;
 public class PostbackEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(PostbackEventHandler.class);
     private final MessageService messageService;
-    private final MessageTemplateService messageTemplateService;
-    private final ChatRoomService chatRoomService;
+    private final MessageTemplateProvider messageTemplateProvider;
+    private final ChatRoomManager chatRoomManager;
 
     public void handle(JsonNode event) {
         try {
@@ -31,36 +31,36 @@ public class PostbackEventHandler {
                 String sourceType = source.get("type").asText();
                 String roomId = sourceType.equals("group") ? source.get("groupId").asText() : source.get("userId").asText();
 
-                ChatRoom.RoomType roomType = chatRoomService.determineRoomType(sourceType);
+                ChatRoom.RoomType roomType = chatRoomManager.determineRoomType(sourceType);
 
                 logger.info("Room {} (type: {}) clicked button: {}", roomId, roomType, data);
 
                 // 處理按鈕回應
                 Message response = switch (data) {
                     case "action=toggle_ai" -> {
-                        boolean currentStatus = chatRoomService.isAiEnabled(roomId, roomType);
-                        yield messageTemplateService.aiSettingsMenu(currentStatus);
+                        boolean currentStatus = chatRoomManager.isAiEnabled(roomId, roomType);
+                        yield messageTemplateProvider.aiSettingsMenu(currentStatus);
                     }
                     case "action=enable_ai" -> {
-                        boolean success = chatRoomService.enableAi(roomId, roomType);
+                        boolean success = chatRoomManager.enableAi(roomId, roomType);
                         if (success) {
-                            yield messageTemplateService.success("AI 回應功能已啟用！您可以直接與我對話。");
+                            yield messageTemplateProvider.success("AI 回應功能已啟用！您可以直接與我對話。");
                         } else {
-                            yield messageTemplateService.error("啟用 AI 功能時發生錯誤，請稍後再試。");
+                            yield messageTemplateProvider.error("啟用 AI 功能時發生錯誤，請稍後再試。");
                         }
                     }
                     case "action=disable_ai" -> {
-                        boolean success = chatRoomService.disableAi(roomId, roomType);
+                        boolean success = chatRoomManager.disableAi(roomId, roomType);
                         if (success) {
-                            yield messageTemplateService.success("AI 回應功能已關閉。");
+                            yield messageTemplateProvider.success("AI 回應功能已關閉。");
                         } else {
-                            yield messageTemplateService.error("關閉 AI 功能時發生錯誤，請稍後再試。");
+                            yield messageTemplateProvider.error("關閉 AI 功能時發生錯誤，請稍後再試。");
                         }
                     }
-                    case "action=help_menu" -> messageTemplateService.helpMenu();
-                    case "action=main_menu" -> messageTemplateService.mainMenu();
-                    case "action=about" -> messageTemplateService.about();
-                    default -> messageTemplateService.postbackResponse(data);
+                    case "action=help_menu" -> messageTemplateProvider.helpMenu();
+                    case "action=main_menu" -> messageTemplateProvider.mainMenu();
+                    case "action=about" -> messageTemplateProvider.about();
+                    default -> messageTemplateProvider.postbackResponse(data);
                 };
 
                 messageService.sendMessage(replyToken, response);
