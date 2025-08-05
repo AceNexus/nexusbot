@@ -30,6 +30,17 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
   export PATH="/c/Program Files/Java/jdk-17/bin:$PATH"
   ```
 
+### Database Migration
+- **Flyway Integration**: Database schema managed through Flyway migrations
+- **Cross-Database Compatibility**: Single migration script works across H2 (local/test) and MySQL (dev/prod)
+- **Migration Scripts**: Located in `src/main/resources/db/migration`
+- **DDL Auto Strategy**: 
+  - All environments: `validate` mode (no auto-generation)
+  - Local/Test: `baseline-on-migrate: true` for existing databases
+  - Dev/Prod: `baseline-on-migrate: false` for strict migration validation
+- **Schema Consistency**: Identical schema structure across all environments
+- **SQL Compatibility**: Uses standard SQL syntax supported by both H2 and MySQL
+
 ## Architecture Overview
 
 ### Core Components
@@ -164,8 +175,8 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 **Data Access**:
 - JPA/Hibernate with `@Entity` annotations
 - Repository pattern with `ChatRoomRepository`
-- H2 in-memory database for local development
-- Automatic schema generation via `ddl-auto: update`
+- Database migration managed by Flyway
+- Schema validation via `ddl-auto: validate` (no auto-generation in any environment)
 
 ### Menu Architecture
 

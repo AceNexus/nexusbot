@@ -39,6 +39,9 @@ dependencies {
     // DataBase
     implementation("com.mysql:mysql-connector-j:8.3.0")
     runtimeOnly("com.h2database:h2")
+    
+    // Database Migration
+    implementation("org.flywaydb:flyway-core")
 
     // LINE Bot SDK
     implementation("com.linecorp.bot:line-bot-spring-boot:6.0.0")
