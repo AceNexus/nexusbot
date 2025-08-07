@@ -20,15 +20,18 @@ import org.springframework.stereotype.Service;
 import java.util.Arrays;
 import java.util.List;
 
+import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
+import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
+import static com.acenexus.tata.nexusbot.template.UIConstants.Icons;
+import static com.acenexus.tata.nexusbot.template.UIConstants.Sizes;
+
 @Service
 public class MessageTemplateProviderImpl implements MessageTemplateProvider {
-
-    // 顏色配置
-    private static final String PRIMARY_COLOR = "#1976D2";
-    private static final String SUCCESS_COLOR = "#4CAF50";
-    private static final String INFO_COLOR = "#2196F3";
-    private static final String ERROR_COLOR = "#F44336";
-    private static final String SECONDARY_COLOR = "#0288D1";
 
     public Message welcome() {
         return TextMessage.builder()
@@ -76,8 +79,8 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "NexusBot 功能選單",
                 "請選擇一項功能開始操作",
                 Arrays.asList(
-                        createButton("AI 回應開關", "action=toggle_ai", PRIMARY_COLOR),
-                        createButton("說明與支援", "action=help_menu", INFO_COLOR)
+                        createButton(Icons.AI + " AI 回應開關", TOGGLE_AI, Colors.PRIMARY),
+                        createButton(Icons.INFO + " 說明與支援", HELP_MENU, Colors.INFO)
                 )
         );
     }
@@ -93,9 +96,9 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "AI 回應設定",
                 "管理 AI 功能相關設定\n" + statusText,
                 Arrays.asList(
-                        createButton("開啟 AI 回應", "action=enable_ai", SUCCESS_COLOR),
-                        createButton("關閉 AI 回應", "action=disable_ai", ERROR_COLOR),
-                        createButton("返回主選單", "action=main_menu", SECONDARY_COLOR)
+                        createButton(Icons.SUCCESS + " 開啟 AI 回應", ENABLE_AI, Colors.SUCCESS),
+                        createButton(Icons.ERROR + " 關閉 AI 回應", DISABLE_AI, Colors.ERROR),
+                        createButton(Icons.HOME + " 返回主選單", MAIN_MENU, Colors.SECONDARY)
                 )
         );
     }
@@ -105,30 +108,30 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "說明與支援",
                 "瞭解如何使用 NexusBot",
                 Arrays.asList(
-                        createButton("關於 NexusBot", "action=about", SECONDARY_COLOR),
-                        createButton("返回主選單", "action=main_menu", SECONDARY_COLOR)
+                        createButton(Icons.ABOUT + " 關於 NexusBot", ABOUT, Colors.INFO),
+                        createButton(Icons.HOME + " 返回主選單", MAIN_MENU, Colors.SECONDARY)
                 )
         );
     }
 
     public String imageResponse(String messageId) {
-        return "收到您的圖片\n圖片ID: " + messageId;
+        return Icons.IMAGE + " 收到您的圖片\n圖片ID: " + messageId;
     }
 
     public String stickerResponse(String packageId, String stickerId) {
-        return String.format("很可愛的貼圖\n貼圖包ID: %s\n貼圖ID: %s", packageId, stickerId);
+        return String.format(Icons.STICKER + " 很可愛的貼圖\n貼圖包ID: %s\n貼圖ID: %s", packageId, stickerId);
     }
 
     public String videoResponse(String messageId) {
-        return "收到您的影片\n影片ID: " + messageId;
+        return Icons.VIDEO + " 收到您的影片\n影片ID: " + messageId;
     }
 
     public String audioResponse(String messageId) {
-        return "收到您的音檔\n音檔ID: " + messageId;
+        return Icons.AUDIO + " 收到您的音檔\n音檔ID: " + messageId;
     }
 
     public String fileResponse(String fileName, long fileSize) {
-        return String.format("收到您的檔案\n檔名: %s\n大小: %d bytes", fileName, fileSize);
+        return String.format(Icons.FILE + " 收到您的檔案\n檔名: %s\n大小: %d bytes", fileName, fileSize);
     }
 
     public String locationResponse(String title, String address, double latitude, double longitude) {
@@ -169,10 +172,10 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     private FlexMessage createFlexMenu(String title, String subtitle, List<Button> buttons) {
         // 標題
         Text titleText = Text.builder()
-                .text(title)
+                .text(Icons.STAR + " " + title)
                 .size(FlexFontSize.XL)
                 .align(FlexAlign.CENTER)
-                .color("#212121")
+                .color(Colors.TEXT_PRIMARY)
                 .weight(Text.TextWeight.BOLD)
                 .wrap(true)
                 .build();
@@ -181,7 +184,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         Text subtitleText = Text.builder()
                 .text(subtitle)
                 .size(FlexFontSize.SM)
-                .color("#757575")
+                .color(Colors.TEXT_SECONDARY)
                 .align(FlexAlign.CENTER)
                 .wrap(true)
                 .margin(FlexMarginSize.SM)
@@ -190,7 +193,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         // 分隔線
         Separator separator = Separator.builder()
                 .margin(FlexMarginSize.LG)
-                .color("#E0E0E0")
+                .color(Colors.SEPARATOR)
                 .build();
 
         // 組合按鈕和間隔
@@ -211,7 +214,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .layout(FlexLayout.VERTICAL)
                 .contents(components)
                 .paddingAll(FlexPaddingSize.LG)
-                .backgroundColor("#FFFFFF")
+                .backgroundColor(Colors.BACKGROUND)
                 .build();
 
         // Bubble 容器
@@ -241,7 +244,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         return Box.builder()
                 .layout(FlexLayout.VERTICAL)
                 .contents(Arrays.asList())
-                .height("8px")
+                .height(Sizes.SPACING_MD)
                 .build();
     }
 }

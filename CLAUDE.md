@@ -24,10 +24,18 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - H2 Console available at: `http://localhost:5001/h2-console`
 - Application runs on port 5001 (configurable via `SERVER_PORT`)
 - **Java Environment**: Requires Java 17+ (configured for Java 17, tested with Java 21)
-- **Windows Development**: May need to set JAVA_HOME for Gradle: 
+- **Critical**: Gradle must use Java 17+. Common issue is Gradle using Java 8, causing build failures
+- **Windows Development**: Set correct Java environment for Gradle: 
   ```bash
+  # For Windows Command Prompt
+  set JAVA_HOME="C:\Program Files\Java\jdk-17"
+  
+  # For Git Bash/WSL
   export JAVA_HOME="/c/Program Files/Java/jdk-17"
   export PATH="/c/Program Files/Java/jdk-17/bin:$PATH"
+  
+  # Then run Gradle commands
+  ./gradlew build
   ```
 
 ### Database Migration
@@ -67,6 +75,8 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - `chatroom/` - Chat room management (`ChatRoomManager` interface, `ChatRoomManagerImpl`)
 - `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
 - `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`)
+- `constants/` - Global constants management (`Actions` for postback actions)
+- `handler/` - Event processing handlers (`PostbackEventHandler`, `MessageEventHandler`)
 
 **Service Layer Architecture**:
 - All major services follow interface-implementation pattern with `Impl` suffix
@@ -107,11 +117,26 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ### Code Structure
 - **Domain-based packages**: `ai/`, `chatroom/`, `template/` for domain logic; `service/`, `handler/`, `controller/` for technical concerns
 - **Interface-implementation pattern**: All major services have interfaces with `Impl` suffix implementations
+- **Constants Management**: Use `Actions` class for postback constants, `UIConstants` for UI styling
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
 - **Simplicity over complexity**: Prefer direct switch statements over complex abstractions
 - **Interface segregation**: Keep interfaces focused on specific domain responsibilities
+
+### Constants and UI Management
+- **Actions Constants**: All postback actions defined in `constants/Actions.java`
+  ```java
+  import static com.acenexus.tata.nexusbot.constants.Actions.*;
+  // Use TOGGLE_AI, ENABLE_AI, DISABLE_AI, etc.
+  ```
+- **UI Constants**: Colors, icons, and sizing in `template/UIConstants.java`
+  ```java
+  import static com.acenexus.tata.nexusbot.template.UIConstants.*;
+  // Use Colors.PRIMARY, Icons.AI, Sizes.SPACING_MD
+  ```
+- **Consistent Styling**: iOS-inspired color palette with semantic color usage
+- **Icon Management**: Centralized emoji icons with semantic meaning
 
 ### SOLID Principles
 
@@ -178,19 +203,47 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Database migration managed by Flyway
 - Schema validation via `ddl-auto: validate` (no auto-generation in any environment)
 
-### Menu Architecture
+### UI Design System Architecture
 
-**Flex Message System** - Template-based approach:
-- **Template Pattern**: `MessageTemplateProvider` creates different message types
-- **Direct Handler Processing**: `PostbackEventHandler` processes button interactions
-- **Material Design Theme**: Consistent color scheme across all menus
-- **Menu Types**: Main menu, AI settings, help menu
-- **Postback Actions**: Structured data format (`action=toggle_ai`, `action=main_menu`)
+**Constants-Based UI System**:
+- **UIConstants**: Centralized design constants (colors, icons, spacing)
+- **Actions**: Postback action constants for button interactions
+- **Template Pattern**: `MessageTemplateProvider` creates consistent Flex Message layouts
 
-**Event Processing Flow**:
+**Design System Structure**:
+```java
+// UI Constants
+Colors.PRIMARY = "#007AFF"    // iOS blue
+Colors.SUCCESS = "#34C759"    // Fresh green
+Colors.ERROR = "#FF3B30"      // Warm red
+Icons.AI = "🤖"               // Robot emoji
+Sizes.SPACING_MD = "12px"     // Standard spacing
+
+// Action Constants  
+Actions.TOGGLE_AI = "action=toggle_ai"
+Actions.ENABLE_AI = "action=enable_ai"
+Actions.MAIN_MENU = "action=main_menu"
 ```
-PostbackEventHandler
-├── Parse action from postback data
-├── Delegate to ChatRoomManager for state changes
-└── Return appropriate template via MessageTemplateProvider
+
+**Flex Message Creation Pattern**:
+```java
+// In MessageTemplateProviderImpl
+createButton(Icons.AI + " AI 回應開關", TOGGLE_AI, Colors.PRIMARY)
 ```
+
+**Event Processing Integration**:
+```java
+// In PostbackEventHandler
+switch (data) {
+    case TOGGLE_AI -> handleToggleAI();
+    case ENABLE_AI -> handleEnableAI();
+    // Actions constants ensure consistency
+}
+```
+
+**UI Color Palette** (iOS-inspired):
+- Primary: `#007AFF` (iOS blue) 
+- Success: `#34C759` (fresh green)
+- Info: `#5856D6` (elegant purple)  
+- Error: `#FF3B30` (warm red)
+- Secondary: `#8E8E93` (neutral gray)

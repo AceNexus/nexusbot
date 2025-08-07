@@ -11,6 +11,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
+
 @Component
 @RequiredArgsConstructor
 public class PostbackEventHandler {
@@ -37,11 +44,11 @@ public class PostbackEventHandler {
 
                 // 處理按鈕回應
                 Message response = switch (data) {
-                    case "action=toggle_ai" -> {
+                    case TOGGLE_AI -> {
                         boolean currentStatus = chatRoomManager.isAiEnabled(roomId, roomType);
                         yield messageTemplateProvider.aiSettingsMenu(currentStatus);
                     }
-                    case "action=enable_ai" -> {
+                    case ENABLE_AI -> {
                         boolean success = chatRoomManager.enableAi(roomId, roomType);
                         if (success) {
                             yield messageTemplateProvider.success("AI 回應功能已啟用！您可以直接與我對話。");
@@ -49,7 +56,7 @@ public class PostbackEventHandler {
                             yield messageTemplateProvider.error("啟用 AI 功能時發生錯誤，請稍後再試。");
                         }
                     }
-                    case "action=disable_ai" -> {
+                    case DISABLE_AI -> {
                         boolean success = chatRoomManager.disableAi(roomId, roomType);
                         if (success) {
                             yield messageTemplateProvider.success("AI 回應功能已關閉。");
@@ -57,9 +64,9 @@ public class PostbackEventHandler {
                             yield messageTemplateProvider.error("關閉 AI 功能時發生錯誤，請稍後再試。");
                         }
                     }
-                    case "action=help_menu" -> messageTemplateProvider.helpMenu();
-                    case "action=main_menu" -> messageTemplateProvider.mainMenu();
-                    case "action=about" -> messageTemplateProvider.about();
+                    case HELP_MENU -> messageTemplateProvider.helpMenu();
+                    case MAIN_MENU -> messageTemplateProvider.mainMenu();
+                    case ABOUT -> messageTemplateProvider.about();
                     default -> messageTemplateProvider.postbackResponse(data);
                 };
 
