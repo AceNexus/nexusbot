@@ -109,7 +109,8 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ### AI Integration
 - Groq API integration for chat responses
 - Configurable model (default: llama-3.1-8b-instant)
-- System prompt configured for Traditional Chinese responses
+- System prompt: Natural conversational friend character in Traditional Chinese
+- Character: Knowledge-rich friend with casual, direct communication style
 - 15-second timeout with graceful fallback
 
 ## Development Guidelines
@@ -213,9 +214,9 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 **Design System Structure**:
 ```java
 // UI Constants
-Colors.PRIMARY = "#007AFF"    // iOS blue
-Colors.SUCCESS = "#34C759"    // Fresh green
-Colors.ERROR = "#FF3B30"      // Warm red
+Colors.PRIMARY = "#E4405F"    // Instagram pink
+Colors.SUCCESS = "#00C896"    // Mint green
+Colors.ERROR = "#FF6B6B"      // Coral red
 Icons.AI = "🤖"               // Robot emoji
 Sizes.SPACING_MD = "12px"     // Standard spacing
 
@@ -241,9 +242,9 @@ switch (data) {
 }
 ```
 
-**UI Color Palette** (iOS-inspired):
-- Primary: `#007AFF` (iOS blue) 
-- Success: `#34C759` (fresh green)
-- Info: `#5856D6` (elegant purple)  
-- Error: `#FF3B30` (warm red)
-- Secondary: `#8E8E93` (neutral gray)
+**UI Color Palette** (Instagram-inspired):
+- Primary: `#E4405F` (Instagram pink) 
+- Success: `#00C896` (mint green)
+- Info: `#5B51D8` (dream purple)  
+- Error: `#FF6B6B` (coral red)
+- Secondary: `#95A5A6` (elegant gray)

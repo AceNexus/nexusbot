@@ -10,12 +10,12 @@ public final class UIConstants {
 
     // ============= 配色管理 =============
     public static final class Colors {
-        // 主要配色
-        public static final String PRIMARY = "#007AFF";      // 藍
-        public static final String SUCCESS = "#34C759";      // 綠
-        public static final String INFO = "#5856D6";         // 紫
-        public static final String ERROR = "#FF3B30";        // 紅
-        public static final String SECONDARY = "#8E8E93";    // 灰
+        // 主要配色 - Instagram 漸層風格
+        public static final String PRIMARY = "#E4405F";
+        public static final String SUCCESS = "#00C896";
+        public static final String INFO = "#5B51D8";
+        public static final String ERROR = "#FF6B6B";
+        public static final String SECONDARY = "#95A5A6";
 
         // 背景色彩
         public static final String BACKGROUND = "#FAFAFA";   // 淺灰背景

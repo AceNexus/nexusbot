@@ -53,7 +53,19 @@ public class AIServiceImpl implements AIService {
             var request = Map.of(
                     "model", model,
                     "messages", new Object[]{
-                            Map.of("role", "system", "content", "你是友善的聊天機器人，用繁體中文簡潔回應。"),
+                            Map.of("role", "system", "content", """
+                                    你是個知識豐富的朋友，回答問題時自然直接。
+                                    
+                                    回應原則：
+                                    1. 用繁體中文回答
+                                    2. 簡潔明瞭，不超過 200 字
+                                    3. 口語化，就像跟朋友聊天
+                                    4. 不知道就說不知道，別硬掰
+                                    5. 避免太正式或太假掰的語氣
+                                    6. 少用表情符號，專注回答內容
+                                    
+                                    就像平常聊天一樣輕鬆回應就好。
+                                    """),
                             Map.of("role", "user", "content", message)
                     },
                     "temperature", 0.7,
