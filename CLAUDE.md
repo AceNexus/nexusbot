@@ -14,6 +14,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **Build and test**: `./gradlew build test`
 - **Run locally**: `./gradlew bootRun`
 - **Create executable JAR**: `./gradlew bootJar` (outputs to `build/libs/`)
+- **Clean build**: `./gradlew clean build`
 
 ### Testing
 - **Single test class**: `./gradlew test --tests ClassName`
@@ -125,6 +126,13 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **Simplicity over complexity**: Prefer direct switch statements over complex abstractions
 - **Interface segregation**: Keep interfaces focused on specific domain responsibilities
 
+### Build System
+- **Gradle Kotlin DSL**: Uses `build.gradle.kts` with Kotlin syntax
+- **Versioning**: Git tag-based versioning (reads from `git describe --tags --abbrev=0`)
+- **Java Toolchain**: Configured for Java 17 (line 22-25 in build.gradle.kts)
+- **Spring Boot Plugin**: Version 3.4.3 with dependency management
+- **JAR Configuration**: Standard jar disabled, bootJar enabled for executable deployment
+
 ### Constants and UI Management
 - **Actions Constants**: All postback actions defined in `constants/Actions.java`
   ```java
@@ -203,6 +211,11 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Repository pattern with `ChatRoomRepository`
 - Database migration managed by Flyway
 - Schema validation via `ddl-auto: validate` (no auto-generation in any environment)
+
+**Migration Scripts**:
+- Located in `src/main/resources/db/migration`
+- File naming: `V{version}__{description}.sql` (e.g., `V1__Create_chat_rooms_table.sql`)
+- Cross-database compatibility (H2 local, MySQL dev/prod)
 
 ### UI Design System Architecture
 
