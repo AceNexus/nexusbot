@@ -2,7 +2,9 @@ package com.acenexus.tata.nexusbot.service;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
+import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -19,8 +21,9 @@ public class MessageProcessorService {
     private final AIService aiService;
     private final MessageTemplateProvider messageTemplateProvider;
     private final ChatRoomManager chatRoomManager;
+    private final ChatMessageRepository chatMessageRepository;
 
-    public void processTextMessage(String roomId, String sourceType, String messageText, String replyToken) {
+    public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
         ChatRoom.RoomType roomType = chatRoomManager.determineRoomType(sourceType);
 
@@ -34,6 +37,10 @@ public class MessageProcessorService {
             logger.info("AI disabled for room: {} (type: {}), skipping AI processing", roomId, roomType);
             return;
         }
+
+        // 儲存用戶對話
+        ChatMessage userMessage = ChatMessage.createUserMessage(roomId, roomType, userId, messageText);
+        chatMessageRepository.save(userMessage);
 
         // 非同步處理 AI 對話
         handleAIMessage(roomId, messageText, replyToken);

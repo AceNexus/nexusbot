@@ -107,7 +107,7 @@ String response = aiService.generateResponse("Hello"); // 任何實作都能正�
 
 **I - 介面隔離原則 (Interface Segregation)**
 
-*客戶端不應該依賴它不使用的介面*
+*一個介面應該專注於單一職責，避免包含不相關的功能*
 
 ```java
 // 分離不同職責的介面，避免肥大介面

@@ -11,7 +11,7 @@ CREATE TABLE chat_messages (
     room_id VARCHAR(100) NOT NULL,                                                       -- 聊天室 ID（LINE userId 或 groupId）
     room_type VARCHAR(10) NOT NULL CHECK (room_type IN ('USER', 'GROUP')),               -- 聊天室類型：USER=個人聊天，GROUP=群組聊天（冗余設計）
     user_id VARCHAR(100),                                                                -- 發送者 ID（LINE userId），AI 訊息此欄為 null
-    message_type VARCHAR(20) NOT NULL CHECK (message_type IN ('USER', 'AI'))             -- 訊息類型：USER=用戶訊息，AI=AI回應
+    message_type VARCHAR(20) NOT NULL CHECK (message_type IN ('USER', 'AI')),            -- 訊息類型：USER=用戶訊息，AI=AI回應
     content TEXT NOT NULL,                                                               -- 訊息內容（支援長文本）
     tokens_used INTEGER DEFAULT 0,                                                       -- AI 處理使用的 tokens 數量（成本統計用）
     processing_time_ms INTEGER DEFAULT 0,                                                -- AI 處理時間（毫秒，效能監控用）

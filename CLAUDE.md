@@ -201,21 +201,26 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ### Database Design
 
 **Entity Structure**:
-- `ChatRoom` - Per-room AI settings with lazy record creation
+- `ChatRoom` (V1 migration) - Per-room AI settings with lazy record creation
   - Tracks AI enabled/disabled state for each LINE user/group
   - Supports both individual and group conversations
-- `ConversationHistory` - Multi-turn conversation tracking (planned)
+- `ChatMessage` (V2 migration) - Multi-turn conversation tracking and AI analytics
+  - Records all user and AI messages with timestamps
+  - Includes AI cost tracking (tokens_used, processing_time_ms, ai_model)
+  - Contains room_type redundancy for query performance optimization
 
 **Data Access**:
 - JPA/Hibernate with `@Entity` annotations
-- Repository pattern with `ChatRoomRepository`
+- Repository pattern with `ChatRoomRepository` and `ConversationHistoryRepository`
 - Database migration managed by Flyway
 - Schema validation via `ddl-auto: validate` (no auto-generation in any environment)
 
 **Migration Scripts**:
 - Located in `src/main/resources/db/migration`
-- File naming: `V{version}__{description}.sql` (e.g., `V1__Create_chat_rooms_table.sql`)
+- File naming: `V{version}__{description}.sql` (e.g., `V2__Create_chat_messages_table.sql`)
 - Cross-database compatibility (H2 local, MySQL dev/prod)
+- **No Foreign Key Constraints**: Uses application-layer consistency control for better performance
+- **Design Rationale**: Detailed comments in migration files explain architectural decisions
 
 ### UI Design System Architecture
 

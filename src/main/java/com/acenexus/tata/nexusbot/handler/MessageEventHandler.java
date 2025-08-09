@@ -23,12 +23,13 @@ public class MessageEventHandler {
             JsonNode source = event.get("source");
             String sourceType = source.get("type").asText();
             String roomId = sourceType.equals("group") ? source.get("groupId").asText() : source.get("userId").asText();
+            String userId = source.get("userId").asText();
 
             switch (messageType) {
                 case "text" -> {
                     String userText = message.get("text").asText();
                     logger.info("Room {} (type: {}) sent text message: {}", roomId, sourceType, userText);
-                    messageProcessorService.processTextMessage(roomId, sourceType, userText, replyToken);
+                    messageProcessorService.processTextMessage(roomId, sourceType, userId, userText, replyToken);
                 }
                 case "image" -> {
                     String messageId = message.get("id").asText();
