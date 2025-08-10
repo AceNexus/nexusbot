@@ -43,7 +43,7 @@ public class MessageProcessorService {
         chatMessageRepository.save(userMessage);
 
         // 非同步處理 AI 對話
-        handleAIMessage(roomId, messageText, replyToken);
+        handleAIMessage(roomId, roomType, messageText, replyToken);
     }
 
     private boolean handlePredefinedCommand(String normalizedText, String roomId, String replyToken) {
@@ -63,17 +63,27 @@ public class MessageProcessorService {
         }
     }
 
-    private void handleAIMessage(String roomId, String messageText, String replyToken) {
+    private void handleAIMessage(String roomId, ChatRoom.RoomType roomType, String messageText, String replyToken) {
         CompletableFuture.runAsync(() -> {
             try {
-                String aiResponse = aiService.chat(messageText);
-                String finalResponse = (aiResponse != null && !aiResponse.trim().isEmpty()) ?
-                        aiResponse : messageTemplateProvider.defaultTextResponse(messageText);
+                AIService.ChatResponse chatResponse = aiService.chatWithDetails(messageText);
+                String finalResponse = (chatResponse.success() && chatResponse.content() != null && !chatResponse.content().trim().isEmpty()) ? chatResponse.content() : messageTemplateProvider.defaultTextResponse(messageText);
+
                 messageService.sendReply(replyToken, finalResponse);
-                logger.info("AI response sent to room {}", roomId);
+
+                // 儲存 AI 對話（現在有真實的 tokens 和處理時間）
+                ChatMessage aiMessage = ChatMessage.createAIMessage(roomId, roomType, finalResponse, chatResponse.model(), chatResponse.tokensUsed(), chatResponse.processingTime().intValue());
+                chatMessageRepository.save(aiMessage);
+
+                logger.info("AI response sent to room {}, tokens: {}, time: {}ms", roomId, chatResponse.tokensUsed(), chatResponse.processingTime());
             } catch (Exception e) {
                 logger.error("AI processing error for room {}: {}", roomId, e.getMessage());
-                messageService.sendReply(replyToken, messageTemplateProvider.defaultTextResponse(messageText));
+                String fallbackResponse = messageTemplateProvider.defaultTextResponse(messageText);
+                messageService.sendReply(replyToken, fallbackResponse);
+
+                // 也儲存錯誤回應
+                ChatMessage aiMessage = ChatMessage.createAIMessage(roomId, roomType, fallbackResponse, "fallback", 0, 0);
+                chatMessageRepository.save(aiMessage);
             }
         });
     }

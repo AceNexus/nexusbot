@@ -9,7 +9,19 @@ public interface AIService {
      * 處理聊天對話
      *
      * @param message 使用者訊息
-     * @return AI 回應，失敗時回傳 null
+     * @return AI 回應結果（包含模型、tokens等資訊）
      */
-    String chat(String message);
+    ChatResponse chatWithDetails(String message);
+
+    /**
+     * AI 回應結果
+     */
+    record ChatResponse(
+            String content,
+            String model,
+            Integer tokensUsed,
+            Long processingTime,
+            boolean success
+    ) {
+    }
 }

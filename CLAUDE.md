@@ -64,12 +64,14 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
    - `GroupEventHandler` - handles group join/leave events
 
 **Message Processing Pipeline**:
-1. `MessageEventHandler` receives message events
+1. `MessageEventHandler` receives message events and extracts `userId` from LINE payload
 2. Routes to `MessageProcessorService` based on message type
 3. For text messages:
+   - Stores user message to `chat_messages` table immediately
    - First checks for predefined commands (menu, 選單)
-   - Falls back to AI processing via `GroqService`
+   - Falls back to AI processing via `AIService`
    - Async processing with fallback responses
+   - Stores AI responses with analytics (processing time, model used)
 
 **Domain-Driven Package Structure**:
 - `ai/` - AI service interface (`AIService`) and Groq implementation (`AIServiceImpl`)
@@ -108,21 +110,26 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Request signature verification (can be disabled for development)
 
 ### AI Integration
-- Groq API integration for chat responses
-- Configurable model (default: llama-3.1-8b-instant)
-- System prompt: Natural conversational friend character in Traditional Chinese
-- Character: Knowledge-rich friend with casual, direct communication style
-- 15-second timeout with graceful fallback
+- **Groq API Integration**: Primary AI service for chat responses
+- **Model Configuration**: Configurable model via `groq.model` property (default: llama-3.1-8b-instant)
+- **Character Design**: Natural conversational friend character in Traditional Chinese
+- **Response Style**: Knowledge-rich friend with casual, direct communication style
+- **Timeout Handling**: 15-second timeout with graceful fallback to default responses
+- **Message Storage**: All user messages and AI responses stored in `chat_messages` table with analytics
+- **Async Processing**: AI requests processed asynchronously via `CompletableFuture` to avoid blocking LINE webhook responses
 
 ## Development Guidelines
 
 ### Code Structure
 - **Domain-based packages**: `ai/`, `chatroom/`, `template/` for domain logic; `service/`, `handler/`, `controller/` for technical concerns
 - **Interface-implementation pattern**: All major services have interfaces with `Impl` suffix implementations
+- **Entity Lifecycle Management**: JPA entities use `@PrePersist` and `@PreUpdate` for automatic timestamp handling
 - **Constants Management**: Use `Actions` class for postback constants, `UIConstants` for UI styling
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
+- **Async Pattern**: Use `CompletableFuture.runAsync()` for non-blocking operations, especially AI processing
+- **Transaction Management**: Use `@Transactional` for database operations, avoid in async contexts
 - **Simplicity over complexity**: Prefer direct switch statements over complex abstractions
 - **Interface segregation**: Keep interfaces focused on specific domain responsibilities
 
@@ -211,7 +218,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 
 **Data Access**:
 - JPA/Hibernate with `@Entity` annotations
-- Repository pattern with `ChatRoomRepository` and `ConversationHistoryRepository`
+- Repository pattern with `ChatRoomRepository` and `ChatMessageRepository`
 - Database migration managed by Flyway
 - Schema validation via `ddl-auto: validate` (no auto-generation in any environment)
 
@@ -266,3 +273,30 @@ switch (data) {
 - Info: `#5B51D8` (dream purple)  
 - Error: `#FF6B6B` (coral red)
 - Secondary: `#95A5A6` (elegant gray)
+
+## Common Issues and Solutions
+
+### Build Issues
+- **Java Version Mismatch**: Ensure Gradle uses Java 17+, not Java 8
+- **Compilation Errors**: After major changes, run `./gradlew clean build` to clear cache
+- **Dependency Conflicts**: Check `build.gradle.kts` for version alignment
+
+### Database Issues
+- **Migration Failures**: Check Flyway baseline settings in configuration
+- **H2 Console Access**: Ensure correct JDBC URL format in local development
+- **Entity Mapping Errors**: Verify JPA annotations and database column names match
+
+### AI Integration Issues
+- **Groq API Failures**: Check API key configuration and network connectivity
+- **Timeout Issues**: AI processing has 15-second timeout, check response patterns
+- **Empty Responses**: Fallback mechanism provides default responses when AI fails
+
+### LINE Bot Integration
+- **Webhook Validation**: Signature validation can be disabled for development
+- **Message Type Handling**: All message types have specific handlers in `MessageEventHandler`
+- **Async Response Issues**: Use `CompletableFuture` for non-blocking AI processing
+
+### Performance Considerations
+- **Database Queries**: `ChatMessageRepository` includes optimized queries for analytics
+- **Memory Usage**: H2 in-memory database for local development
+- **Async Processing**: AI requests don't block LINE webhook responses

@@ -40,14 +40,16 @@ public class AIServiceImpl implements AIService {
         }
     }
 
-    public String chat(String message) {
+    public ChatResponse chatWithDetails(String message) {
         if (!isConfigured) {
-            return null;
+            return new ChatResponse(null, model, 0, 0L, false);
         }
 
         if (message == null || message.trim().isEmpty()) {
-            return null;
+            return new ChatResponse(null, model, 0, 0L, false);
         }
+
+        long startTime = System.currentTimeMillis();
 
         try {
             var request = Map.of(
@@ -55,7 +57,7 @@ public class AIServiceImpl implements AIService {
                     "messages", new Object[]{
                             Map.of("role", "system", "content", """
                                     你是個知識豐富的朋友，回答問題時自然直接。
-                                    
+                                                                        
                                     回應原則：
                                     1. 用繁體中文回答
                                     2. 簡潔明瞭，不超過 200 字
@@ -63,7 +65,7 @@ public class AIServiceImpl implements AIService {
                                     4. 不知道就說不知道，別硬掰
                                     5. 避免太正式或太假掰的語氣
                                     6. 少用表情符號，專注回答內容
-                                    
+                                                                        
                                     就像平常聊天一樣輕鬆回應就好。
                                     """),
                             Map.of("role", "user", "content", message)
@@ -81,31 +83,59 @@ public class AIServiceImpl implements AIService {
                     .timeout(Duration.ofSeconds(15))
                     .block();
 
-            return extractContent(response);
+            long processingTime = System.currentTimeMillis() - startTime;
+            logger.debug("Groq API response: {}", response);
+
+            return parseGroqResponse(response, processingTime);
 
         } catch (Exception e) {
+            long processingTime = System.currentTimeMillis() - startTime;
             logger.error("Groq API call failed: {}", e.getMessage());
-            return null;
+            return new ChatResponse(null, model, 0, processingTime, false);
         }
     }
 
-    private String extractContent(Map<?, ?> response) {
+    /**
+     * 解析 Groq API 回應，一次性提取所有需要的資料
+     *
+     * @param response       Groq API 原始回應
+     * @param processingTime 處理時間
+     * @return ChatResponse 物件
+     */
+    private ChatResponse parseGroqResponse(Map<?, ?> response, long processingTime) {
         if (response == null) {
-            return null;
+            return new ChatResponse(null, model, 0, processingTime, false);
         }
 
         try {
+            // 解析 content
+            String content = null;
             var choices = (java.util.List<?>) response.get("choices");
             if (choices != null && !choices.isEmpty()) {
                 var choice = (Map<?, ?>) choices.get(0);
                 var messageObj = (Map<?, ?>) choice.get("message");
-                var content = (String) messageObj.get("content");
-                return (content != null) ? content.trim() : null;
+                if (messageObj != null) {
+                    var rawContent = (String) messageObj.get("content");
+                    content = (rawContent != null) ? rawContent.trim() : null;
+                }
             }
+
+            // 解析 tokens
+            Integer tokensUsed = 0;
+            var usage = (Map<?, ?>) response.get("usage");
+            if (usage != null) {
+                var totalTokens = usage.get("total_tokens");
+                if (totalTokens instanceof Number) {
+                    tokensUsed = ((Number) totalTokens).intValue();
+                }
+                logger.debug("Tokens used: {}", tokensUsed);
+            }
+
+            return new ChatResponse(content, model, tokensUsed, processingTime, content != null);
+
         } catch (Exception e) {
             logger.error("Failed to parse Groq response: {}", e.getMessage());
+            return new ChatResponse(null, model, 0, processingTime, false);
         }
-
-        return null;
     }
 }
