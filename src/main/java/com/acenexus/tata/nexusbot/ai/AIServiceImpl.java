@@ -28,6 +28,9 @@ public class AIServiceImpl implements AIService {
     @Value("${groq.model:llama-3.1-8b-instant}")
     private String model;
 
+    @Value("${ai.conversation.history-limit:15}")
+    private int historyLimit;
+
     private volatile WebClient webClient;
     private volatile boolean isConfigured = false;
 
@@ -61,8 +64,8 @@ public class AIServiceImpl implements AIService {
         long startTime = System.currentTimeMillis();
 
         try {
-            // 獲取最近的對話歷史（最近 10 筆訊息）
-            List<ChatMessage> recentHistory = chatMessageRepository.findRecentMessagesDesc(roomId, 10);
+            // 獲取最近的對話歷史
+            List<ChatMessage> recentHistory = chatMessageRepository.findRecentMessagesDesc(roomId, historyLimit);
 
             // 建立包含歷史對話的訊息列表
             List<Map<String, String>> messages = buildMessagesWithHistory(recentHistory, message);
