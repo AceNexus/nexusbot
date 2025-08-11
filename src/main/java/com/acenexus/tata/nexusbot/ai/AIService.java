@@ -6,12 +6,13 @@ package com.acenexus.tata.nexusbot.ai;
 public interface AIService {
 
     /**
-     * 處理聊天對話
+     * 處理聊天對話（帶上下文）
      *
+     * @param roomId  聊天室 ID，用於查詢對話歷史
      * @param message 使用者訊息
      * @return AI 回應結果（包含模型、tokens等資訊）
      */
-    ChatResponse chatWithDetails(String message);
+    ChatResponse chatWithContext(String roomId, String message);
 
     /**
      * AI 回應結果

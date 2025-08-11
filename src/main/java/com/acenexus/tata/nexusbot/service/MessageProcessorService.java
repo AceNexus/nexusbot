@@ -66,7 +66,7 @@ public class MessageProcessorService {
     private void handleAIMessage(String roomId, ChatRoom.RoomType roomType, String messageText, String replyToken) {
         CompletableFuture.runAsync(() -> {
             try {
-                AIService.ChatResponse chatResponse = aiService.chatWithDetails(messageText);
+                AIService.ChatResponse chatResponse = aiService.chatWithContext(roomId, messageText);
                 String finalResponse = (chatResponse.success() && chatResponse.content() != null && !chatResponse.content().trim().isEmpty()) ? chatResponse.content() : messageTemplateProvider.defaultTextResponse(messageText);
 
                 messageService.sendReply(replyToken, finalResponse);
