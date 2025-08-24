@@ -59,6 +59,14 @@ public class ChatRoom {
     private Boolean aiEnabled = false;
 
     /**
+     * 選擇的AI模型
+     * 預設：llama-3.1-8b-instant
+     */
+    @Column(name = "ai_model", length = 50)
+    @Builder.Default
+    private String aiModel = "llama-3.1-8b-instant";
+
+    /**
      * 建立時間
      */
     @Column(name = "created_at", nullable = false)

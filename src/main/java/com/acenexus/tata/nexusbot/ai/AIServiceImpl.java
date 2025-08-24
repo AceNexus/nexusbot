@@ -52,13 +52,13 @@ public class AIServiceImpl implements AIService {
     }
 
     @Override
-    public ChatResponse chatWithContext(String roomId, String message) {
+    public ChatResponse chatWithContext(String roomId, String message, String selectedModel) {
         if (!isConfigured) {
-            return new ChatResponse(null, model, 0, 0L, false);
+            return new ChatResponse(null, selectedModel, 0, 0L, false);
         }
 
         if (message == null || message.trim().isEmpty()) {
-            return new ChatResponse(null, model, 0, 0L, false);
+            return new ChatResponse(null, selectedModel, 0, 0L, false);
         }
 
         long startTime = System.currentTimeMillis();
@@ -70,11 +70,14 @@ public class AIServiceImpl implements AIService {
             // 建立包含歷史對話的訊息列表
             List<Map<String, String>> messages = buildMessagesWithHistory(recentHistory, message);
 
+            // 根據不同模型設定最適合的參數
+            var modelConfig = getModelConfiguration(selectedModel);
+            
             var request = Map.of(
-                    "model", model,
+                    "model", selectedModel,
                     "messages", messages,
-                    "temperature", 0.7,
-                    "max_tokens", 1000
+                    "temperature", modelConfig.temperature(),
+                    "max_tokens", modelConfig.maxTokens()
             );
 
             var response = webClient
@@ -87,15 +90,46 @@ public class AIServiceImpl implements AIService {
                     .block();
 
             long processingTime = System.currentTimeMillis() - startTime;
-            logger.debug("Groq API response with context: {}", response);
+            logger.debug("Groq API response with context using model {}: {}", selectedModel, response);
 
-            return parseGroqResponse(response, processingTime);
+            return parseGroqResponse(response, processingTime, selectedModel);
 
         } catch (Exception e) {
             long processingTime = System.currentTimeMillis() - startTime;
-            logger.error("Groq API call with context failed: {}", e.getMessage());
-            return new ChatResponse(null, model, 0, processingTime, false);
+            logger.error("Groq API call with context failed using model {}: {}", selectedModel, e.getMessage());
+            return new ChatResponse(null, selectedModel, 0, processingTime, false);
         }
+    }
+
+    /**
+     * 模型配置記錄
+     */
+    private record ModelConfiguration(double temperature, int maxTokens) {}
+
+    /**
+     * 根據模型獲取最佳配置參數
+     */
+    private ModelConfiguration getModelConfiguration(String model) {
+        return switch (model) {
+            // 快速模型 - 較高創意性，適中長度
+            case "llama-3.1-8b-instant" -> new ModelConfiguration(0.8, 800);
+            
+            // 大型強力模型 - 較低溫度確保準確性，更長輸出
+            case "llama-3.3-70b-versatile" -> new ModelConfiguration(0.6, 1200);
+            case "llama3-70b-8192" -> new ModelConfiguration(0.65, 1500);
+            
+            // 創意模型 - 高創意性，中等長度
+            case "gemma2-9b-it" -> new ModelConfiguration(0.9, 1000);
+            
+            // 推理模型 - 低溫度確保邏輯性，較長輸出
+            case "deepseek-r1-distill-llama-70b" -> new ModelConfiguration(0.4, 1500);
+            
+            // 多語言模型 - 平衡設定
+            case "qwen/qwen3-32b" -> new ModelConfiguration(0.7, 1200);
+            
+            // 預設設定
+            default -> new ModelConfiguration(0.7, 1000);
+        };
     }
 
     /**
@@ -137,11 +171,12 @@ public class AIServiceImpl implements AIService {
      *
      * @param response       Groq API 原始回應
      * @param processingTime 處理時間
+     * @param usedModel      使用的模型
      * @return ChatResponse 物件
      */
-    private ChatResponse parseGroqResponse(Map<?, ?> response, long processingTime) {
+    private ChatResponse parseGroqResponse(Map<?, ?> response, long processingTime, String usedModel) {
         if (response == null) {
-            return new ChatResponse(null, model, 0, processingTime, false);
+            return new ChatResponse(null, usedModel, 0, processingTime, false);
         }
 
         try {
@@ -168,11 +203,11 @@ public class AIServiceImpl implements AIService {
                 logger.debug("Tokens used: {}", tokensUsed);
             }
 
-            return new ChatResponse(content, model, tokensUsed, processingTime, content != null);
+            return new ChatResponse(content, usedModel, tokensUsed, processingTime, content != null);
 
         } catch (Exception e) {
             logger.error("Failed to parse Groq response: {}", e.getMessage());
-            return new ChatResponse(null, model, 0, processingTime, false);
+            return new ChatResponse(null, usedModel, 0, processingTime, false);
         }
     }
 }

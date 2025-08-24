@@ -66,7 +66,9 @@ public class MessageProcessorService {
     private void handleAIMessage(String roomId, ChatRoom.RoomType roomType, String messageText, String replyToken) {
         CompletableFuture.runAsync(() -> {
             try {
-                AIService.ChatResponse chatResponse = aiService.chatWithContext(roomId, messageText);
+                // 獲取聊天室指定的AI模型
+                String selectedModel = chatRoomManager.getAiModel(roomId, roomType);
+                AIService.ChatResponse chatResponse = aiService.chatWithContext(roomId, messageText, selectedModel);
                 String finalResponse = (chatResponse.success() && chatResponse.content() != null && !chatResponse.content().trim().isEmpty()) ? chatResponse.content() : messageTemplateProvider.defaultTextResponse(messageText);
 
                 messageService.sendReply(replyToken, finalResponse);

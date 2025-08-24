@@ -55,5 +55,10 @@ public final class UIConstants {
         public static final String FILE = "📁";
         public static final String STICKER = "😊";
         public static final String STAR = "✨";
+        public static final String MODEL = "⚙️";
+        public static final String BRAIN = "🧠";
+        public static final String LIGHTNING = "⚡";
+        public static final String ROCKET = "🚀";
+        public static final String CRYSTAL = "💎";
     }
 }

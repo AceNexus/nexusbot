@@ -21,6 +21,10 @@ public interface MessageTemplateProvider {
 
     Message aiSettingsMenu(boolean currentStatus);
 
+    Message aiModelSelectionMenu();
+
+    Message aiModelSelectionMenu(String currentModel);
+
     Message helpMenu();
 
     Message postbackResponse(String data);

@@ -87,6 +87,59 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
 
 
     /**
+     * 獲取聊天室的 AI 模型
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @return AI 模型名稱
+     */
+    @Override
+    public String getAiModel(String roomId, ChatRoom.RoomType roomType) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            return "llama-3.1-8b-instant"; // 預設模型
+        }
+        
+        ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
+        return chatRoom.getAiModel() != null ? chatRoom.getAiModel() : "llama-3.1-8b-instant";
+    }
+
+    /**
+     * 設定聊天室的 AI 模型
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @param model    AI 模型名稱
+     * @return 是否成功設定
+     */
+    @Override
+    @Transactional
+    public boolean setAiModel(String roomId, ChatRoom.RoomType roomType, String model) {
+        try {
+            ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
+            chatRoom.setAiModel(model);
+            chatRoomRepository.save(chatRoom);
+            
+            logger.info("AI model set to {} for room: {} (type: {})", model, roomId, roomType);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to set AI model for room: {}, error: {}", roomId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 找到或創建聊天室
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @return 聊天室實體
+     */
+    @Override
+    public ChatRoom findOrCreateChatRoom(String roomId, ChatRoom.RoomType roomType) {
+        return getOrCreateChatRoom(roomId, roomType);
+    }
+
+    /**
      * 獲取或建立聊天室記錄
      *
      * @param roomId   聊天室 ID

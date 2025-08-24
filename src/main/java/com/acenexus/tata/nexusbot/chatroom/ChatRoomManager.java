@@ -41,4 +41,32 @@ public interface ChatRoomManager {
      * @return 聊天室類型
      */
     ChatRoom.RoomType determineRoomType(String sourceType);
+
+    /**
+     * 獲取聊天室的 AI 模型
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @return AI 模型名稱
+     */
+    String getAiModel(String roomId, ChatRoom.RoomType roomType);
+
+    /**
+     * 設定聊天室的 AI 模型
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @param model    AI 模型名稱
+     * @return 是否成功設定
+     */
+    boolean setAiModel(String roomId, ChatRoom.RoomType roomType, String model);
+
+    /**
+     * 找到或創建聊天室
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @return 聊天室實體
+     */
+    ChatRoom findOrCreateChatRoom(String roomId, ChatRoom.RoomType roomType);
 }

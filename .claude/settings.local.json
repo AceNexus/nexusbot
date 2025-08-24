@@ -36,7 +36,8 @@
       "Bash(mkdir:*)",
       "Bash(git restore:*)",
       "Bash(grep:*)",
-      "Bash(rg:*)"
+      "Bash(rg:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

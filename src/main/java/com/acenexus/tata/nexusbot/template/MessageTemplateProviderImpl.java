@@ -25,6 +25,13 @@ import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_DEEPSEEK_R1;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMMA2_9B;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA3_70B;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
+import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Icons;
@@ -98,6 +105,37 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 Arrays.asList(
                         createButton(Icons.SUCCESS + " 開啟 AI 回應", ENABLE_AI, Colors.SUCCESS),
                         createButton(Icons.ERROR + " 關閉 AI 回應", DISABLE_AI, Colors.ERROR),
+                        createButton(Icons.MODEL + " 選擇 AI 模型", SELECT_MODEL, Colors.INFO),
+                        createButton(Icons.HOME + " 返回主選單", MAIN_MENU, Colors.SECONDARY)
+                )
+        );
+    }
+
+    @Override
+    public Message aiModelSelectionMenu() {
+        return aiModelSelectionMenu("llama-3.1-8b-instant");
+    }
+
+    @Override
+    public Message aiModelSelectionMenu(String currentModel) {
+        String modelDisplayName = getModelDisplayName(currentModel);
+        
+        return createFlexMenu(
+                "AI 模型選擇",
+                "選擇您偏好的 AI 模型\n目前使用：" + modelDisplayName,
+                Arrays.asList(
+                        createButton(Icons.LIGHTNING + " Llama 3.1 8B (快速創意)", MODEL_LLAMA_3_1_8B, 
+                                currentModel.equals("llama-3.1-8b-instant") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton(Icons.BRAIN + " Llama 3.3 70B (精準強力)", MODEL_LLAMA_3_3_70B, 
+                                currentModel.equals("llama-3.3-70b-versatile") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton(Icons.ROCKET + " Llama 3 70B (詳細平衡)", MODEL_LLAMA3_70B, 
+                                currentModel.equals("llama3-70b-8192") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton(Icons.CRYSTAL + " Gemma2 9B (高度創意)", MODEL_GEMMA2_9B, 
+                                currentModel.equals("gemma2-9b-it") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton(Icons.STAR + " DeepSeek R1 (邏輯推理)", MODEL_DEEPSEEK_R1, 
+                                currentModel.equals("deepseek-r1-distill-llama-70b") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton(Icons.AI + " Qwen3 32B (多語平衡)", MODEL_QWEN3_32B, 
+                                currentModel.equals("qwen/qwen3-32b") ? Colors.SUCCESS : Colors.PRIMARY),
                         createButton(Icons.HOME + " 返回主選單", MAIN_MENU, Colors.SECONDARY)
                 )
         );
@@ -226,6 +264,18 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .altText(title)
                 .contents(bubble)
                 .build();
+    }
+
+    private String getModelDisplayName(String modelId) {
+        return switch (modelId) {
+            case "llama-3.1-8b-instant" -> "Llama 3.1 8B (快速創意)";
+            case "llama-3.3-70b-versatile" -> "Llama 3.3 70B (精準強力)";
+            case "llama3-70b-8192" -> "Llama 3 70B (詳細平衡)";
+            case "gemma2-9b-it" -> "Gemma2 9B (高度創意)";
+            case "deepseek-r1-distill-llama-70b" -> "DeepSeek R1 (邏輯推理)";
+            case "qwen/qwen3-32b" -> "Qwen3 32B (多語平衡)";
+            default -> modelId; // 如果找不到匹配，返回原始ID
+        };
     }
 
     private Button createButton(String label, String action, String color) {
