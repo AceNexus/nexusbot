@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.chatroom;
 
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -21,6 +22,7 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
     private static final Logger logger = LoggerFactory.getLogger(ChatRoomManagerImpl.class);
 
     private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
 
     /**
      * 檢查聊天室的 AI 是否啟用
@@ -98,7 +100,7 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
         if (roomId == null || roomId.trim().isEmpty()) {
             return "llama-3.1-8b-instant"; // 預設模型
         }
-        
+
         ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
         return chatRoom.getAiModel() != null ? chatRoom.getAiModel() : "llama-3.1-8b-instant";
     }
@@ -118,12 +120,28 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
             ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
             chatRoom.setAiModel(model);
             chatRoomRepository.save(chatRoom);
-            
+
             logger.info("AI model set to {} for room: {} (type: {})", model, roomId, roomType);
             return true;
         } catch (Exception e) {
             logger.error("Failed to set AI model for room: {}, error: {}", roomId, e.getMessage(), e);
             return false;
+        }
+    }
+
+    /**
+     * 清除聊天室的歷史對話記錄
+     *
+     * @param roomId 聊天室 ID
+     */
+    @Override
+    @Transactional
+    public void clearChatHistory(String roomId) {
+        try {
+            chatMessageRepository.softDeleteByRoomId(roomId);
+            logger.info("Cleared chat history for room: {}", roomId);
+        } catch (Exception e) {
+            logger.error("Failed to clear chat history for room: {}, error: {}", roomId, e.getMessage(), e);
         }
     }
 

@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
+import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
@@ -34,7 +36,6 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
-import static com.acenexus.tata.nexusbot.template.UIConstants.Icons;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Sizes;
 
 @Service
@@ -86,8 +87,8 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "NexusBot 功能選單",
                 "請選擇一項功能開始操作",
                 Arrays.asList(
-                        createButton(Icons.AI + " AI 回應開關", TOGGLE_AI, Colors.PRIMARY),
-                        createButton(Icons.INFO + " 說明與支援", HELP_MENU, Colors.INFO)
+                        createButton("AI 回應開關", TOGGLE_AI, Colors.PRIMARY),
+                        createButton("說明與支援", HELP_MENU, Colors.INFO)
                 )
         );
     }
@@ -103,10 +104,11 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "AI 回應設定",
                 "管理 AI 功能相關設定\n" + statusText,
                 Arrays.asList(
-                        createButton(Icons.SUCCESS + " 開啟 AI 回應", ENABLE_AI, Colors.SUCCESS),
-                        createButton(Icons.ERROR + " 關閉 AI 回應", DISABLE_AI, Colors.ERROR),
-                        createButton(Icons.MODEL + " 選擇 AI 模型", SELECT_MODEL, Colors.INFO),
-                        createButton(Icons.HOME + " 返回主選單", MAIN_MENU, Colors.SECONDARY)
+                        createButton("開啟 AI 回應", ENABLE_AI, Colors.SUCCESS),
+                        createButton("關閉 AI 回應", DISABLE_AI, Colors.ERROR),
+                        createButton("選擇 AI 模型", SELECT_MODEL, Colors.INFO),
+                        createButton("清除歷史對話", CLEAR_HISTORY, Colors.ERROR),
+                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
                 )
         );
     }
@@ -119,24 +121,18 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     @Override
     public Message aiModelSelectionMenu(String currentModel) {
         String modelDisplayName = getModelDisplayName(currentModel);
-        
+
         return createFlexMenu(
                 "AI 模型選擇",
                 "選擇您偏好的 AI 模型\n目前使用：" + modelDisplayName,
                 Arrays.asList(
-                        createButton(Icons.LIGHTNING + " Llama 3.1 8B (快速創意)", MODEL_LLAMA_3_1_8B, 
-                                currentModel.equals("llama-3.1-8b-instant") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton(Icons.BRAIN + " Llama 3.3 70B (精準強力)", MODEL_LLAMA_3_3_70B, 
-                                currentModel.equals("llama-3.3-70b-versatile") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton(Icons.ROCKET + " Llama 3 70B (詳細平衡)", MODEL_LLAMA3_70B, 
-                                currentModel.equals("llama3-70b-8192") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton(Icons.CRYSTAL + " Gemma2 9B (高度創意)", MODEL_GEMMA2_9B, 
-                                currentModel.equals("gemma2-9b-it") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton(Icons.STAR + " DeepSeek R1 (邏輯推理)", MODEL_DEEPSEEK_R1, 
-                                currentModel.equals("deepseek-r1-distill-llama-70b") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton(Icons.AI + " Qwen3 32B (多語平衡)", MODEL_QWEN3_32B, 
-                                currentModel.equals("qwen/qwen3-32b") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton(Icons.HOME + " 返回主選單", MAIN_MENU, Colors.SECONDARY)
+                        createButton("Llama 3.1 8B (快速創意)", MODEL_LLAMA_3_1_8B, currentModel.equals("llama-3.1-8b-instant") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton("Llama 3.3 70B (精準強力)", MODEL_LLAMA_3_3_70B, currentModel.equals("llama-3.3-70b-versatile") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton("Llama 3 70B (詳細平衡)", MODEL_LLAMA3_70B, currentModel.equals("llama3-70b-8192") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton("Gemma2 9B (高度創意)", MODEL_GEMMA2_9B, currentModel.equals("gemma2-9b-it") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton("DeepSeek R1 (邏輯推理)", MODEL_DEEPSEEK_R1, currentModel.equals("deepseek-r1-distill-llama-70b") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton("Qwen3 32B (多語平衡)", MODEL_QWEN3_32B, currentModel.equals("qwen/qwen3-32b") ? Colors.SUCCESS : Colors.PRIMARY),
+                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
                 )
         );
     }
@@ -146,30 +142,41 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "說明與支援",
                 "瞭解如何使用 NexusBot",
                 Arrays.asList(
-                        createButton(Icons.ABOUT + " 關於 NexusBot", ABOUT, Colors.INFO),
-                        createButton(Icons.HOME + " 返回主選單", MAIN_MENU, Colors.SECONDARY)
+                        createButton("關於 NexusBot", ABOUT, Colors.INFO),
+                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
+                )
+        );
+    }
+
+    public Message clearHistoryConfirmation() {
+        return createFlexMenu(
+                "確認清除歷史對話",
+                "此動作將清除所有歷史對話記錄\n請確認是否繼續",
+                Arrays.asList(
+                        createButton("確認清除", CONFIRM_CLEAR_HISTORY, Colors.ERROR),
+                        createButton("返回設定", TOGGLE_AI, Colors.SECONDARY)
                 )
         );
     }
 
     public String imageResponse(String messageId) {
-        return Icons.IMAGE + " 收到您的圖片\n圖片ID: " + messageId;
+        return "收到您的圖片\n圖片ID: " + messageId;
     }
 
     public String stickerResponse(String packageId, String stickerId) {
-        return String.format(Icons.STICKER + " 很可愛的貼圖\n貼圖包ID: %s\n貼圖ID: %s", packageId, stickerId);
+        return String.format("很可愛的貼圖\n貼圖包ID: %s\n貼圖ID: %s", packageId, stickerId);
     }
 
     public String videoResponse(String messageId) {
-        return Icons.VIDEO + " 收到您的影片\n影片ID: " + messageId;
+        return "收到您的影片\n影片ID: " + messageId;
     }
 
     public String audioResponse(String messageId) {
-        return Icons.AUDIO + " 收到您的音檔\n音檔ID: " + messageId;
+        return "收到您的音檔\n音檔ID: " + messageId;
     }
 
     public String fileResponse(String fileName, long fileSize) {
-        return String.format(Icons.FILE + " 收到您的檔案\n檔名: %s\n大小: %d bytes", fileName, fileSize);
+        return String.format("收到您的檔案\n檔名: %s\n大小: %d bytes", fileName, fileSize);
     }
 
     public String locationResponse(String title, String address, double latitude, double longitude) {
@@ -210,7 +217,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     private FlexMessage createFlexMenu(String title, String subtitle, List<Button> buttons) {
         // 標題
         Text titleText = Text.builder()
-                .text(Icons.STAR + " " + title)
+                .text(title)
                 .size(FlexFontSize.XL)
                 .align(FlexAlign.CENTER)
                 .color(Colors.TEXT_PRIMARY)

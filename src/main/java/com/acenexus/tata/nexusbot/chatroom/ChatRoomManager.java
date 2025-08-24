@@ -62,6 +62,13 @@ public interface ChatRoomManager {
     boolean setAiModel(String roomId, ChatRoom.RoomType roomType, String model);
 
     /**
+     * 清除聊天室的歷史對話記錄
+     *
+     * @param roomId 聊天室 ID
+     */
+    void clearChatHistory(String roomId);
+
+    /**
      * 找到或創建聊天室
      *
      * @param roomId   聊天室 ID

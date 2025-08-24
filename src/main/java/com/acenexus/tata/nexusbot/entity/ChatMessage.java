@@ -107,6 +107,13 @@ public class ChatMessage {
     private LocalDateTime updatedAt;
 
     /**
+     * 軟刪除時間
+     * null 表示未刪除，有值表示已刪除
+     */
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    /**
      * 訊息類型列舉
      */
     public enum MessageType {

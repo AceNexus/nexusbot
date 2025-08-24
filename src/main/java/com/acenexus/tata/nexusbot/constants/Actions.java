@@ -14,6 +14,8 @@ public final class Actions {
     public static final String ENABLE_AI = "action=enable_ai";
     public static final String DISABLE_AI = "action=disable_ai";
     public static final String SELECT_MODEL = "action=select_model";
+    public static final String CLEAR_HISTORY = "action=clear_history";
+    public static final String CONFIRM_CLEAR_HISTORY = "action=confirm_clear_history";
 
     // ============= AI 模型選擇動作 =============
     public static final String MODEL_LLAMA_3_1_8B = "model=llama-3.1-8b-instant";

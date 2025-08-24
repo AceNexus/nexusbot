@@ -27,6 +27,8 @@ public interface MessageTemplateProvider {
 
     Message helpMenu();
 
+    Message clearHistoryConfirmation();
+
     Message postbackResponse(String data);
 
     String imageResponse(String messageId);

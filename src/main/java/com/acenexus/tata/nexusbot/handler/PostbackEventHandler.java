@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
+import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
@@ -75,12 +77,23 @@ public class PostbackEventHandler {
                         String currentModel = chatRoomManager.getAiModel(roomId, roomType);
                         yield messageTemplateProvider.aiModelSelectionMenu(currentModel);
                     }
-                    case MODEL_LLAMA_3_1_8B -> handleModelSelection(roomId, roomType, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)");
-                    case MODEL_LLAMA_3_3_70B -> handleModelSelection(roomId, roomType, "llama-3.3-70b-versatile", "Llama 3.3 70B (精準強力)");
-                    case MODEL_LLAMA3_70B -> handleModelSelection(roomId, roomType, "llama3-70b-8192", "Llama 3 70B (詳細平衡)");
-                    case MODEL_GEMMA2_9B -> handleModelSelection(roomId, roomType, "gemma2-9b-it", "Gemma2 9B (高度創意)");
-                    case MODEL_DEEPSEEK_R1 -> handleModelSelection(roomId, roomType, "deepseek-r1-distill-llama-70b", "DeepSeek R1 (邏輯推理)");
-                    case MODEL_QWEN3_32B -> handleModelSelection(roomId, roomType, "qwen/qwen3-32b", "Qwen3 32B (多語平衡)");
+                    case MODEL_LLAMA_3_1_8B ->
+                            handleModelSelection(roomId, roomType, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)");
+                    case MODEL_LLAMA_3_3_70B ->
+                            handleModelSelection(roomId, roomType, "llama-3.3-70b-versatile", "Llama 3.3 70B (精準強力)");
+                    case MODEL_LLAMA3_70B ->
+                            handleModelSelection(roomId, roomType, "llama3-70b-8192", "Llama 3 70B (詳細平衡)");
+                    case MODEL_GEMMA2_9B ->
+                            handleModelSelection(roomId, roomType, "gemma2-9b-it", "Gemma2 9B (高度創意)");
+                    case MODEL_DEEPSEEK_R1 ->
+                            handleModelSelection(roomId, roomType, "deepseek-r1-distill-llama-70b", "DeepSeek R1 (邏輯推理)");
+                    case MODEL_QWEN3_32B ->
+                            handleModelSelection(roomId, roomType, "qwen/qwen3-32b", "Qwen3 32B (多語平衡)");
+                    case CLEAR_HISTORY -> messageTemplateProvider.clearHistoryConfirmation();
+                    case CONFIRM_CLEAR_HISTORY -> {
+                        chatRoomManager.clearChatHistory(roomId);
+                        yield messageTemplateProvider.success("歷史對話記錄已清除。");
+                    }
                     case HELP_MENU -> messageTemplateProvider.helpMenu();
                     case MAIN_MENU -> messageTemplateProvider.mainMenu();
                     case ABOUT -> messageTemplateProvider.about();
