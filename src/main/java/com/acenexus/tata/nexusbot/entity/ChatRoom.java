@@ -67,6 +67,22 @@ public class ChatRoom {
     private String aiModel = "llama-3.1-8b-instant";
 
     /**
+     * 是否為管理員聊天室
+     * 預設：false (非管理員)
+     */
+    @Column(name = "is_admin", nullable = false)
+    @Builder.Default
+    private Boolean isAdmin = false;
+
+    /**
+     * 是否正在等待密碼輸入
+     * 預設：false (非等待狀態)
+     */
+    @Column(name = "auth_pending", nullable = false)
+    @Builder.Default
+    private Boolean authPending = false;
+
+    /**
      * 建立時間
      */
     @Column(name = "created_at", nullable = false)

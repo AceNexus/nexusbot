@@ -68,7 +68,8 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 2. Routes to `MessageProcessorService` based on message type
 3. For text messages:
    - Stores user message to `chat_messages` table immediately
-   - First checks for predefined commands (menu, 選單)
+   - First processes admin authentication commands via `AdminService`
+   - Then checks for predefined commands (menu, 選單)
    - Falls back to AI processing via `AIService`
    - Async processing with fallback responses
    - Stores AI responses with analytics (processing time, model used)
@@ -77,13 +78,15 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - `ai/` - AI service interface (`AIService`) and Groq implementation (`AIServiceImpl`)
 - `chatroom/` - Chat room management (`ChatRoomManager` interface, `ChatRoomManagerImpl`)
 - `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
-- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`)
+- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`)
+- `config/properties/` - Configuration properties classes (`AdminProperties`)
 - `constants/` - Global constants management (`Actions` for postback actions)
 - `handler/` - Event processing handlers (`PostbackEventHandler`, `MessageEventHandler`)
 
 **Service Layer Architecture**:
 - All major services follow interface-implementation pattern with `Impl` suffix
-- `MessageProcessorService` orchestrates message processing (predefined commands → AI fallback)
+- `MessageProcessorService` orchestrates message processing (admin auth → predefined commands → AI fallback)
+- `AdminService` handles two-step authentication flow with state tracking
 - Dependency injection uses interfaces for loose coupling and testability
 
 ### Configuration Management
@@ -98,6 +101,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - `LineBotConfig` - LINE Bot SDK 6.0.0 configuration with `LineMessagingClient`
 - `ConfigValidator` - validates configuration on startup
 - Properties classes in `config.properties` package
+- `AdminProperties` - admin authentication configuration with password seed
 
 ### Message Types Supported
 - Text messages (with AI responses)
@@ -117,6 +121,21 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **Timeout Handling**: 15-second timeout with graceful fallback to default responses
 - **Message Storage**: All user messages and AI responses stored in `chat_messages` table with analytics
 - **Async Processing**: AI requests processed asynchronously via `CompletableFuture` to avoid blocking LINE webhook responses
+- **Conversation History**: Configurable history limit via `ai.conversation.history-limit` (default: 15 messages)
+- **Soft Delete**: AI reply messages support soft delete functionality for conversation management
+
+### Admin Authentication
+- **Two-Step Authentication**: `/auth` command followed by password input
+- **Dynamic Password**: Date-based password generation (YYYYMMDD + seed)
+- **Room-Based Permissions**: Each chat room can be independently authenticated as admin
+- **Authentication State**: Uses `auth_pending` flag to track authentication flow
+- **Password Configuration**: Configurable via `admin.password-seed` (default: "1103")
+- **Simple Flow**: User types `/auth` → "請輸入密碼" → User enters password → Authentication complete
+- **Service Architecture**: 
+  - `AdminService` handles authentication commands and state management
+  - `DynamicPasswordService` generates current valid password
+  - `ChatRoomManager` stores admin status per room
+- **Database Fields**: `is_admin` and `auth_pending` in `chat_rooms` table
 
 ## Development Guidelines
 
@@ -125,6 +144,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **Interface-implementation pattern**: All major services have interfaces with `Impl` suffix implementations
 - **Entity Lifecycle Management**: JPA entities use `@PrePersist` and `@PreUpdate` for automatic timestamp handling
 - **Constants Management**: Use `Actions` class for postback constants, `UIConstants` for UI styling
+- **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based passwords
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
@@ -211,10 +231,13 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - `ChatRoom` (V1 migration) - Per-room AI settings with lazy record creation
   - Tracks AI enabled/disabled state for each LINE user/group
   - Supports both individual and group conversations
+  - V5: Added `is_admin` field for room-based admin authentication
+  - V6: Added `auth_pending` field for two-step authentication flow
 - `ChatMessage` (V2 migration) - Multi-turn conversation tracking and AI analytics
   - Records all user and AI messages with timestamps
   - Includes AI cost tracking (tokens_used, processing_time_ms, ai_model)
   - Contains room_type redundancy for query performance optimization
+  - V4: Added soft delete support for conversation management
 
 **Data Access**:
 - JPA/Hibernate with `@Entity` annotations
@@ -228,6 +251,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - Cross-database compatibility (H2 local, MySQL dev/prod)
 - **No Foreign Key Constraints**: Uses application-layer consistency control for better performance
 - **Design Rationale**: Detailed comments in migration files explain architectural decisions
+- **Current Migrations**: V1 (chat rooms), V2 (chat messages), V3 (AI model tracking), V4 (soft delete support), V5 (admin authentication), V6 (auth pending state)
 
 ### UI Design System Architecture
 

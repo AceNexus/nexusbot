@@ -69,11 +69,31 @@ public interface ChatRoomManager {
     void clearChatHistory(String roomId);
 
     /**
-     * 找到或創建聊天室
+     * 設定聊天室的管理員狀態
      *
      * @param roomId   聊天室 ID
      * @param roomType 聊天室類型
-     * @return 聊天室實體
+     * @param isAdmin  是否為管理員
+     * @return 是否成功設定
      */
-    ChatRoom findOrCreateChatRoom(String roomId, ChatRoom.RoomType roomType);
+    boolean setAdminStatus(String roomId, ChatRoom.RoomType roomType, boolean isAdmin);
+
+    /**
+     * 設定聊天室的認證等待狀態
+     *
+     * @param roomId      聊天室 ID
+     * @param roomType    聊天室類型
+     * @param authPending 是否正在等待密碼輸入
+     * @return 是否成功設定
+     */
+    boolean setAuthPending(String roomId, ChatRoom.RoomType roomType, boolean authPending);
+
+    /**
+     * 檢查聊天室是否正在等待密碼輸入
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @return 是否正在等待密碼輸入
+     */
+    boolean isAuthPending(String roomId, ChatRoom.RoomType roomType);
 }

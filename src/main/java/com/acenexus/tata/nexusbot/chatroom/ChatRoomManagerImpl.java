@@ -146,18 +146,6 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
     }
 
     /**
-     * 找到或創建聊天室
-     *
-     * @param roomId   聊天室 ID
-     * @param roomType 聊天室類型
-     * @return 聊天室實體
-     */
-    @Override
-    public ChatRoom findOrCreateChatRoom(String roomId, ChatRoom.RoomType roomType) {
-        return getOrCreateChatRoom(roomId, roomType);
-    }
-
-    /**
      * 獲取或建立聊天室記錄
      *
      * @param roomId   聊天室 ID
@@ -180,11 +168,62 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
                 });
     }
 
-
     /**
      * 根據來源類型判斷聊天室類型
      */
     public ChatRoom.RoomType determineRoomType(String sourceType) {
         return "group".equals(sourceType) ? ChatRoom.RoomType.GROUP : ChatRoom.RoomType.USER;
+    }
+
+    /**
+     * 設定聊天室的管理員狀態
+     */
+    @Override
+    @Transactional
+    public boolean setAdminStatus(String roomId, ChatRoom.RoomType roomType, boolean isAdmin) {
+        try {
+            ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
+            chatRoom.setIsAdmin(isAdmin);
+
+            chatRoomRepository.save(chatRoom);
+            logger.info("Admin status updated for room {}: isAdmin={}", roomId, isAdmin);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to update admin status for room {}: {}", roomId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 設定聊天室的認證等待狀態
+     */
+    @Override
+    @Transactional
+    public boolean setAuthPending(String roomId, ChatRoom.RoomType roomType, boolean authPending) {
+        try {
+            ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
+            chatRoom.setAuthPending(authPending);
+
+            chatRoomRepository.save(chatRoom);
+            logger.info("Auth pending status updated for room {}: authPending={}", roomId, authPending);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to update auth pending status for room {}: {}", roomId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 檢查聊天室是否正在等待密碼輸入
+     */
+    @Override
+    public boolean isAuthPending(String roomId, ChatRoom.RoomType roomType) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            logger.warn("Room ID is null or empty, not auth pending");
+            return false;
+        }
+
+        ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
+        return chatRoom.getAuthPending();
     }
 }

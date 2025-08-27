@@ -12,6 +12,10 @@ ai:
   conversation:
     history-limit: ${AI_HISTORY_LIMIT:15}
 
+# 管理員設定
+admin:
+  password-seed: ${ADMIN_PASSWORD_SEED:1103}
+
 logging:
   level:
     root: INFO

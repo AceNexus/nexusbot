@@ -22,10 +22,18 @@ public class MessageProcessorService {
     private final MessageTemplateProvider messageTemplateProvider;
     private final ChatRoomManager chatRoomManager;
     private final ChatMessageRepository chatMessageRepository;
+    private final AdminService adminService;
 
     public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
         ChatRoom.RoomType roomType = chatRoomManager.determineRoomType(sourceType);
+
+        // 處理管理員認證命令
+        String authResponse = adminService.processAuthCommand(roomId, roomType, messageText);
+        if (authResponse != null) {
+            messageService.sendReply(replyToken, authResponse);
+            return;
+        }
 
         // 處理預定義指令
         if (handlePredefinedCommand(normalizedText, roomId, replyToken)) {
