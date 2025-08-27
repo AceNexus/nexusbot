@@ -226,4 +226,18 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
         ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
         return chatRoom.getAuthPending();
     }
+
+    /**
+     * 檢查聊天室是否為管理員
+     */
+    @Override
+    public boolean isAdminRoom(String roomId, ChatRoom.RoomType roomType) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            logger.warn("Room ID is null or empty, not admin room");
+            return false;
+        }
+
+        ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
+        return Boolean.TRUE.equals(chatRoom.getIsAdmin());
+    }
 }

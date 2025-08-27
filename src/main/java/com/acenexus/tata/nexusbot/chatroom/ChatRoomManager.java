@@ -96,4 +96,13 @@ public interface ChatRoomManager {
      * @return 是否正在等待密碼輸入
      */
     boolean isAuthPending(String roomId, ChatRoom.RoomType roomType);
+
+    /**
+     * 檢查聊天室是否為管理員
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @return 是否為管理員聊天室
+     */
+    boolean isAdminRoom(String roomId, ChatRoom.RoomType roomType);
 }

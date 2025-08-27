@@ -13,6 +13,7 @@ public class AdminService {
 
     private final ChatRoomManager chatRoomManager;
     private final DynamicPasswordService dynamicPasswordService;
+    private final SystemStatsService systemStatsService;
 
     /**
      * 處理認證相關命令
@@ -41,6 +42,28 @@ public class AdminService {
 
         return null;
     }
+
+    /**
+     * 處理管理員命令
+     */
+    public String processAdminCommand(String roomId, ChatRoom.RoomType roomType, String message) {
+        // 檢查是否為管理員聊天室
+        if (!chatRoomManager.isAdminRoom(roomId, roomType)) {
+            return null;
+        }
+
+        if (message == null) {
+            return null;
+        }
+
+        String command = message.trim().toLowerCase();
+
+        return switch (command) {
+            case "/stats" -> systemStatsService.getSystemStats();
+            default -> null; // 非管理員命令
+        };
+    }
+
 
     /**
      * 處理開始認證命令

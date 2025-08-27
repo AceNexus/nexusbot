@@ -35,6 +35,13 @@ public class MessageProcessorService {
             return;
         }
 
+        // 處理管理員指令
+        String adminResponse = adminService.processAdminCommand(roomId, roomType, messageText);
+        if (adminResponse != null) {
+            messageService.sendReply(replyToken, adminResponse);
+            return;
+        }
+
         // 處理預定義指令
         if (handlePredefinedCommand(normalizedText, roomId, replyToken)) {
             return;

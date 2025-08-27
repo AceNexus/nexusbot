@@ -27,4 +27,23 @@ public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
      */
     @Query("SELECT c.aiEnabled FROM ChatRoom c WHERE c.roomId = :roomId")
     Optional<Boolean> findAiEnabledByRoomId(@Param("roomId") String roomId);
+
+    /**
+     * 統計總聊天室數量
+     */
+    @Query("SELECT COUNT(c) FROM ChatRoom c")
+    long countTotalRooms();
+
+    /**
+     * 統計 AI 啟用的聊天室數量
+     */
+    @Query("SELECT COUNT(c) FROM ChatRoom c WHERE c.aiEnabled = true")
+    long countAiEnabledRooms();
+
+    /**
+     * 統計管理員聊天室數量
+     */
+    @Query("SELECT COUNT(c) FROM ChatRoom c WHERE c.isAdmin = true")
+    long countAdminRooms();
+
 }
