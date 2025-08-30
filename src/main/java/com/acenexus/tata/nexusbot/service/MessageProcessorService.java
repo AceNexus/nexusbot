@@ -6,6 +6,7 @@ import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,22 +29,8 @@ public class MessageProcessorService {
         String normalizedText = messageText.toLowerCase().trim();
         ChatRoom.RoomType roomType = chatRoomManager.determineRoomType(sourceType);
 
-        // 處理管理員認證命令
-        String authResponse = adminService.processAuthCommand(roomId, roomType, messageText);
-        if (authResponse != null) {
-            messageService.sendReply(replyToken, authResponse);
-            return;
-        }
-
-        // 處理管理員指令
-        String adminResponse = adminService.processAdminCommand(roomId, roomType, messageText);
-        if (adminResponse != null) {
-            messageService.sendReply(replyToken, adminResponse);
-            return;
-        }
-
-        // 處理預定義指令
-        if (handlePredefinedCommand(normalizedText, roomId, replyToken)) {
+        // 處理所有命令
+        if (handleAllCommands(roomId, roomType, messageText, normalizedText, replyToken)) {
             return;
         }
 
@@ -61,19 +48,35 @@ public class MessageProcessorService {
         handleAIMessage(roomId, roomType, messageText, replyToken);
     }
 
-    private boolean handlePredefinedCommand(String normalizedText, String roomId, String replyToken) {
+    /**
+     * 處理所有命令類型
+     */
+    private boolean handleAllCommands(String roomId, ChatRoom.RoomType roomType, String messageText, String normalizedText, String replyToken) {
+        // 1. 管理員認證命令
+        String authResponse = adminService.processAuthCommand(roomId, roomType, messageText);
+        if (authResponse != null) {
+            messageService.sendReply(replyToken, authResponse);
+            return true;
+        }
+
+        // 2. 管理員指令
+        Message adminMessage = adminService.processAdminCommand(roomId, roomType, messageText);
+        if (adminMessage != null) {
+            messageService.sendMessage(replyToken, adminMessage);
+            return true;
+        }
+
+        // 3. 預定義指令
         try {
-            switch (normalizedText) {
+            return switch (normalizedText) {
                 case "menu", "選單" -> {
                     messageService.sendMessage(replyToken, messageTemplateProvider.mainMenu());
-                    return true;
+                    yield true;
                 }
-                default -> {
-                    return false;
-                }
-            }
+                default -> false;
+            };
         } catch (Exception e) {
-            logger.error("Error sending predefined response to room {}: {}", roomId, e.getMessage());
+            logger.error("Error processing command for room {}: {}", roomId, e.getMessage());
             return false; // 讓它繼續走 AI 處理
         }
     }

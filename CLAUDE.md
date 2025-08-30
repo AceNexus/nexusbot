@@ -78,7 +78,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - `ai/` - AI service interface (`AIService`) and Groq implementation (`AIServiceImpl`)
 - `chatroom/` - Chat room management (`ChatRoomManager` interface, `ChatRoomManagerImpl`)
 - `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
-- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`)
+- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`, `SystemStatsService`)
 - `config/properties/` - Configuration properties classes (`AdminProperties`)
 - `constants/` - Global constants management (`Actions` for postback actions)
 - `handler/` - Event processing handlers (`PostbackEventHandler`, `MessageEventHandler`)
@@ -135,7 +135,9 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
   - `AdminService` handles authentication commands and state management
   - `DynamicPasswordService` generates current valid password
   - `ChatRoomManager` stores admin status per room
+  - `SystemStatsService` provides comprehensive system analytics for admins
 - **Database Fields**: `is_admin` and `auth_pending` in `chat_rooms` table
+- **Admin Commands**: Authentication flow and system stats reporting with detailed metrics
 
 ## Development Guidelines
 

@@ -50,4 +50,8 @@ public interface MessageTemplateProvider {
     String groupJoinMessage(String sourceType);
 
     String memberJoinedMessage(int memberCount);
+
+    Message systemStats(long totalRooms, long aiEnabledRooms, long adminRooms,
+                        long totalMessages, long userMessages, long aiMessages,
+                        long todayActiveRooms, long weekActiveRooms, String avgProcessingTime);
 }

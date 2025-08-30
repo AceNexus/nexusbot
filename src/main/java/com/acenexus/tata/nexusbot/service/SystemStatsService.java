@@ -2,12 +2,11 @@ package com.acenexus.tata.nexusbot.service;
 
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.repository.ChatRoomRepository;
+import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Service
@@ -16,11 +15,12 @@ public class SystemStatsService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final MessageTemplateProvider messageTemplateProvider;
 
     /**
-     * 獲取系統統計資訊
+     * 獲取系統統計資訊 Message
      */
-    public String getSystemStats() {
+    public Message getSystemStats() {
         try {
             // 聊天室統計
             long totalRooms = chatRoomRepository.countTotalRooms();
@@ -40,44 +40,15 @@ public class SystemStatsService {
             Double avgProcessingTime = chatMessageRepository.getAverageProcessingTime();
             String avgTimeStr = avgProcessingTime != null ? String.format("%.1f ms", avgProcessingTime) : "無數據";
 
-            return String.format("""
-                            系統統計報告
-                                            
-                            聊天室概況
-                            • 總聊天室：%d 個
-                            • AI 啟用：%d 個 (%.1f%%)
-                            • 管理員室：%d 個
-                                            
-                            消息統計
-                            • 總消息數：%d 條
-                            • 用戶消息：%d 條
-                            • AI 回應：%d 條
-                                            
-                            活躍度
-                            • 今日活躍：%d 個聊天室
-                            • 本週活躍：%d 個聊天室
-                                            
-                            AI 性能
-                            • 平均響應時間：%s
-                                            
-                            統計時間：%s
-                            """,
-                    totalRooms,
-                    aiEnabledRooms,
-                    totalRooms > 0 ? (aiEnabledRooms * 100.0 / totalRooms) : 0.0,
-                    adminRooms,
-                    totalMessages,
-                    userMessages,
-                    aiMessages,
-                    todayActiveRooms,
-                    weekActiveRooms,
-                    avgTimeStr,
-                    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+            return messageTemplateProvider.systemStats(
+                    totalRooms, aiEnabledRooms, adminRooms,
+                    totalMessages, userMessages, aiMessages,
+                    todayActiveRooms, weekActiveRooms, avgTimeStr
             );
 
         } catch (Exception e) {
             log.error("Failed to generate system stats", e);
-            return "統計資料生成失敗：" + e.getMessage();
+            return messageTemplateProvider.error("統計資料生成失敗：" + e.getMessage());
         }
     }
 }

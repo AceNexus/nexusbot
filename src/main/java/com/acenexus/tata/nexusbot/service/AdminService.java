@@ -2,6 +2,7 @@ package com.acenexus.tata.nexusbot.service;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,7 +47,7 @@ public class AdminService {
     /**
      * 處理管理員命令
      */
-    public String processAdminCommand(String roomId, ChatRoom.RoomType roomType, String message) {
+    public Message processAdminCommand(String roomId, ChatRoom.RoomType roomType, String message) {
         // 檢查是否為管理員聊天室
         if (!chatRoomManager.isAdminRoom(roomId, roomType)) {
             return null;

@@ -17,6 +17,7 @@ import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
 import com.linecorp.bot.model.message.flex.unit.FlexPaddingSize;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -214,6 +215,24 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         return "Welcome new members!\n" + memberCount + " new friends joined the group!";
     }
 
+    @Override
+    public Message systemStats(long totalRooms, long aiEnabledRooms, long adminRooms,
+                               long totalMessages, long userMessages, long aiMessages,
+                               long todayActiveRooms, long weekActiveRooms, String avgProcessingTime) {
+
+        double aiEnabledPercent = totalRooms > 0 ? (aiEnabledRooms * 100.0 / totalRooms) : 0.0;
+
+        return createStatsCard(
+                "NexusBot 系統狀態",
+                Arrays.asList(
+                        createStatRow("■", "聊天室統計", String.format("總計：%,d 間\nAI啟用：%,d 間 (%.1f%%)\n管理員：%,d 間", totalRooms, aiEnabledRooms, aiEnabledPercent, adminRooms)),
+                        createStatRow("●", "訊息統計", String.format("總計：%,d 條\n用戶：%,d 條\nAI回應：%,d 條", totalMessages, userMessages, aiMessages)),
+                        createStatRow("▲", "活躍度", String.format("今日：%,d 間\n本週：%,d 間", todayActiveRooms, weekActiveRooms)),
+                        createStatRow("◆", "AI 性能", "平均響應時間：" + avgProcessingTime)
+                )
+        );
+    }
+
     private FlexMessage createFlexMenu(String title, String subtitle, List<Button> buttons) {
         // 標題
         Text titleText = Text.builder()
@@ -302,6 +321,66 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .layout(FlexLayout.VERTICAL)
                 .contents(Arrays.asList())
                 .height(Sizes.SPACING_MD)
+                .build();
+    }
+
+    private FlexMessage createStatsCard(String title, List<Box> statRows) {
+        // 標題
+        Text titleText = Text.builder()
+                .text(title)
+                .size(FlexFontSize.LG)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.PRIMARY)
+                .align(FlexAlign.CENTER)
+                .build();
+
+        // 建立內容容器
+        List<FlexComponent> components = new ArrayList<>();
+        components.add(titleText);
+        components.add(createSpacer());
+        components.addAll(statRows);
+
+        // 主容器
+        Box mainBox = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(components)
+                .paddingAll(FlexPaddingSize.LG)
+                .backgroundColor(Colors.BACKGROUND)
+                .spacing(FlexMarginSize.SM)
+                .build();
+
+        // Bubble 容器
+        Bubble bubble = Bubble.builder()
+                .body(mainBox)
+                .build();
+
+        return FlexMessage.builder()
+                .altText(title)
+                .contents(bubble)
+                .build();
+    }
+
+    private Box createStatRow(String icon, String category, String value) {
+        // 標題行（圖示 + 類別）
+        Text headerText = Text.builder()
+                .text(icon + " " + category)
+                .size(FlexFontSize.SM)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.PRIMARY)
+                .build();
+
+        // 數值行
+        Text valueText = Text.builder()
+                .text(value)
+                .size(FlexFontSize.XS)
+                .color(Colors.SECONDARY)
+                .wrap(true)
+                .build();
+
+        return Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList(headerText, valueText))
+                .spacing(FlexMarginSize.XS)
                 .build();
     }
 }
