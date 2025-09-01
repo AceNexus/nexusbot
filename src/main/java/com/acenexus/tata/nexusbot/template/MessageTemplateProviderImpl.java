@@ -34,6 +34,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
+import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
@@ -88,8 +89,9 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "NexusBot 功能選單",
                 "請選擇一項功能開始操作",
                 Arrays.asList(
-                        createButton("AI 回應開關", TOGGLE_AI, Colors.PRIMARY),
-                        createButton("說明與支援", HELP_MENU, Colors.INFO)
+                        createButton("🤖 AI 回應開關", TOGGLE_AI, Colors.PRIMARY),
+                        createButton("📅 提醒功能", REMINDER_MENU, Colors.SUCCESS),
+                        createButton("ℹ️ 說明與支援", HELP_MENU, Colors.INFO)
                 )
         );
     }
@@ -112,11 +114,6 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                         createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
                 )
         );
-    }
-
-    @Override
-    public Message aiModelSelectionMenu() {
-        return aiModelSelectionMenu("llama-3.1-8b-instant");
     }
 
     @Override
@@ -261,7 +258,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .build();
 
         // 組合按鈕和間隔
-        List<FlexComponent> components = new java.util.ArrayList<>();
+        List<FlexComponent> components = new ArrayList<>();
         components.add(titleText);
         components.add(subtitleText);
         components.add(separator);
@@ -382,5 +379,15 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .contents(Arrays.asList(headerText, valueText))
                 .spacing(FlexMarginSize.XS)
                 .build();
+    }
+
+    public Message reminderMenu() {
+        return createFlexMenu(
+                "📅 提醒功能",
+                "管理您的提醒設定",
+                Arrays.asList(
+                        createButton("🔙 返回主選單", MAIN_MENU, Colors.SECONDARY)
+                )
+        );
     }
 }

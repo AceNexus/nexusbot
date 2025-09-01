@@ -24,6 +24,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
+import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 
@@ -53,6 +54,12 @@ public class PostbackEventHandler {
 
                 // 處理按鈕回應
                 Message response = switch (data) {
+                    // 主選單
+                    case HELP_MENU -> messageTemplateProvider.helpMenu();
+                    case MAIN_MENU -> messageTemplateProvider.mainMenu();
+                    case ABOUT -> messageTemplateProvider.about();
+
+                    // AI 功能
                     case TOGGLE_AI -> {
                         boolean currentStatus = chatRoomManager.isAiEnabled(roomId, roomType);
                         yield messageTemplateProvider.aiSettingsMenu(currentStatus);
@@ -94,9 +101,9 @@ public class PostbackEventHandler {
                         chatRoomManager.clearChatHistory(roomId);
                         yield messageTemplateProvider.success("歷史對話記錄已清除。");
                     }
-                    case HELP_MENU -> messageTemplateProvider.helpMenu();
-                    case MAIN_MENU -> messageTemplateProvider.mainMenu();
-                    case ABOUT -> messageTemplateProvider.about();
+
+                    // 提醒功能
+                    case REMINDER_MENU -> messageTemplateProvider.reminderMenu();
                     default -> messageTemplateProvider.postbackResponse(data);
                 };
 

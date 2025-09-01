@@ -17,17 +17,15 @@ public interface MessageTemplateProvider {
 
     Message mainMenu();
 
-    Message aiSettingsMenu();
-
     Message aiSettingsMenu(boolean currentStatus);
-
-    Message aiModelSelectionMenu();
 
     Message aiModelSelectionMenu(String currentModel);
 
     Message helpMenu();
 
     Message clearHistoryConfirmation();
+
+    Message reminderMenu();
 
     Message postbackResponse(String data);
 
