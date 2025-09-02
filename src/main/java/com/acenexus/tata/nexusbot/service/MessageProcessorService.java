@@ -4,6 +4,9 @@ import com.acenexus.tata.nexusbot.ai.AIService;
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.entity.ReminderState;
+import com.acenexus.tata.nexusbot.reminder.ReminderService;
+import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
@@ -12,6 +15,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -24,6 +29,8 @@ public class MessageProcessorService {
     private final ChatRoomManager chatRoomManager;
     private final ChatMessageRepository chatMessageRepository;
     private final AdminService adminService;
+    private final ReminderService reminderService;
+    private final ReminderStateManager reminderStateManager;
 
     public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
@@ -66,7 +73,12 @@ public class MessageProcessorService {
             return true;
         }
 
-        // 3. 預定義指令
+        // 3. 提醒互動流程處理
+        if (handleReminderInteraction(roomId, messageText, replyToken)) {
+            return true;
+        }
+
+        // 4. 預定義指令
         try {
             return switch (normalizedText) {
                 case "menu", "選單" -> {
@@ -148,5 +160,63 @@ public class MessageProcessorService {
         String response = messageTemplateProvider.unknownMessage();
         logger.warn("Default message handler used for room {}", roomId);
         messageService.sendReply(replyToken, response);
+    }
+
+    private boolean handleReminderInteraction(String roomId, String messageText, String replyToken) {
+        ReminderState.Step currentStep = reminderStateManager.getCurrentStep(roomId);
+        if (currentStep == null) {
+            return false; // 用戶不在提醒流程中
+        }
+
+        try {
+            switch (currentStep) {
+                case WAITING_FOR_TIME -> {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                    LocalDateTime reminderTime = LocalDateTime.parse(messageText.trim(), formatter);
+
+                    // 檢查時間是否在未來
+                    if (reminderTime.isBefore(LocalDateTime.now())) {
+                        messageService.sendReply(replyToken, "提醒時間必須是未來的時間！\n請重新輸入：");
+                        return true;
+                    }
+
+                    // 儲存時間並進入下一步
+                    reminderStateManager.setTime(roomId, reminderTime);
+                    Message nextStepMessage = messageTemplateProvider.reminderInputMenu("content");
+                    messageService.sendMessage(replyToken, nextStepMessage);
+                    return true;
+                }
+                case WAITING_FOR_CONTENT -> {
+                    // 獲取之前輸入的時間和重複類型
+                    LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
+                    String repeatType = reminderStateManager.getRepeatType(roomId);
+                    String content = messageText.trim();
+
+                    // 創建提醒 (以聊天室為主，createdBy 使用 roomId)
+                    reminderService.createReminder(roomId, content, reminderTime, repeatType, roomId);
+
+                    // 清除狀態
+                    reminderStateManager.clearState(roomId);
+
+                    String repeatTypeText = switch (repeatType) {
+                        case "DAILY" -> "每日重複";
+                        case "WEEKLY" -> "每週重複";
+                        default -> "僅一次";
+                    };
+
+                    messageService.sendReply(replyToken, String.format("提醒已設定！\n時間：%s\n頻率：%s\n內容：%s", reminderTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), repeatTypeText, content));
+
+                    logger.info("Reminder created for room {}: {} at {}", roomId, content, reminderTime);
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error processing reminder interaction: {}", e.getMessage());
+            reminderStateManager.clearState(roomId);
+            messageService.sendReply(replyToken, "輸入格式錯誤，已取消新增提醒。\n請重新點選「新增提醒」按鈕。");
+            return true;
+        }
+
+        return false;
     }
 }

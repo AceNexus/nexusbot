@@ -27,6 +27,10 @@ public interface MessageTemplateProvider {
 
     Message reminderMenu();
 
+    Message reminderRepeatTypeMenu();
+
+    Message reminderInputMenu(String step);
+
     Message postbackResponse(String data);
 
     String imageResponse(String messageId);

@@ -22,6 +22,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
+import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
@@ -35,6 +37,9 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_DAILY;
+import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
+import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
@@ -89,9 +94,9 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "NexusBot 功能選單",
                 "請選擇一項功能開始操作",
                 Arrays.asList(
-                        createButton("🤖 AI 回應開關", TOGGLE_AI, Colors.PRIMARY),
-                        createButton("📅 提醒功能", REMINDER_MENU, Colors.SUCCESS),
-                        createButton("ℹ️ 說明與支援", HELP_MENU, Colors.INFO)
+                        createButton("AI 回應開關", TOGGLE_AI, Colors.PRIMARY),
+                        createButton("提醒功能", REMINDER_MENU, Colors.SUCCESS),
+                        createButton("說明與支援", HELP_MENU, Colors.INFO)
                 )
         );
     }
@@ -383,10 +388,40 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
     public Message reminderMenu() {
         return createFlexMenu(
-                "📅 提醒功能",
-                "管理您的提醒設定",
+                "提醒功能",
+                "點擊下方按鈕新增提醒",
                 Arrays.asList(
-                        createButton("🔙 返回主選單", MAIN_MENU, Colors.SECONDARY)
+                        createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
+                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
+                )
+        );
+    }
+
+    public Message reminderRepeatTypeMenu() {
+        return createFlexMenu(
+                "選擇提醒頻率",
+                "請選擇您希望的提醒頻率",
+                Arrays.asList(
+                        createButton("僅一次", REPEAT_ONCE, Colors.INFO),
+                        createButton("每日重複", REPEAT_DAILY, Colors.SUCCESS),
+                        createButton("每週重複", REPEAT_WEEKLY, Colors.PRIMARY),
+                        createButton("取消新增", CANCEL_REMINDER_INPUT, Colors.ERROR)
+                )
+        );
+    }
+
+    public Message reminderInputMenu(String step) {
+        String title = step.equals("time") ? "輸入提醒時間" : "輸入提醒內容";
+        String subtitle = step.equals("time") ?
+                "請輸入提醒時間\n格式：2025-01-01 13:00" :
+                "請輸入提醒內容\n例如：吃藥、運動、開會等";
+
+        return createFlexMenu(
+                title,
+                subtitle,
+                Arrays.asList(
+                        createButton("取消新增", CANCEL_REMINDER_INPUT, Colors.ERROR),
+                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
                 )
         );
     }

@@ -4,11 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. It integrates with LINE Messaging API (SDK 6.0.0) to handle various message types and provides AI-powered responses through the Groq API. Features a simplified architecture with Flex Message interactive menus.
+NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. It integrates with LINE Messaging API (
+SDK 6.0.0) to handle various message types and provides AI-powered responses through the Groq API. Features a simplified
+architecture with Flex Message interactive menus.
 
 ## Common Development Commands
 
 ### Build & Run
+
 - **Build**: `./gradlew build`
 - **Run tests**: `./gradlew test`
 - **Build and test**: `./gradlew build test`
@@ -17,16 +20,18 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **Clean build**: `./gradlew clean build`
 
 ### Testing
+
 - **Single test class**: `./gradlew test --tests ClassName`
 - **Test with debug**: `./gradlew test --debug-jvm`
 
 ### Local Development
+
 - Uses H2 in-memory database by default (local profile)
 - H2 Console available at: `http://localhost:5001/h2-console`
 - Application runs on port 5001 (configurable via `SERVER_PORT`)
 - **Java Environment**: Requires Java 17+ (configured for Java 17, tested with Java 21)
 - **Critical**: Gradle must use Java 17+. Common issue is Gradle using Java 8, causing build failures
-- **Windows Development**: Set correct Java environment for Gradle: 
+- **Windows Development**: Set correct Java environment for Gradle:
   ```bash
   # For Windows Command Prompt
   set JAVA_HOME="C:\Program Files\Java\jdk-17"
@@ -40,13 +45,14 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
   ```
 
 ### Database Migration
+
 - **Flyway Integration**: Database schema managed through Flyway migrations
 - **Cross-Database Compatibility**: Single migration script works across H2 (local/test) and MySQL (dev/prod)
 - **Migration Scripts**: Located in `src/main/resources/db/migration`
-- **DDL Auto Strategy**: 
-  - All environments: `validate` mode (no auto-generation)
-  - Local/Test: `baseline-on-migrate: true` for existing databases
-  - Dev/Prod: `baseline-on-migrate: false` for strict migration validation
+- **DDL Auto Strategy**:
+    - All environments: `validate` mode (no auto-generation)
+    - Local/Test: `baseline-on-migrate: true` for existing databases
+    - Dev/Prod: `baseline-on-migrate: false` for strict migration validation
 - **Schema Consistency**: Identical schema structure across all environments
 - **SQL Compatibility**: Uses standard SQL syntax supported by both H2 and MySQL
 
@@ -55,35 +61,40 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ### Core Components
 
 **Event Processing Flow**:
+
 1. `LineBotController` receives LINE webhook requests
 2. `EventHandlerService` routes events to specific handlers
 3. Event-specific handlers process different event types:
-   - `MessageEventHandler` - handles all message types
-   - `PostbackEventHandler` - handles button interactions
-   - `FollowEventHandler` - handles follow/unfollow events
-   - `GroupEventHandler` - handles group join/leave events
+    - `MessageEventHandler` - handles all message types
+    - `PostbackEventHandler` - handles button interactions
+    - `FollowEventHandler` - handles follow/unfollow events
+    - `GroupEventHandler` - handles group join/leave events
 
 **Message Processing Pipeline**:
+
 1. `MessageEventHandler` receives message events and extracts `userId` from LINE payload
 2. Routes to `MessageProcessorService` based on message type
 3. For text messages:
-   - Stores user message to `chat_messages` table immediately
-   - First processes admin authentication commands via `AdminService`
-   - Then checks for predefined commands (menu, 選單)
-   - Falls back to AI processing via `AIService`
-   - Async processing with fallback responses
-   - Stores AI responses with analytics (processing time, model used)
+    - Stores user message to `chat_messages` table immediately
+    - First processes admin authentication commands via `AdminService`
+    - Then checks for predefined commands (menu, 選單)
+    - Falls back to AI processing via `AIService`
+    - Async processing with fallback responses
+    - Stores AI responses with analytics (processing time, model used)
 
 **Domain-Driven Package Structure**:
+
 - `ai/` - AI service interface (`AIService`) and Groq implementation (`AIServiceImpl`)
 - `chatroom/` - Chat room management (`ChatRoomManager` interface, `ChatRoomManagerImpl`)
 - `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
-- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`, `SystemStatsService`)
+- `service/` - Core application
+  services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`, `SystemStatsService`)
 - `config/properties/` - Configuration properties classes (`AdminProperties`)
 - `constants/` - Global constants management (`Actions` for postback actions)
 - `handler/` - Event processing handlers (`PostbackEventHandler`, `MessageEventHandler`)
 
 **Service Layer Architecture**:
+
 - All major services follow interface-implementation pattern with `Impl` suffix
 - `MessageProcessorService` orchestrates message processing (admin auth → predefined commands → AI fallback)
 - `AdminService` handles two-step authentication flow with state tracking
@@ -92,61 +103,86 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ### Configuration Management
 
 **Profile-based Configuration**:
+
 - `bootstrap.yml` - base configuration
 - `bootstrap-local.yml` - local development (H2, no Eureka)
 - `bootstrap-dev.yml` - development environment
 - `bootstrap-prod.yml` - production environment
 
 **Key Configuration Classes**:
+
 - `LineBotConfig` - LINE Bot SDK 6.0.0 configuration with `LineMessagingClient`
 - `ConfigValidator` - validates configuration on startup
 - Properties classes in `config.properties` package
 - `AdminProperties` - admin authentication configuration with password seed
 
 ### Message Types Supported
+
 - Text messages (with AI responses)
 - Images, stickers, videos, audio files
 - File uploads, location sharing
 - All responses handled by `MessageTemplateProvider` implementations
 
 ### Security & Validation
+
 - `SignatureValidator` - validates LINE webhook signatures
 - Request signature verification (can be disabled for development)
 
 ### AI Integration
+
 - **Groq API Integration**: Primary AI service for chat responses
 - **Model Configuration**: Configurable model via `groq.model` property (default: llama-3.1-8b-instant)
 - **Character Design**: Natural conversational friend character in Traditional Chinese
 - **Response Style**: Knowledge-rich friend with casual, direct communication style
 - **Timeout Handling**: 15-second timeout with graceful fallback to default responses
 - **Message Storage**: All user messages and AI responses stored in `chat_messages` table with analytics
-- **Async Processing**: AI requests processed asynchronously via `CompletableFuture` to avoid blocking LINE webhook responses
+- **Async Processing**: AI requests processed asynchronously via `CompletableFuture` to avoid blocking LINE webhook
+  responses
 - **Conversation History**: Configurable history limit via `ai.conversation.history-limit` (default: 15 messages)
 - **Soft Delete**: AI reply messages support soft delete functionality for conversation management
 
 ### Admin Authentication
+
 - **Two-Step Authentication**: `/auth` command followed by password input
 - **Dynamic Password**: Date-based password generation (YYYYMMDD + seed)
 - **Room-Based Permissions**: Each chat room can be independently authenticated as admin
 - **Authentication State**: Uses `auth_pending` flag to track authentication flow
 - **Password Configuration**: Configurable via `admin.password-seed` (default: "1103")
 - **Simple Flow**: User types `/auth` → "請輸入密碼" → User enters password → Authentication complete
-- **Service Architecture**: 
-  - `AdminService` handles authentication commands and state management
-  - `DynamicPasswordService` generates current valid password
-  - `ChatRoomManager` stores admin status per room
-  - `SystemStatsService` provides comprehensive system analytics for admins
+- **Service Architecture**:
+    - `AdminService` handles authentication commands and state management
+    - `DynamicPasswordService` generates current valid password
+    - `ChatRoomManager` stores admin status per room
+    - `SystemStatsService` provides comprehensive system analytics for admins
 - **Database Fields**: `is_admin` and `auth_pending` in `chat_rooms` table
 - **Admin Commands**: Authentication flow and system stats reporting with detailed metrics
+
+### Reminder System
+
+- **Smart Reminders**: Scheduled reminder system with repeat options (ONCE, DAILY, WEEKLY)
+- **Database Design**: Three-table architecture for reliability:
+    - `reminders` - reminder configuration and scheduling
+    - `reminder_logs` - delivery tracking and error logging
+    - `reminder_locks` - distributed lock mechanism for preventing duplicate sends
+- **Status Management**: ACTIVE, PAUSED, COMPLETED states for flexible reminder control
+- **Room-Scoped**: Each reminder belongs to a specific chat room with creator tracking
+- **Reliability Features**:
+    - Duplicate prevention via unique lock keys
+    - Comprehensive error logging and retry mechanisms
+    - Delivery status tracking for monitoring
+- **UI Integration**: Accessible through LINE Bot menu system with postback actions
 
 ## Development Guidelines
 
 ### Code Structure
-- **Domain-based packages**: `ai/`, `chatroom/`, `template/` for domain logic; `service/`, `handler/`, `controller/` for technical concerns
+
+- **Domain-based packages**: `ai/`, `chatroom/`, `template/` for domain logic; `service/`, `handler/`, `controller/` for
+  technical concerns
 - **Interface-implementation pattern**: All major services have interfaces with `Impl` suffix implementations
 - **Entity Lifecycle Management**: JPA entities use `@PrePersist` and `@PreUpdate` for automatic timestamp handling
 - **Constants Management**: Use `Actions` class for postback constants, `UIConstants` for UI styling
-- **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based passwords
+- **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based
+  passwords
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
@@ -156,6 +192,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **Interface segregation**: Keep interfaces focused on specific domain responsibilities
 
 ### Build System
+
 - **Gradle Kotlin DSL**: Uses `build.gradle.kts` with Kotlin syntax
 - **Versioning**: Git tag-based versioning (reads from `git describe --tags --abbrev=0`)
 - **Java Toolchain**: Configured for Java 17 (line 22-25 in build.gradle.kts)
@@ -163,6 +200,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **JAR Configuration**: Standard jar disabled, bootJar enabled for executable deployment
 
 ### Constants and UI Management
+
 - **Actions Constants**: All postback actions defined in `constants/Actions.java`
   ```java
   import static com.acenexus.tata.nexusbot.constants.Actions.*;
@@ -179,37 +217,44 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ### SOLID Principles
 
 **S - Single Responsibility Principle (SRP)**
+
 - Each class should have only one reason to change
 - Examples: `MessageService` only handles LINE API communication, `AIServiceImpl` only handles AI integration
 - Event handlers focus solely on routing, business logic stays in services
 
 **O - Open/Closed Principle (OCP)**
+
 - Classes should be open for extension, closed for modification
 - Use interfaces for external integrations (e.g., `AIService` can have different implementations beyond Groq)
 - Template method pattern in `MessageTemplateProviderImpl` allows extending message types without modification
 
 **L - Liskov Substitution Principle (LSP)**
+
 - Derived classes must be substitutable for their base classes
 - All service implementations should honor their interface contracts
 - Mock services in tests should behave identically to production services
 
 **I - Interface Segregation Principle (ISP)**
+
 - Clients should not depend on interfaces they don't use
 - Keep service interfaces focused and specific to their domain
 - Avoid monolithic service interfaces with unrelated methods
 
 **D - Dependency Inversion Principle (DIP)**
+
 - High-level modules should not depend on low-level modules - both should depend on abstractions
 - Use Spring's dependency injection with `@RequiredArgsConstructor`
 - Depend on interfaces, not concrete implementations where possible
 - Example: Services depend on Repository interfaces, not JPA implementations
 
 ### Configuration
+
 - Add new configuration properties to appropriate `Properties` classes
 - Validate critical configuration in `ConfigValidator`
 - Use profile-specific files for environment differences
 
 ### LINE Bot SDK Considerations
+
 - **Current Version**: 6.0.0 (downgraded from 9.8.0 for stability)
 - **API Changes**: Uses `LineMessagingClient` instead of `MessagingApiClient`
 - **Flex Message Support**: Full Flex Message capabilities with SDK 6.x APIs
@@ -217,11 +262,13 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 - **Message Construction**: Uses `ReplyMessage` class for sending responses
 
 ### Testing
+
 - Tests located in `src/test/java`
 - Use `application-test.yml` for test configuration
 - JUnit 5 with Spring Boot Test support
 
 ### Deployment
+
 - Automated deployment via GitHub Actions on version tags (`v*.*.*`)
 - Builds with Java 21, deploys to EC2 via Docker
 - JAR versioning based on Git tags
@@ -230,99 +277,118 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. 
 ### Database Design
 
 **Entity Structure**:
+
 - `ChatRoom` (V1 migration) - Per-room AI settings with lazy record creation
-  - Tracks AI enabled/disabled state for each LINE user/group
-  - Supports both individual and group conversations
-  - V5: Added `is_admin` field for room-based admin authentication
-  - V6: Added `auth_pending` field for two-step authentication flow
+    - Tracks AI enabled/disabled state for each LINE user/group
+    - Supports both individual and group conversations
+    - V5: Added `is_admin` field for room-based admin authentication
+    - V6: Added `auth_pending` field for two-step authentication flow
 - `ChatMessage` (V2 migration) - Multi-turn conversation tracking and AI analytics
-  - Records all user and AI messages with timestamps
-  - Includes AI cost tracking (tokens_used, processing_time_ms, ai_model)
-  - Contains room_type redundancy for query performance optimization
-  - V4: Added soft delete support for conversation management
+    - Records all user and AI messages with timestamps
+    - Includes AI cost tracking (tokens_used, processing_time_ms, ai_model)
+    - Contains room_type redundancy for query performance optimization
+    - V4: Added soft delete support for conversation management
 
 **Data Access**:
+
 - JPA/Hibernate with `@Entity` annotations
 - Repository pattern with `ChatRoomRepository` and `ChatMessageRepository`
 - Database migration managed by Flyway
 - Schema validation via `ddl-auto: validate` (no auto-generation in any environment)
 
 **Migration Scripts**:
+
 - Located in `src/main/resources/db/migration`
 - File naming: `V{version}__{description}.sql` (e.g., `V2__Create_chat_messages_table.sql`)
 - Cross-database compatibility (H2 local, MySQL dev/prod)
 - **No Foreign Key Constraints**: Uses application-layer consistency control for better performance
 - **Design Rationale**: Detailed comments in migration files explain architectural decisions
-- **Current Migrations**: V1 (chat rooms), V2 (chat messages), V3 (AI model tracking), V4 (soft delete support), V5 (admin authentication), V6 (auth pending state)
+- **Current Migrations**: V1 (chat rooms), V2 (chat messages), V3 (AI model tracking), V4 (soft delete support), V5 (
+  admin authentication), V6 (auth pending state), V7 (reminder system)
 
 ### UI Design System Architecture
 
 **Constants-Based UI System**:
+
 - **UIConstants**: Centralized design constants (colors, icons, spacing)
 - **Actions**: Postback action constants for button interactions
 - **Template Pattern**: `MessageTemplateProvider` creates consistent Flex Message layouts
 
 **Design System Structure**:
+
 ```java
 // UI Constants
-Colors.PRIMARY = "#E4405F"    // Instagram pink
-Colors.SUCCESS = "#00C896"    // Mint green
-Colors.ERROR = "#FF6B6B"      // Coral red
-Icons.AI = "🤖"               // Robot emoji
-Sizes.SPACING_MD = "12px"     // Standard spacing
+Colors.PRIMARY ="#E4405F"    // Instagram pink
+Colors.SUCCESS ="#00C896"    // Mint green
+Colors.ERROR ="#FF6B6B"      // Coral red
+Icons.AI ="🤖"               // Robot emoji
+Sizes.SPACING_MD ="12px"     // Standard spacing
 
 // Action Constants  
-Actions.TOGGLE_AI = "action=toggle_ai"
-Actions.ENABLE_AI = "action=enable_ai"
-Actions.MAIN_MENU = "action=main_menu"
+Actions.TOGGLE_AI ="action=toggle_ai"
+Actions.ENABLE_AI ="action=enable_ai"
+Actions.MAIN_MENU ="action=main_menu"
+Actions.REMINDER_MENU ="action=reminder_menu"
 ```
 
 **Flex Message Creation Pattern**:
+
 ```java
 // In MessageTemplateProviderImpl
-createButton(Icons.AI + " AI 回應開關", TOGGLE_AI, Colors.PRIMARY)
+createButton(Icons.AI +" AI 回應開關", TOGGLE_AI, Colors.PRIMARY)
 ```
 
 **Event Processing Integration**:
+
 ```java
 // In PostbackEventHandler
-switch (data) {
-    case TOGGLE_AI -> handleToggleAI();
-    case ENABLE_AI -> handleEnableAI();
-    // Actions constants ensure consistency
+switch(data){
+        case TOGGLE_AI ->
+
+handleToggleAI();
+    case ENABLE_AI ->
+
+handleEnableAI();
+// Actions constants ensure consistency
 }
 ```
 
 **UI Color Palette** (Instagram-inspired):
-- Primary: `#E4405F` (Instagram pink) 
+
+- Primary: `#E4405F` (Instagram pink)
 - Success: `#00C896` (mint green)
-- Info: `#5B51D8` (dream purple)  
+- Info: `#5B51D8` (dream purple)
 - Error: `#FF6B6B` (coral red)
 - Secondary: `#95A5A6` (elegant gray)
 
 ## Common Issues and Solutions
 
 ### Build Issues
+
 - **Java Version Mismatch**: Ensure Gradle uses Java 17+, not Java 8
 - **Compilation Errors**: After major changes, run `./gradlew clean build` to clear cache
 - **Dependency Conflicts**: Check `build.gradle.kts` for version alignment
 
 ### Database Issues
+
 - **Migration Failures**: Check Flyway baseline settings in configuration
 - **H2 Console Access**: Ensure correct JDBC URL format in local development
 - **Entity Mapping Errors**: Verify JPA annotations and database column names match
 
 ### AI Integration Issues
+
 - **Groq API Failures**: Check API key configuration and network connectivity
 - **Timeout Issues**: AI processing has 15-second timeout, check response patterns
 - **Empty Responses**: Fallback mechanism provides default responses when AI fails
 
 ### LINE Bot Integration
+
 - **Webhook Validation**: Signature validation can be disabled for development
 - **Message Type Handling**: All message types have specific handlers in `MessageEventHandler`
 - **Async Response Issues**: Use `CompletableFuture` for non-blocking AI processing
 
 ### Performance Considerations
+
 - **Database Queries**: `ChatMessageRepository` includes optimized queries for analytics
 - **Memory Usage**: H2 in-memory database for local development
 - **Async Processing**: AI requests don't block LINE webhook responses

@@ -2,6 +2,7 @@ package com.acenexus.tata.nexusbot.handler;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -12,6 +13,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
+import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
@@ -25,6 +28,9 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_DAILY;
+import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
+import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 
@@ -35,6 +41,7 @@ public class PostbackEventHandler {
     private final MessageService messageService;
     private final MessageTemplateProvider messageTemplateProvider;
     private final ChatRoomManager chatRoomManager;
+    private final ReminderStateManager reminderStateManager;
 
     public void handle(JsonNode event) {
         try {
@@ -104,6 +111,26 @@ public class PostbackEventHandler {
 
                     // 提醒功能
                     case REMINDER_MENU -> messageTemplateProvider.reminderMenu();
+                    case ADD_REMINDER -> {
+                        reminderStateManager.startAddingReminder(roomId);
+                        yield messageTemplateProvider.reminderRepeatTypeMenu();
+                    }
+                    case REPEAT_ONCE -> {
+                        reminderStateManager.setRepeatType(roomId, "ONCE");
+                        yield messageTemplateProvider.reminderInputMenu("time");
+                    }
+                    case REPEAT_DAILY -> {
+                        reminderStateManager.setRepeatType(roomId, "DAILY");
+                        yield messageTemplateProvider.reminderInputMenu("time");
+                    }
+                    case REPEAT_WEEKLY -> {
+                        reminderStateManager.setRepeatType(roomId, "WEEKLY");
+                        yield messageTemplateProvider.reminderInputMenu("time");
+                    }
+                    case CANCEL_REMINDER_INPUT -> {
+                        reminderStateManager.clearState(roomId);
+                        yield messageTemplateProvider.success("已取消新增提醒");
+                    }
                     default -> messageTemplateProvider.postbackResponse(data);
                 };
 

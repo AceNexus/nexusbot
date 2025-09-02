@@ -1,0 +1,31 @@
+package com.acenexus.tata.nexusbot.reminder;
+
+import com.acenexus.tata.nexusbot.entity.Reminder;
+import com.acenexus.tata.nexusbot.repository.ReminderRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
+@Service
+@RequiredArgsConstructor
+public class ReminderServiceImpl implements ReminderService {
+
+    private final ReminderRepository reminderRepository;
+
+    @Override
+    public Reminder createReminder(String roomId, String content, LocalDateTime reminderTime,
+                                   String repeatType, String createdBy) {
+        Reminder reminder = Reminder.builder()
+                .roomId(roomId)
+                .content(content)
+                .reminderTime(reminderTime)
+                .repeatType(repeatType != null ? repeatType : "ONCE")
+                .status("ACTIVE")
+                .createdBy(createdBy)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        return reminderRepository.save(reminder);
+    }
+}
