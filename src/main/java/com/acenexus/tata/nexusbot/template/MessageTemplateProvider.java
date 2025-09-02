@@ -25,12 +25,6 @@ public interface MessageTemplateProvider {
 
     Message clearHistoryConfirmation();
 
-    Message reminderMenu();
-
-    Message reminderRepeatTypeMenu();
-
-    Message reminderInputMenu(String step);
-
     Message postbackResponse(String data);
 
     String imageResponse(String messageId);
@@ -56,4 +50,14 @@ public interface MessageTemplateProvider {
     Message systemStats(long totalRooms, long aiEnabledRooms, long adminRooms,
                         long totalMessages, long userMessages, long aiMessages,
                         long todayActiveRooms, long weekActiveRooms, String avgProcessingTime);
+
+    Message reminderMenu();
+
+    Message reminderRepeatTypeMenu();
+
+    Message reminderInputMenu(String step);
+
+    String reminderCreatedSuccess(String reminderTime, String repeatType, String content);
+
+    String reminderInputError();
 }

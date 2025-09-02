@@ -204,7 +204,9 @@ public class MessageProcessorService {
                         default -> "僅一次";
                     };
 
-                    messageService.sendReply(replyToken, String.format("提醒已設定！\n時間：%s\n頻率：%s\n內容：%s", reminderTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), repeatTypeText, content));
+                    String successMessage = messageTemplateProvider.reminderCreatedSuccess(reminderTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), repeatTypeText, content);
+
+                    messageService.sendReply(replyToken, successMessage);
 
                     logger.info("Reminder created for room {}: {} at {}", roomId, content, reminderTime);
                     return true;
@@ -213,7 +215,7 @@ public class MessageProcessorService {
         } catch (Exception e) {
             logger.error("Error processing reminder interaction: {}", e.getMessage());
             reminderStateManager.clearState(roomId);
-            messageService.sendReply(replyToken, "輸入格式錯誤，已取消新增提醒。\n請重新點選「新增提醒」按鈕。");
+            messageService.sendReply(replyToken, messageTemplateProvider.reminderInputError());
             return true;
         }
 

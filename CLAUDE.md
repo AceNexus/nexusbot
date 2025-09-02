@@ -87,11 +87,13 @@ architecture with Flex Message interactive menus.
 - `ai/` - AI service interface (`AIService`) and Groq implementation (`AIServiceImpl`)
 - `chatroom/` - Chat room management (`ChatRoomManager` interface, `ChatRoomManagerImpl`)
 - `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
-- `service/` - Core application
-  services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`, `SystemStatsService`)
+- `reminder/` - Reminder domain services (`ReminderService`, `ReminderStateManager`)
+- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`, `SystemStatsService`)
 - `config/properties/` - Configuration properties classes (`AdminProperties`)
 - `constants/` - Global constants management (`Actions` for postback actions)
 - `handler/` - Event processing handlers (`PostbackEventHandler`, `MessageEventHandler`)
+- `entity/` - JPA entities (`ChatRoom`, `ChatMessage`, `Reminder`, `ReminderState`)
+- `repository/` - Data access repositories (`ChatRoomRepository`, `ChatMessageRepository`, `ReminderRepository`, `ReminderStateRepository`)
 
 **Service Layer Architecture**:
 
@@ -160,29 +162,37 @@ architecture with Flex Message interactive menus.
 ### Reminder System
 
 - **Smart Reminders**: Scheduled reminder system with repeat options (ONCE, DAILY, WEEKLY)
-- **Database Design**: Three-table architecture for reliability:
-    - `reminders` - reminder configuration and scheduling
+- **Database Design**: Four-table architecture for reliability and multi-server support:
+    - `reminders` - reminder configuration and scheduling  
     - `reminder_logs` - delivery tracking and error logging
     - `reminder_locks` - distributed lock mechanism for preventing duplicate sends
+    - `reminder_states` - stateful reminder creation flow (V8 migration) for multi-instance environments
+- **Multi-Instance Support**: State management moved from memory to database to support horizontal scaling
 - **Status Management**: ACTIVE, PAUSED, COMPLETED states for flexible reminder control
 - **Room-Scoped**: Each reminder belongs to a specific chat room with creator tracking
+- **Interactive Creation Flow**: Three-step process (repeat type → time input → content input) with 30-minute state expiration
 - **Reliability Features**:
     - Duplicate prevention via unique lock keys
     - Comprehensive error logging and retry mechanisms
     - Delivery status tracking for monitoring
+    - Automatic cleanup of expired creation states
 - **UI Integration**: Accessible through LINE Bot menu system with postback actions
+- **Service Architecture**:
+    - `ReminderService` handles reminder CRUD operations
+    - `ReminderStateManager` manages database-backed creation flow state
+    - Template-based user messaging via `MessageTemplateProvider`
 
 ## Development Guidelines
 
 ### Code Structure
 
-- **Domain-based packages**: `ai/`, `chatroom/`, `template/` for domain logic; `service/`, `handler/`, `controller/` for
-  technical concerns
+- **Domain-based packages**: `ai/`, `chatroom/`, `template/`, `reminder/` for domain logic; `service/`, `handler/`, `controller/` for technical concerns
 - **Interface-implementation pattern**: All major services have interfaces with `Impl` suffix implementations
-- **Entity Lifecycle Management**: JPA entities use `@PrePersist` and `@PreUpdate` for automatic timestamp handling
+- **Entity Lifecycle Management**: JPA entities use `@PrePersist` and `@PreUpdate` for automatic timestamp handling, but explicit field setting is preferred for critical fields like `expiresAt`
 - **Constants Management**: Use `Actions` class for postback constants, `UIConstants` for UI styling
-- **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based
-  passwords
+- **Message Template Pattern**: All user-facing messages should be defined in `MessageTemplateProvider` interface and implemented in `MessageTemplateProviderImpl` for consistency
+- **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based passwords
+- **Reminder Services**: `ReminderService` handles CRUD operations, `ReminderStateManager` manages multi-step creation flow with database persistence
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
@@ -190,6 +200,7 @@ architecture with Flex Message interactive menus.
 - **Transaction Management**: Use `@Transactional` for database operations, avoid in async contexts
 - **Simplicity over complexity**: Prefer direct switch statements over complex abstractions
 - **Interface segregation**: Keep interfaces focused on specific domain responsibilities
+- **Multi-Instance Architecture**: State should be stored in database, not memory, to support horizontal scaling
 
 ### Build System
 
@@ -303,8 +314,7 @@ architecture with Flex Message interactive menus.
 - Cross-database compatibility (H2 local, MySQL dev/prod)
 - **No Foreign Key Constraints**: Uses application-layer consistency control for better performance
 - **Design Rationale**: Detailed comments in migration files explain architectural decisions
-- **Current Migrations**: V1 (chat rooms), V2 (chat messages), V3 (AI model tracking), V4 (soft delete support), V5 (
-  admin authentication), V6 (auth pending state), V7 (reminder system)
+- **Current Migrations**: V1 (chat rooms), V2 (chat messages), V3 (AI model tracking), V4 (soft delete support), V5 (admin authentication), V6 (auth pending state), V7 (reminder system), V8 (reminder states for multi-instance support)
 
 ### UI Design System Architecture
 

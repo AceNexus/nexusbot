@@ -425,4 +425,25 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 )
         );
     }
+
+    @Override
+    public String reminderCreatedSuccess(String reminderTime, String repeatType, String content) {
+        return String.format("""
+                        提醒設定完成
+                                        
+                        時間：%s
+                        頻率：%s
+                        內容：%s
+                                        
+                        系統將在指定時間為您發送提醒""",
+                reminderTime, repeatType, content);
+    }
+
+    @Override
+    public String reminderInputError() {
+        return """
+                輸入格式錯誤，已取消新增提醒
+                                
+                請重新點選「新增提醒」按鈕""";
+    }
 }
