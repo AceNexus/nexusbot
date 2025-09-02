@@ -204,9 +204,9 @@ public class MessageProcessorService {
                         default -> "僅一次";
                     };
 
-                    String successMessage = messageTemplateProvider.reminderCreatedSuccess(reminderTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), repeatTypeText, content);
+                    Message successMessage = messageTemplateProvider.reminderCreatedSuccess(reminderTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), repeatTypeText, content);
 
-                    messageService.sendReply(replyToken, successMessage);
+                    messageService.sendMessage(replyToken, successMessage);
 
                     logger.info("Reminder created for room {}: {} at {}", roomId, content, reminderTime);
                     return true;
@@ -215,7 +215,7 @@ public class MessageProcessorService {
         } catch (Exception e) {
             logger.error("Error processing reminder interaction: {}", e.getMessage());
             reminderStateManager.clearState(roomId);
-            messageService.sendReply(replyToken, messageTemplateProvider.reminderInputError());
+            messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError());
             return true;
         }
 

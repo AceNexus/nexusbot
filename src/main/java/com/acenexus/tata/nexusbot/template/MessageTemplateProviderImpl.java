@@ -427,23 +427,33 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     }
 
     @Override
-    public String reminderCreatedSuccess(String reminderTime, String repeatType, String content) {
-        return String.format("""
-                        提醒設定完成
-                                        
-                        時間：%s
-                        頻率：%s
-                        內容：%s
-                                        
-                        系統將在指定時間為您發送提醒""",
-                reminderTime, repeatType, content);
+    public Message reminderCreatedSuccess(String reminderTime, String repeatType, String content) {
+        String subtitle = String.format("""
+                時間：%s
+                頻率：%s
+                內容：%s
+                                
+                系統將在指定時間為您發送提醒""", reminderTime, repeatType, content);
+
+        return createFlexMenu(
+                "提醒設定完成",
+                subtitle,
+                Arrays.asList(
+                        createButton("返回提醒功能", REMINDER_MENU, Colors.SUCCESS),
+                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
+                )
+        );
     }
 
     @Override
-    public String reminderInputError() {
-        return """
-                輸入格式錯誤，已取消新增提醒
-                                
-                請重新點選「新增提醒」按鈕""";
+    public Message reminderInputError() {
+        return createFlexMenu(
+                "輸入格式錯誤",
+                "已取消新增提醒\n請重新點選「新增提醒」按鈕",
+                Arrays.asList(
+                        createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
+                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
+                )
+        );
     }
 }

@@ -57,7 +57,7 @@ public interface MessageTemplateProvider {
 
     Message reminderInputMenu(String step);
 
-    String reminderCreatedSuccess(String reminderTime, String repeatType, String content);
+    Message reminderCreatedSuccess(String reminderTime, String repeatType, String content);
 
-    String reminderInputError();
+    Message reminderInputError();
 }
