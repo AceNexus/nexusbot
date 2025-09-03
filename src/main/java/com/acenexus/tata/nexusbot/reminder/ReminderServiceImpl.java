@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -27,5 +28,10 @@ public class ReminderServiceImpl implements ReminderService {
                 .build();
 
         return reminderRepository.save(reminder);
+    }
+
+    @Override
+    public List<Reminder> getActiveReminders(String roomId) {
+        return reminderRepository.findActiveRemindersByRoomId(roomId);
     }
 }

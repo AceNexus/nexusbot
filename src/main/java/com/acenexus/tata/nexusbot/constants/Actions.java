@@ -33,6 +33,7 @@ public final class Actions {
     // ============= 提醒功能動作 =============
     public static final String REMINDER_MENU = "action=reminder_menu";
     public static final String ADD_REMINDER = "action=add_reminder";
+    public static final String LIST_REMINDERS = "action=list_reminders";
     public static final String CANCEL_REMINDER_INPUT = "action=cancel_reminder_input";
 
     // 重複類型選擇

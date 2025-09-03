@@ -2,6 +2,7 @@ package com.acenexus.tata.nexusbot.handler;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
@@ -12,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
@@ -20,6 +23,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.LIST_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_DEEPSEEK_R1;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMMA2_9B;
@@ -42,6 +46,7 @@ public class PostbackEventHandler {
     private final MessageTemplateProvider messageTemplateProvider;
     private final ChatRoomManager chatRoomManager;
     private final ReminderStateManager reminderStateManager;
+    private final com.acenexus.tata.nexusbot.reminder.ReminderService reminderService;
 
     public void handle(JsonNode event) {
         try {
@@ -114,6 +119,10 @@ public class PostbackEventHandler {
                     case ADD_REMINDER -> {
                         reminderStateManager.startAddingReminder(roomId);
                         yield messageTemplateProvider.reminderRepeatTypeMenu();
+                    }
+                    case LIST_REMINDERS -> {
+                        List<Reminder> reminders = reminderService.getActiveReminders(roomId);
+                        yield messageTemplateProvider.reminderList(reminders);
                     }
                     case REPEAT_ONCE -> {
                         reminderStateManager.setRepeatType(roomId, "ONCE");

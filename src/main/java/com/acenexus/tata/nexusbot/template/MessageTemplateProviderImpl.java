@@ -29,6 +29,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.LIST_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_DEEPSEEK_R1;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMMA2_9B;
@@ -389,9 +390,10 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     public Message reminderMenu() {
         return createFlexMenu(
                 "提醒功能",
-                "點擊下方按鈕新增提醒",
+                "管理您的提醒設定",
                 Arrays.asList(
                         createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
+                        createButton("提醒列表", LIST_REMINDERS, Colors.INFO),
                         createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
                 )
         );
@@ -450,6 +452,45 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         return createFlexMenu(
                 "輸入格式錯誤",
                 "已取消新增提醒\n請重新點選「新增提醒」按鈕",
+                Arrays.asList(
+                        createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
+                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
+                )
+        );
+    }
+
+    @Override
+    public Message reminderList(java.util.List<com.acenexus.tata.nexusbot.entity.Reminder> reminders) {
+        if (reminders.isEmpty()) {
+            return createFlexMenu(
+                    "提醒列表",
+                    "目前沒有任何提醒",
+                    Arrays.asList(
+                            createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
+                            createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
+                    )
+            );
+        }
+
+        StringBuilder reminderList = new StringBuilder();
+        for (int i = 0; i < reminders.size(); i++) {
+            com.acenexus.tata.nexusbot.entity.Reminder reminder = reminders.get(i);
+            String repeatTypeText = switch (reminder.getRepeatType()) {
+                case "DAILY" -> "每日重複";
+                case "WEEKLY" -> "每週重複";
+                default -> "僅一次";
+            };
+
+            reminderList.append(String.format("%d. %s\n時間: %s\n頻率: %s\n\n",
+                    i + 1,
+                    reminder.getContent(),
+                    reminder.getReminderTime().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
+                    repeatTypeText));
+        }
+
+        return createFlexMenu(
+                "提醒列表",
+                reminderList.toString().trim(),
                 Arrays.asList(
                         createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
                         createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
