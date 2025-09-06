@@ -188,12 +188,12 @@ public class MessageProcessorService {
                     }
 
                     if (reminderTime == null) {
-                        messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError());
+                        messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError(input, "無法解析時間格式"));
                         return true;
                     }
 
                     if (reminderTime.isBefore(LocalDateTime.now())) {
-                        messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError(reminderTime.format(TIME_FORMATTER)));
+                        messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError(input, "時間必須是未來\n" + reminderTime.format(TIME_FORMATTER)));
                         return true;
                     }
 
@@ -232,7 +232,7 @@ public class MessageProcessorService {
         } catch (Exception e) {
             logger.error("Error processing reminder interaction: {}", e.getMessage());
             reminderStateManager.clearState(roomId);
-            messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError());
+            messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError("系統錯誤", "處理提醒時發生錯誤"));
             return true;
         }
 

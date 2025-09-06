@@ -205,10 +205,13 @@ architecture with Flex Message interactive menus.
 - **Entity Lifecycle Management**: JPA entities use `@PrePersist` and `@PreUpdate` for automatic timestamp handling, but explicit field setting is preferred for critical fields like `expiresAt`
 - **Constants Management**: Use `Actions` class for postback constants, `UIConstants` for UI styling
 - **Message Template Pattern**: All user-facing messages should be defined in `MessageTemplateProvider` interface and implemented in `MessageTemplateProviderImpl` for consistency
+  - **Method Overloading**: Support parameterized templates (e.g., `reminderInputError(String originalInput, String aiAnalysis)`) for enhanced context-aware messaging
 - **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based passwords
 - **Reminder Services**: `ReminderService` handles CRUD operations, `ReminderStateManager` manages multi-step creation flow with database persistence
 - **Utility Classes**: 
   - `AnalyzerUtil` provides AI-powered time parsing with natural language support and user feedback, integrated as Spring `@Component` with static methods
+  - **Enhanced Error Reporting**: `TimeParseResult` class encapsulates parsing results with original input, AI analysis, and success status for detailed user feedback
+  - **Dynamic AI Prompts**: Time parsing uses real-time context including current date/time and calculated relative dates for improved accuracy
   - **Performance Constants**: Extract commonly used `DateTimeFormatter` patterns as static final constants (e.g., `TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")`) to improve performance and maintainability
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
@@ -421,9 +424,11 @@ handleEnableAI();
 
 ### Reminder System Issues
 
-- **Time Parsing**: Standard format (`yyyy-MM-dd HH:mm`) is parsed directly for performance; natural language expressions use AI semantic analysis
+- **Time Parsing Performance**: Standard format (`yyyy-MM-dd HH:mm`) is parsed directly for performance; natural language expressions use AI semantic analysis
+- **Enhanced Error Feedback**: `AnalyzerUtil.TimeParseResult` class provides detailed parsing feedback including original input and AI analysis results for better user experience
+- **AI Prompt Optimization**: Time parsing prompts include dynamic context (current time, day of week) and structured examples for improved accuracy
 - **State Management**: Multi-step creation flow uses database-backed state for multi-instance support
-- **User Experience**: Display parsed time results to users for confirmation and transparency
+- **User Experience**: Display parsed time results and detailed error analysis to users for confirmation and transparency
 
 ### Performance Considerations
 

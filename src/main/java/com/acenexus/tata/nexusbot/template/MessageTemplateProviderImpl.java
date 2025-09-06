@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.template;
 
+import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.linecorp.bot.model.action.PostbackAction;
 import com.linecorp.bot.model.message.FlexMessage;
 import com.linecorp.bot.model.message.Message;
@@ -466,23 +467,12 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         );
     }
 
-    @Override
-    public Message reminderInputError() {
-        return createFlexMenu(
-                "輸入格式錯誤",
-                "已取消新增提醒\n請重新點選「新增提醒」按鈕",
-                Arrays.asList(
-                        createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
-                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
-                )
-        );
-    }
 
     @Override
-    public Message reminderInputError(String reminderTime) {
+    public Message reminderInputError(String userInput, String aiResult) {
         return createFlexMenu(
-                "時間格式錯誤",
-                "提醒時間必須是未來的時間！\n您輸入的時間：" + reminderTime + "\n\n已取消新增提醒\n請重新點選「新增提醒」按鈕",
+                "時間輸入錯誤",
+                "您的輸入：" + userInput + "\n解析結果：" + aiResult + "\n\n請重新輸入時間\n例如：「明天下午3點」或「2025-09-07 15:00」",
                 Arrays.asList(
                         createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
                         createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
@@ -522,7 +512,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         List<Button> buttons = new ArrayList<>();
 
         // 為每個提醒添加刪除按鈕
-        for (com.acenexus.tata.nexusbot.entity.Reminder reminder : reminders) {
+        for (Reminder reminder : reminders) {
             String buttonText = String.format("刪除: %s",
                     reminder.getContent().length() > 15 ?
                             reminder.getContent().substring(0, 15) + "..." :
