@@ -413,11 +413,29 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         );
     }
 
+    @Override
     public Message reminderInputMenu(String step) {
         String title = step.equals("time") ? "輸入提醒時間" : "輸入提醒內容";
         String subtitle = step.equals("time") ?
                 "請輸入提醒時間\n輸入日期時間（如：2025-01-01 13:00）\n或自然語句（如：明天下午三點）" :
                 "請輸入提醒內容\n例如：吃藥、運動、開會等";
+
+        return createFlexMenu(
+                title,
+                subtitle,
+                Arrays.asList(
+                        createButton("取消新增", CANCEL_REMINDER_INPUT, Colors.ERROR),
+                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
+                )
+        );
+    }
+
+    @Override
+    public Message reminderInputMenu(String step, String reminderTime) {
+        String title = step.equals("time") ? "輸入提醒時間" : "輸入提醒內容";
+        String subtitle = step.equals("time") ?
+                "請輸入提醒時間\n輸入日期時間（如：2025-01-01 13:00）\n或自然語句（如：明天下午三點）" :
+                "設定提醒時間：" + reminderTime + "\n\n請輸入提醒內容\n例如：吃藥、運動、開會等";
 
         return createFlexMenu(
                 title,
@@ -453,6 +471,18 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         return createFlexMenu(
                 "輸入格式錯誤",
                 "已取消新增提醒\n請重新點選「新增提醒」按鈕",
+                Arrays.asList(
+                        createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
+                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
+                )
+        );
+    }
+
+    @Override
+    public Message reminderInputError(String reminderTime) {
+        return createFlexMenu(
+                "時間格式錯誤",
+                "提醒時間必須是未來的時間！\n您輸入的時間：" + reminderTime + "\n\n已取消新增提醒\n請重新點選「新增提醒」按鈕",
                 Arrays.asList(
                         createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
                         createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)

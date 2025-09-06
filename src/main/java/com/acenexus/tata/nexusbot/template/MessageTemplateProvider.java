@@ -57,9 +57,13 @@ public interface MessageTemplateProvider {
 
     Message reminderInputMenu(String step);
 
+    Message reminderInputMenu(String step, String reminderTime);
+
     Message reminderCreatedSuccess(String reminderTime, String repeatType, String content);
 
     Message reminderInputError();
+
+    Message reminderInputError(String reminderTime);
 
     Message reminderList(java.util.List<com.acenexus.tata.nexusbot.entity.Reminder> reminders);
 }

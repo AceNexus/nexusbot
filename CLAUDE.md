@@ -89,6 +89,7 @@ architecture with Flex Message interactive menus.
 - `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
 - `reminder/` - Reminder domain services (`ReminderService`, `ReminderStateManager`)
 - `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`, `SystemStatsService`)
+- `util/` - Utility classes (`AnalyzerUtil` for AI time parsing, `SignatureValidator` for LINE webhook validation)
 - `config/properties/` - Configuration properties classes (`AdminProperties`)
 - `constants/` - Global constants management (`Actions` for postback actions)
 - `handler/` - Event processing handlers (`PostbackEventHandler`, `MessageEventHandler`)
@@ -138,10 +139,14 @@ architecture with Flex Message interactive menus.
 - **Response Style**: Knowledge-rich friend with casual, direct communication style
 - **Timeout Handling**: 15-second timeout with graceful fallback to default responses
 - **Message Storage**: All user messages and AI responses stored in `chat_messages` table with analytics
-- **Async Processing**: AI requests processed asynchronously via `CompletableFuture` to avoid blocking LINE webhook
-  responses
+- **Async Processing**: AI requests processed asynchronously via `CompletableFuture` to avoid blocking LINE webhook responses
 - **Conversation History**: Configurable history limit via `ai.conversation.history-limit` (default: 15 messages)
 - **Soft Delete**: AI reply messages support soft delete functionality for conversation management
+- **Natural Language Processing**: `AnalyzerUtil` provides AI-powered semantic analysis for natural language time expressions
+  - **Performance Optimization**: Standard format detection (`yyyy-MM-dd HH:mm`) bypasses AI parsing to reduce API calls
+  - **Format Validation**: Regex-based pre-validation before AI semantic analysis
+  - **User Feedback**: Real-time parsing results displayed to users for transparency
+  - **Timezone Support**: Defaults to Asia/Taipei timezone for consistent time handling
 
 ### Admin Authentication
 
@@ -177,9 +182,18 @@ architecture with Flex Message interactive menus.
     - Delivery status tracking for monitoring
     - Automatic cleanup of expired creation states
 - **UI Integration**: Accessible through LINE Bot menu system with postback actions
+- **AI-Powered Time Parsing**: Natural language time parsing via `AnalyzerUtil`
+    - Supports expressions like "明天下午3點", "30分鐘後", "2025-09-06 17:00"  
+    - Uses Groq AI service for semantic analysis and time resolution
+    - Strict format validation (YYYY-MM-DD HH:MM) with timezone handling (Asia/Taipei)
+    - **User Feedback System**: Real-time display of AI parsing process to users
+        - Shows original input, AI interpretation, and parsing results
+        - Provides detailed error messages with examples on failure
+        - Confirms successful parsing with formatted time display
 - **Service Architecture**:
     - `ReminderService` handles reminder CRUD operations
     - `ReminderStateManager` manages database-backed creation flow state
+    - `AnalyzerUtil` provides AI-driven time parsing with user feedback integration
     - Template-based user messaging via `MessageTemplateProvider`
 
 ## Development Guidelines
@@ -193,6 +207,9 @@ architecture with Flex Message interactive menus.
 - **Message Template Pattern**: All user-facing messages should be defined in `MessageTemplateProvider` interface and implemented in `MessageTemplateProviderImpl` for consistency
 - **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based passwords
 - **Reminder Services**: `ReminderService` handles CRUD operations, `ReminderStateManager` manages multi-step creation flow with database persistence
+- **Utility Classes**: 
+  - `AnalyzerUtil` provides AI-powered time parsing with natural language support and user feedback, integrated as Spring `@Component` with static methods
+  - **Performance Constants**: Extract commonly used `DateTimeFormatter` patterns as static final constants (e.g., `TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")`) to improve performance and maintainability
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
@@ -271,6 +288,8 @@ architecture with Flex Message interactive menus.
 - **Flex Message Support**: Full Flex Message capabilities with SDK 6.x APIs
 - **Import Paths**: Use `com.linecorp.bot.model.*` instead of `com.linecorp.bot.messaging.*`
 - **Message Construction**: Uses `ReplyMessage` class for sending responses
+- **ReplyToken Limitation**: Each `replyToken` can only be used once - combine messages or use single response to avoid API errors
+- **Message Template Overloading**: Support for parameterized templates (e.g., `reminderInputMenu(String step, String reminderTime)`) for enhanced user experience
 
 ### Testing
 
@@ -390,15 +409,25 @@ handleEnableAI();
 - **Groq API Failures**: Check API key configuration and network connectivity
 - **Timeout Issues**: AI processing has 15-second timeout, check response patterns
 - **Empty Responses**: Fallback mechanism provides default responses when AI fails
+- **Performance Optimization**: Use direct parsing for standard time formats before falling back to AI semantic analysis
 
 ### LINE Bot Integration
 
 - **Webhook Validation**: Signature validation can be disabled for development
 - **Message Type Handling**: All message types have specific handlers in `MessageEventHandler`
 - **Async Response Issues**: Use `CompletableFuture` for non-blocking AI processing
+- **ReplyToken Usage**: Avoid using the same `replyToken` multiple times - combine responses or use single message
+- **Switch Case Limitations**: For parameterized postback actions like `"action=delete_reminder&id=123"`, use `startsWith()` in default case rather than exact matching in switch statements
+
+### Reminder System Issues
+
+- **Time Parsing**: Standard format (`yyyy-MM-dd HH:mm`) is parsed directly for performance; natural language expressions use AI semantic analysis
+- **State Management**: Multi-step creation flow uses database-backed state for multi-instance support
+- **User Experience**: Display parsed time results to users for confirmation and transparency
 
 ### Performance Considerations
 
 - **Database Queries**: `ChatMessageRepository` includes optimized queries for analytics
 - **Memory Usage**: H2 in-memory database for local development
 - **Async Processing**: AI requests don't block LINE webhook responses
+- **Constant Optimization**: Use static final constants for frequently used formatters and patterns

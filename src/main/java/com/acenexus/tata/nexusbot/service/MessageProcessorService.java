@@ -24,6 +24,7 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class MessageProcessorService {
     private static final Logger logger = LoggerFactory.getLogger(MessageProcessorService.class);
+    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private final MessageService messageService;
     private final AIService aiService;
     private final MessageTemplateProvider messageTemplateProvider;
@@ -172,17 +173,33 @@ public class MessageProcessorService {
         try {
             switch (currentStep) {
                 case WAITING_FOR_TIME -> {
-                    LocalDateTime reminderTime = AnalyzerUtil.parseTime(messageText.trim());
+                    String input = messageText.trim();
+                    LocalDateTime reminderTime;
 
-                    // 檢查時間是否在未來
+                    // 先嘗試標準格式，失敗則使用 AI 解析
+                    if (input.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")) {
+                        try {
+                            reminderTime = LocalDateTime.parse(input, TIME_FORMATTER);
+                        } catch (Exception e) {
+                            reminderTime = AnalyzerUtil.parseTime(input);
+                        }
+                    } else {
+                        reminderTime = AnalyzerUtil.parseTime(input);
+                    }
+
+                    if (reminderTime == null) {
+                        messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError());
+                        return true;
+                    }
+
                     if (reminderTime.isBefore(LocalDateTime.now())) {
-                        messageService.sendReply(replyToken, "提醒時間必須是未來的時間！\n請重新輸入：");
+                        messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError(reminderTime.format(TIME_FORMATTER)));
                         return true;
                     }
 
                     // 儲存時間並進入下一步
                     reminderStateManager.setTime(roomId, reminderTime);
-                    Message nextStepMessage = messageTemplateProvider.reminderInputMenu("content");
+                    Message nextStepMessage = messageTemplateProvider.reminderInputMenu("content", reminderTime.format(TIME_FORMATTER));
                     messageService.sendMessage(replyToken, nextStepMessage);
                     return true;
                 }
@@ -204,7 +221,7 @@ public class MessageProcessorService {
                         default -> "僅一次";
                     };
 
-                    Message successMessage = messageTemplateProvider.reminderCreatedSuccess(reminderTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")), repeatTypeText, content);
+                    Message successMessage = messageTemplateProvider.reminderCreatedSuccess(reminderTime.format(TIME_FORMATTER), repeatTypeText, content);
 
                     messageService.sendMessage(replyToken, successMessage);
 
