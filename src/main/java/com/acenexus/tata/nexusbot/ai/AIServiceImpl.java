@@ -72,7 +72,7 @@ public class AIServiceImpl implements AIService {
 
             // 根據不同模型設定最適合的參數
             var modelConfig = getModelConfiguration(selectedModel);
-            
+
             var request = Map.of(
                     "model", selectedModel,
                     "messages", messages,
@@ -96,7 +96,7 @@ public class AIServiceImpl implements AIService {
 
         } catch (Exception e) {
             long processingTime = System.currentTimeMillis() - startTime;
-            logger.error("Groq API call with context failed using model {}: {}", selectedModel, e.getMessage());
+            logger.error("Groq API call failed - Model: {}, Time: {}ms, Error: {}", selectedModel, processingTime, e.getMessage(), e);
             return new ChatResponse(null, selectedModel, 0, processingTime, false);
         }
     }
@@ -104,7 +104,8 @@ public class AIServiceImpl implements AIService {
     /**
      * 模型配置記錄
      */
-    private record ModelConfiguration(double temperature, int maxTokens) {}
+    private record ModelConfiguration(double temperature, int maxTokens) {
+    }
 
     /**
      * 根據模型獲取最佳配置參數
@@ -113,20 +114,20 @@ public class AIServiceImpl implements AIService {
         return switch (model) {
             // 快速模型 - 較高創意性，適中長度
             case "llama-3.1-8b-instant" -> new ModelConfiguration(0.8, 800);
-            
+
             // 大型強力模型 - 較低溫度確保準確性，更長輸出
             case "llama-3.3-70b-versatile" -> new ModelConfiguration(0.6, 1200);
             case "llama3-70b-8192" -> new ModelConfiguration(0.65, 1500);
-            
+
             // 創意模型 - 高創意性，中等長度
             case "gemma2-9b-it" -> new ModelConfiguration(0.9, 1000);
-            
+
             // 推理模型 - 低溫度確保邏輯性，較長輸出
             case "deepseek-r1-distill-llama-70b" -> new ModelConfiguration(0.4, 1500);
-            
+
             // 多語言模型 - 平衡設定
             case "qwen/qwen3-32b" -> new ModelConfiguration(0.7, 1200);
-            
+
             // 預設設定
             default -> new ModelConfiguration(0.7, 1000);
         };

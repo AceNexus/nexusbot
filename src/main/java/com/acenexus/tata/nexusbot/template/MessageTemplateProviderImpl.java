@@ -95,7 +95,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "NexusBot 功能選單",
                 "請選擇一項功能開始操作",
                 Arrays.asList(
-                        createButton("AI 回應開關", TOGGLE_AI, Colors.PRIMARY),
+                        createButton("AI 回應功能", TOGGLE_AI, Colors.PRIMARY),
                         createButton("提醒功能", REMINDER_MENU, Colors.SUCCESS),
                         createButton("說明與支援", HELP_MENU, Colors.INFO)
                 )
