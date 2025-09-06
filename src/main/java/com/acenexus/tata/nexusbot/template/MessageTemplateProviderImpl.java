@@ -416,7 +416,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     public Message reminderInputMenu(String step) {
         String title = step.equals("time") ? "輸入提醒時間" : "輸入提醒內容";
         String subtitle = step.equals("time") ?
-                "請輸入提醒時間\n格式：2025-01-01 13:00" :
+                "請輸入提醒時間\n輸入日期時間（如：2025-01-01 13:00）\n或自然語句（如：明天下午三點）" :
                 "請輸入提醒內容\n例如：吃藥、運動、開會等";
 
         return createFlexMenu(

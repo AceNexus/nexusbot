@@ -9,6 +9,7 @@ import com.acenexus.tata.nexusbot.reminder.ReminderService;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.acenexus.tata.nexusbot.util.AnalyzerUtil;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -171,8 +172,7 @@ public class MessageProcessorService {
         try {
             switch (currentStep) {
                 case WAITING_FOR_TIME -> {
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-                    LocalDateTime reminderTime = LocalDateTime.parse(messageText.trim(), formatter);
+                    LocalDateTime reminderTime = AnalyzerUtil.parseTime(messageText.trim());
 
                     // 檢查時間是否在未來
                     if (reminderTime.isBefore(LocalDateTime.now())) {
