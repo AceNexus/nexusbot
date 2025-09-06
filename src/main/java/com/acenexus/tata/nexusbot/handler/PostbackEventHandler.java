@@ -20,6 +20,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
+import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
@@ -140,7 +141,13 @@ public class PostbackEventHandler {
                         reminderStateManager.clearState(roomId);
                         yield messageTemplateProvider.success("已取消新增提醒");
                     }
-                    default -> messageTemplateProvider.postbackResponse(data);
+                    default -> {
+                        if (data.startsWith(DELETE_REMINDER)) { // 刪除提醒
+                            yield handleDeleteReminder(data, roomId);
+                        } else {
+                            yield messageTemplateProvider.postbackResponse(data);
+                        }
+                    }
                 };
 
                 messageService.sendMessage(replyToken, response);
@@ -158,6 +165,20 @@ public class PostbackEventHandler {
         } else {
             logger.error("Failed to change AI model to {} for room {} (type: {})", modelId, roomId, roomType);
             return messageTemplateProvider.error("切換 AI 模型時發生錯誤，請稍後再試。");
+        }
+    }
+
+    private Message handleDeleteReminder(String data, String roomId) {
+        try {
+            String idStr = data.substring(data.indexOf("&id=") + 4);
+            Long reminderId = Long.parseLong(idStr);
+
+            boolean success = reminderService.deleteReminder(reminderId, roomId);
+            return success ? messageTemplateProvider.success("提醒已刪除") : messageTemplateProvider.error("刪除失敗");
+
+        } catch (Exception e) {
+            logger.error("Delete reminder error: {}", e.getMessage());
+            return messageTemplateProvider.error("刪除提醒時發生錯誤");
         }
     }
 }

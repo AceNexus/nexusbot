@@ -34,4 +34,18 @@ public class ReminderServiceImpl implements ReminderService {
     public List<Reminder> getActiveReminders(String roomId) {
         return reminderRepository.findActiveRemindersByRoomId(roomId);
     }
+
+    @Override
+    public boolean deleteReminder(Long reminderId, String roomId) {
+        try {
+            var reminder = reminderRepository.findById(reminderId);
+            if (reminder.isPresent() && reminder.get().getRoomId().equals(roomId)) {
+                reminderRepository.deleteById(reminderId);
+                return true;
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

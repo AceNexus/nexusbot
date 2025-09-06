@@ -17,4 +17,9 @@ public interface ReminderService {
      * 查詢聊天室的所有活躍提醒
      */
     List<Reminder> getActiveReminders(String roomId);
+
+    /**
+     * 刪除指定提醒
+     */
+    boolean deleteReminder(Long reminderId, String roomId);
 }

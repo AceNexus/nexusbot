@@ -26,6 +26,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
+import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
@@ -488,13 +489,24 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                     repeatTypeText));
         }
 
+        List<Button> buttons = new ArrayList<>();
+
+        // 為每個提醒添加刪除按鈕
+        for (com.acenexus.tata.nexusbot.entity.Reminder reminder : reminders) {
+            String buttonText = String.format("刪除: %s",
+                    reminder.getContent().length() > 15 ?
+                            reminder.getContent().substring(0, 15) + "..." :
+                            reminder.getContent());
+            buttons.add(createButton(buttonText, DELETE_REMINDER + "&id=" + reminder.getId(), Colors.ERROR));
+        }
+
+        buttons.add(createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY));
+        buttons.add(createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY));
+
         return createFlexMenu(
                 "提醒列表",
                 reminderList.toString().trim(),
-                Arrays.asList(
-                        createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
-                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
-                )
+                buttons
         );
     }
 }
