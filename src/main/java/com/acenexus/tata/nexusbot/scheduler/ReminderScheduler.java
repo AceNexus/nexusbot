@@ -1,7 +1,9 @@
 package com.acenexus.tata.nexusbot.scheduler;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
+import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.lock.DistributedLock;
+import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
 import com.acenexus.tata.nexusbot.repository.ReminderRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -26,6 +28,7 @@ public class ReminderScheduler {
     private static final Logger logger = LoggerFactory.getLogger(ReminderScheduler.class);
 
     private final ReminderRepository reminderRepository;
+    private final ReminderLogRepository reminderLogRepository;
     private final DistributedLock distributedLock;
 
     /**
@@ -99,6 +102,15 @@ public class ReminderScheduler {
      */
     private void sendReminderMessage(Reminder reminder) {
         logger.info("Room [{}] 提醒訊息：{}", reminder.getRoomId(), reminder.getContent());
+
+        // TODO 發送 Line 通知
+
+        // TODO 記錄日誌
+        ReminderLog log = new ReminderLog();
+        log.setReminderId(reminder.getId());
+        log.setRoomId(reminder.getRoomId());
+        log.setStatus("SENT");
+        reminderLogRepository.save(log);
     }
 
 
