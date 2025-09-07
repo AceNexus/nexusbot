@@ -10,12 +10,14 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 
+import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
+
 @Component
 public class AnalyzerUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(AnalyzerUtil.class);
     private static final Pattern TIME_FORMAT = Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$");
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter FORMATTER = STANDARD_TIME;
 
     private static AIService aiService;
 

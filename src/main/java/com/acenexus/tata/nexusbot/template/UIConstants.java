@@ -41,24 +41,4 @@ public final class UIConstants {
         public static final String SPACING_XXL = "24px";
     }
 
-    // ============= 圖標管理 =============
-    public static final class Icons {
-        public static final String AI = "🤖";
-        public static final String HOME = "🏠";
-        public static final String INFO = "ℹ️";
-        public static final String ABOUT = "📖";
-        public static final String SUCCESS = "✅";
-        public static final String ERROR = "❌";
-        public static final String IMAGE = "📸";
-        public static final String VIDEO = "🎥";
-        public static final String AUDIO = "🎵";
-        public static final String FILE = "📁";
-        public static final String STICKER = "😊";
-        public static final String STAR = "✨";
-        public static final String MODEL = "⚙️";
-        public static final String BRAIN = "🧠";
-        public static final String LIGHTNING = "⚡";
-        public static final String ROCKET = "🚀";
-        public static final String CRYSTAL = "💎";
-    }
 }

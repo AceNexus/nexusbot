@@ -20,11 +20,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
 
+import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
+
 @Service
 @RequiredArgsConstructor
 public class MessageProcessorService {
     private static final Logger logger = LoggerFactory.getLogger(MessageProcessorService.class);
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter TIME_FORMATTER = STANDARD_TIME;
     private final MessageService messageService;
     private final AIService aiService;
     private final MessageTemplateProvider messageTemplateProvider;

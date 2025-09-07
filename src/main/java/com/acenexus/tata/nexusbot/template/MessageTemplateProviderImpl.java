@@ -45,6 +45,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
+import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Sizes;
 
@@ -493,40 +494,133 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
             );
         }
 
-        StringBuilder reminderList = new StringBuilder();
+        // 創建標題
+        Text titleText = Text.builder()
+                .text("提醒列表")
+                .size(FlexFontSize.LG)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.PRIMARY)
+                .align(FlexAlign.CENTER)
+                .build();
+
+        // 創建提醒卡片列表
+        List<FlexComponent> reminderCards = new ArrayList<>();
+        reminderCards.add(titleText);
+        reminderCards.add(createSpacer());
+
         for (int i = 0; i < reminders.size(); i++) {
-            com.acenexus.tata.nexusbot.entity.Reminder reminder = reminders.get(i);
+            Reminder reminder = reminders.get(i);
             String repeatTypeText = switch (reminder.getRepeatType()) {
                 case "DAILY" -> "每日重複";
                 case "WEEKLY" -> "每週重複";
                 default -> "僅一次";
             };
 
-            reminderList.append(String.format("%d. %s\n時間: %s\n頻率: %s\n\n",
+            // 提醒內容卡片
+            Box reminderCard = createReminderCard(
                     i + 1,
                     reminder.getContent(),
-                    reminder.getReminderTime().format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")),
-                    repeatTypeText));
+                    reminder.getReminderTime().format(STANDARD_TIME),
+                    repeatTypeText,
+                    reminder.getId()
+            );
+
+            reminderCards.add(reminderCard);
+            if (i < reminders.size() - 1) {
+                reminderCards.add(createSpacer());
+            }
         }
 
-        List<Button> buttons = new ArrayList<>();
+        // 底部按鈕
+        reminderCards.add(createSpacer());
+        reminderCards.add(createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY));
+        reminderCards.add(createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY));
 
-        // 為每個提醒添加刪除按鈕
-        for (Reminder reminder : reminders) {
-            String buttonText = String.format("刪除: %s",
-                    reminder.getContent().length() > 15 ?
-                            reminder.getContent().substring(0, 15) + "..." :
-                            reminder.getContent());
-            buttons.add(createButton(buttonText, DELETE_REMINDER + "&id=" + reminder.getId(), Colors.ERROR));
-        }
+        // 主容器
+        Box mainBox = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(reminderCards)
+                .paddingAll(FlexPaddingSize.LG)
+                .spacing(FlexMarginSize.MD)
+                .build();
 
-        buttons.add(createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY));
-        buttons.add(createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY));
+        // Bubble 容器
+        Bubble bubble = Bubble.builder()
+                .body(mainBox)
+                .build();
 
-        return createFlexMenu(
-                "提醒列表",
-                reminderList.toString().trim(),
-                buttons
+        return FlexMessage.builder()
+                .altText("提醒列表")
+                .contents(bubble)
+                .build();
+    }
+
+    private Box createReminderCard(int index, String content, String time, String repeatType, Long reminderId) {
+        // 序號和內容
+        Text indexText = Text.builder()
+                .text(String.valueOf(index))
+                .size(FlexFontSize.SM)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.PRIMARY)
+                .flex(0)
+                .build();
+
+        Text contentText = Text.builder()
+                .text(content)
+                .size(FlexFontSize.SM)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.TEXT_PRIMARY)
+                .flex(1)
+                .wrap(true)
+                .build();
+
+        Box headerBox = Box.builder()
+                .layout(FlexLayout.HORIZONTAL)
+                .contents(Arrays.asList(indexText, contentText))
+                .spacing(FlexMarginSize.MD)
+                .build();
+
+        // 時間資訊
+        Text timeText = Text.builder()
+                .text("時間: " + time)
+                .size(FlexFontSize.SM)
+                .color(Colors.INFO)
+                .build();
+
+        // 頻率資訊
+        Text repeatText = Text.builder()
+                .text("頻率: " + repeatType)
+                .size(FlexFontSize.SM)
+                .color(Colors.SUCCESS)
+                .build();
+
+        // 刪除按鈕
+        String buttonText = content.length() > 8 ?
+                content.substring(0, 8) + "..." : content;
+        Button deleteButton = Button.builder()
+                .style(Button.ButtonStyle.SECONDARY)
+                .action(PostbackAction.builder()
+                        .label("刪除")
+                        .data(DELETE_REMINDER + "&id=" + reminderId)
+                        .build())
+                .build();
+
+        // 組合卡片內容
+        List<FlexComponent> cardContents = Arrays.asList(
+                headerBox,
+                timeText,
+                repeatText,
+                createSpacer(),
+                deleteButton
         );
+
+        return Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(cardContents)
+                .paddingAll(FlexPaddingSize.MD)
+                .backgroundColor("#F8F9FA")
+                .cornerRadius("8px")
+                .spacing(FlexMarginSize.SM)
+                .build();
     }
 }
