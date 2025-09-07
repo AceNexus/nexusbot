@@ -32,9 +32,23 @@ public class ReminderLockService implements DistributedLock {
     }
 
     @Override
+    public void releaseLock(String lockKey) {
+        try {
+            String sql = "DELETE FROM reminder_locks WHERE lock_key = ?";
+            int result = jdbcTemplate.update(sql, lockKey);
+
+            if (result > 0) {
+                logger.debug("Successfully released lock: {}", lockKey);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to release lock {}: {}", lockKey, e.getMessage());
+        }
+    }
+
+    @Override
     public void cleanExpiredLocks() {
         try {
-            LocalDateTime expiredBefore = LocalDateTime.now().minusMinutes(30);
+            LocalDateTime expiredBefore = LocalDateTime.now().minusMinutes(5);
             String sql = "DELETE FROM reminder_locks WHERE locked_at < ?";
             int result = jdbcTemplate.update(sql, expiredBefore);
 

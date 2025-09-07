@@ -88,6 +88,9 @@ public class ReminderScheduler {
 
         } catch (Exception e) {
             logger.error("Failed to process reminder [{}]: {}", reminder.getId(), e.getMessage(), e);
+        } finally {
+            // 釋放分散式鎖
+            distributedLock.releaseLock(lockKey);
         }
     }
 
