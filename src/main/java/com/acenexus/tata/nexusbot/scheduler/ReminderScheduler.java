@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.scheduler;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
+import com.acenexus.tata.nexusbot.lock.DistributedLock;
 import com.acenexus.tata.nexusbot.repository.ReminderRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -25,6 +26,7 @@ public class ReminderScheduler {
     private static final Logger logger = LoggerFactory.getLogger(ReminderScheduler.class);
 
     private final ReminderRepository reminderRepository;
+    private final DistributedLock distributedLock;
 
     /**
      * 每分鐘執行一次，掃描並發送到期提醒
@@ -65,6 +67,14 @@ public class ReminderScheduler {
      */
     @Transactional
     public void processReminder(Reminder reminder) {
+        String lockKey = "reminder_" + reminder.getId();
+
+        // 嘗試獲取分散式鎖，防止多實例重複處理
+        if (!distributedLock.tryLock(lockKey)) {
+            logger.debug("Reminder [{}] is already being processed by another instance", reminder.getId());
+            return;
+        }
+
         try {
             logger.info("Processing reminder [{}]: {}", reminder.getId(), reminder.getContent());
 
