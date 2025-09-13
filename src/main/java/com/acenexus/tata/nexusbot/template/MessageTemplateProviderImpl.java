@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
@@ -39,6 +40,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
+import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_COMPLETED;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_DAILY;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
@@ -482,7 +484,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     }
 
     @Override
-    public Message reminderList(java.util.List<com.acenexus.tata.nexusbot.entity.Reminder> reminders) {
+    public Message reminderList(java.util.List<com.acenexus.tata.nexusbot.entity.Reminder> reminders, Map<Long, String> userResponseStatuses) {
         if (reminders.isEmpty()) {
             return createFlexMenu(
                     "提醒列表",
@@ -516,12 +518,16 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 default -> "僅一次";
             };
 
+            // 獲取用戶回應狀態
+            String userStatus = userResponseStatuses.getOrDefault(reminder.getId(), "無回應");
+
             // 提醒內容卡片
             Box reminderCard = createReminderCard(
                     i + 1,
                     reminder.getContent(),
                     reminder.getReminderTime().format(STANDARD_TIME),
                     repeatTypeText,
+                    userStatus,
                     reminder.getId()
             );
 
@@ -555,7 +561,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .build();
     }
 
-    private Box createReminderCard(int index, String content, String time, String repeatType, Long reminderId) {
+    private Box createReminderCard(int index, String content, String time, String repeatType, String userStatus, Long reminderId) {
         // 序號和內容
         Text indexText = Text.builder()
                 .text(String.valueOf(index))
@@ -594,6 +600,16 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .color(Colors.SUCCESS)
                 .build();
 
+        // 用戶狀態資訊
+        String statusColor = "COMPLETED".equals(userStatus) ? Colors.SUCCESS : Colors.SECONDARY;
+        String statusDisplay = "COMPLETED".equals(userStatus) ? "已執行" : "無回應";
+
+        Text statusText = Text.builder()
+                .text("狀態: " + statusDisplay)
+                .size(FlexFontSize.SM)
+                .color(statusColor)
+                .build();
+
         // 刪除按鈕
         String buttonText = content.length() > 8 ?
                 content.substring(0, 8) + "..." : content;
@@ -610,6 +626,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 headerBox,
                 timeText,
                 repeatText,
+                statusText,
                 createSpacer(),
                 deleteButton
         );
@@ -621,6 +638,99 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .backgroundColor("#F8F9FA")
                 .cornerRadius("8px")
                 .spacing(FlexMarginSize.SM)
+                .build();
+    }
+
+    @Override
+    public Message buildReminderNotification(String content, String repeatType, Long reminderId) {
+        String repeatDescription = switch (repeatType.toUpperCase()) {
+            case "DAILY" -> "每日提醒";
+            case "WEEKLY" -> "每週提醒";
+            case "ONCE" -> "一次性提醒";
+            default -> "提醒";
+        };
+
+        String currentTime = java.time.LocalDateTime.now().format(STANDARD_TIME);
+
+        // 主標題
+        Text titleText = Text.builder()
+                .text("提醒時間到了")
+                .size(FlexFontSize.XL)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.PRIMARY)
+                .align(FlexAlign.CENTER)
+                .build();
+
+        // 提醒內容
+        Text contentText = Text.builder()
+                .text(content)
+                .size(FlexFontSize.LG)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.TEXT_PRIMARY)
+                .wrap(true)
+                .build();
+
+        // 提醒類型
+        Text typeText = Text.builder()
+                .text("類型: " + repeatDescription)
+                .size(FlexFontSize.SM)
+                .color(Colors.INFO)
+                .build();
+
+        // 時間
+        Text timeText = Text.builder()
+                .text("時間: " + currentTime)
+                .size(FlexFontSize.SM)
+                .color(Colors.SECONDARY)
+                .build();
+
+        // 分隔線
+        Separator separator = Separator.builder()
+                .margin(FlexMarginSize.LG)
+                .build();
+
+        // 說明文字
+        Text instructionText = Text.builder()
+                .text("請確認您是否已執行此提醒:")
+                .size(FlexFontSize.SM)
+                .color(Colors.TEXT_PRIMARY)
+                .align(FlexAlign.CENTER)
+                .build();
+
+        // 確認按鈕
+        List<FlexComponent> buttonComponents = Arrays.asList(
+                createButton("確認已執行", REMINDER_COMPLETED + "&id=" + reminderId, Colors.SUCCESS)
+        );
+
+        // 主容器內容
+        List<FlexComponent> bodyContents = new ArrayList<>();
+        bodyContents.add(titleText);
+        bodyContents.add(createSpacer());
+        bodyContents.add(contentText);
+        bodyContents.add(createSpacer());
+        bodyContents.add(typeText);
+        bodyContents.add(timeText);
+        bodyContents.add(separator);
+        bodyContents.add(instructionText);
+        bodyContents.add(createSpacer());
+        bodyContents.addAll(buttonComponents);
+
+        // 主容器
+        Box mainBox = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(bodyContents)
+                .paddingAll(FlexPaddingSize.LG)
+                .spacing(FlexMarginSize.SM)
+                .build();
+
+        // Bubble 容器
+        Bubble bubble = Bubble.builder()
+                .body(mainBox)
+                .build();
+
+        return FlexMessage.builder()
+                .altText("提醒通知: " + content)
+                .contents(bubble)
                 .build();
     }
 }

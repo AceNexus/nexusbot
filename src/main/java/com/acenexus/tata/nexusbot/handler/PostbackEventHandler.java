@@ -3,7 +3,9 @@ package com.acenexus.tata.nexusbot.handler;
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.entity.Reminder;
+import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
+import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -13,7 +15,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
@@ -32,6 +38,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
+import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_COMPLETED;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_DAILY;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
@@ -48,6 +55,7 @@ public class PostbackEventHandler {
     private final ChatRoomManager chatRoomManager;
     private final ReminderStateManager reminderStateManager;
     private final com.acenexus.tata.nexusbot.reminder.ReminderService reminderService;
+    private final ReminderLogRepository reminderLogRepository;
 
     public void handle(JsonNode event) {
         try {
@@ -123,7 +131,8 @@ public class PostbackEventHandler {
                     }
                     case LIST_REMINDERS -> {
                         List<Reminder> reminders = reminderService.getActiveReminders(roomId);
-                        yield messageTemplateProvider.reminderList(reminders);
+                        Map<Long, String> userResponseStatuses = getUserResponseStatuses(reminders);
+                        yield messageTemplateProvider.reminderList(reminders, userResponseStatuses);
                     }
                     case REPEAT_ONCE -> {
                         reminderStateManager.setRepeatType(roomId, "ONCE");
@@ -144,6 +153,8 @@ public class PostbackEventHandler {
                     default -> {
                         if (data.startsWith(DELETE_REMINDER)) { // 刪除提醒
                             yield handleDeleteReminder(data, roomId);
+                        } else if (data.startsWith(REMINDER_COMPLETED)) { // 提醒已執行
+                            yield handleReminderCompleted(data, roomId);
                         } else {
                             yield messageTemplateProvider.postbackResponse(data);
                         }
@@ -180,5 +191,73 @@ public class PostbackEventHandler {
             logger.error("Delete reminder error: {}", e.getMessage());
             return messageTemplateProvider.error("刪除提醒時發生錯誤");
         }
+    }
+
+    private Message handleReminderCompleted(String data, String roomId) {
+        try {
+            String idStr = data.substring(data.indexOf("&id=") + 4);
+            Long reminderId = Long.parseLong(idStr);
+
+            logger.info("Reminder [{}] marked as completed by user in room [{}]", reminderId, roomId);
+
+            updateReminderLogWithUserResponse(reminderId);
+            return messageTemplateProvider.success("已記錄您已執行此提醒。");
+
+        } catch (Exception e) {
+            logger.error("Handle reminder completed error: {}", e.getMessage());
+            return messageTemplateProvider.error("處理確認時發生錯誤");
+        }
+    }
+
+    private void updateReminderLogWithUserResponse(Long reminderId) {
+        try {
+            // 查詢最新的發送記錄
+            Optional<ReminderLog> logOptional = reminderLogRepository.findLatestSentLogByReminderId(reminderId);
+
+            if (logOptional.isPresent()) {
+                ReminderLog log = logOptional.get();
+                log.setUserResponseTime(LocalDateTime.now());
+                log.setUserResponseStatus("COMPLETED");
+                reminderLogRepository.save(log);
+
+                logger.info("Updated reminder log [{}] with user response: {}", log.getId(), "COMPLETED");
+            } else {
+                logger.warn("No sent log found for reminder [{}], cannot record user response", reminderId);
+            }
+
+        } catch (Exception e) {
+            logger.error("Failed to update reminder log with user response for reminder [{}]: {}", reminderId, e.getMessage());
+        }
+    }
+
+    private Map<Long, String> getUserResponseStatuses(List<Reminder> reminders) {
+        Map<Long, String> statusMap = new HashMap<>();
+
+        if (reminders.isEmpty()) {
+            return statusMap;
+        }
+
+        try {
+            // 提取所有 reminder ID
+            List<Long> reminderIds = reminders.stream()
+                    .map(Reminder::getId)
+                    .toList();
+
+            // 查詢所有相關的用戶回應記錄
+            List<ReminderLog> responseLogs = reminderLogRepository.findUserResponsesByReminderIds(reminderIds);
+
+            // 將結果轉換為 Map
+            for (ReminderLog log : responseLogs) {
+                statusMap.put(log.getReminderId(), log.getUserResponseStatus());
+            }
+
+            logger.debug("Retrieved user response statuses for {} reminders, found {} responses",
+                    reminderIds.size(), responseLogs.size());
+
+        } catch (Exception e) {
+            logger.error("Failed to retrieve user response statuses: {}", e.getMessage());
+        }
+
+        return statusMap;
     }
 }

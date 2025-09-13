@@ -35,6 +35,12 @@ public class ReminderLog {
     @Column(name = "error_message")
     private String errorMessage;
 
+    @Column(name = "user_response_time")
+    private LocalDateTime userResponseTime;
+
+    @Column(name = "user_response_status")
+    private String userResponseStatus;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

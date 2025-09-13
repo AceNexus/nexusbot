@@ -37,6 +37,9 @@ public final class Actions {
     public static final String DELETE_REMINDER = "action=delete_reminder";
     public static final String CANCEL_REMINDER_INPUT = "action=cancel_reminder_input";
 
+    // ============= 提醒回報動作 =============
+    public static final String REMINDER_COMPLETED = "action=reminder_completed";
+
     // 重複類型選擇
     public static final String REPEAT_ONCE = "repeat=ONCE";
     public static final String REPEAT_DAILY = "repeat=DAILY";

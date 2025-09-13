@@ -1,6 +1,10 @@
 package com.acenexus.tata.nexusbot.template;
 
+import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.linecorp.bot.model.message.Message;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 訊息模板提供者介面
@@ -63,5 +67,7 @@ public interface MessageTemplateProvider {
 
     Message reminderInputError(String userInput, String aiResult);
 
-    Message reminderList(java.util.List<com.acenexus.tata.nexusbot.entity.Reminder> reminders);
+    Message reminderList(List<Reminder> reminders, Map<Long, String> userResponseStatuses);
+
+    Message buildReminderNotification(String content, String repeatType, Long reminderId);
 }

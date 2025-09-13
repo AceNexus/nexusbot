@@ -5,9 +5,10 @@ import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.lock.DistributedLock;
 import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
 import com.acenexus.tata.nexusbot.repository.ReminderRepository;
+import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.client.LineMessagingClient;
 import com.linecorp.bot.model.PushMessage;
-import com.linecorp.bot.model.message.TextMessage;
+import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,6 +35,7 @@ public class ReminderScheduler {
     private final ReminderLogRepository reminderLogRepository;
     private final DistributedLock distributedLock;
     private final LineMessagingClient lineMessagingClient;
+    private final MessageTemplateProvider messageTemplateProvider;
 
     /**
      * 每分鐘執行一次，掃描並發送到期提醒
@@ -108,11 +110,14 @@ public class ReminderScheduler {
         logger.info("Room [{}] 提醒訊息：{}", reminder.getRoomId(), reminder.getContent());
 
         try {
-            String reminderMessage = buildReminderMessage(reminder);
+            Message reminderMessage = messageTemplateProvider.buildReminderNotification(
+                    reminder.getContent(),
+                    reminder.getRepeatType(),
+                    reminder.getId()
+            );
 
             // 發送 Line 通知
-            TextMessage textMessage = new TextMessage(reminderMessage);
-            PushMessage pushMessage = new PushMessage(reminder.getRoomId(), textMessage);
+            PushMessage pushMessage = new PushMessage(reminder.getRoomId(), reminderMessage);
             lineMessagingClient.pushMessage(pushMessage);
 
             saveReminderLog(reminder, "SENT", null);
@@ -121,25 +126,6 @@ public class ReminderScheduler {
             logger.error("Failed to send reminder message for reminder [{}]: {}", reminder.getId(), e.getMessage(), e);
             saveReminderLog(reminder, "FAILED", e.getMessage());
         }
-    }
-
-
-    /**
-     * 構建提醒訊息內容
-     */
-    private String buildReminderMessage(Reminder reminder) {
-        StringBuilder message = new StringBuilder();
-
-        message.append("提醒時間到了！\n\n");
-        message.append("📝 ").append(reminder.getContent()).append("\n");
-
-        switch (reminder.getRepeatType().toUpperCase()) {
-            case "DAILY" -> message.append("\n每日提醒");
-            case "WEEKLY" -> message.append("\n每週提醒");
-            case "ONCE" -> message.append("\n這是一次性提醒");
-        }
-
-        return message.toString();
     }
 
     /**
