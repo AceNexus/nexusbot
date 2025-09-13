@@ -38,9 +38,10 @@ public class ReminderScheduler {
     private final MessageTemplateProvider messageTemplateProvider;
 
     /**
-     * 每分鐘執行一次，掃描並發送到期提醒
+     * 每分鐘整分執行一次，掃描並發送到期提醒
+     * cron: 每分鐘的第0秒執行（確保在整分時執行）
      */
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void processReminders() {
         try {

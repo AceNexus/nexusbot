@@ -41,7 +41,11 @@ public class AnalyzerUtil {
                 logger.debug("AI input: '{}', output: '{}'", input, result);
 
                 if (result.isEmpty() || result.equals("\"\"")) return null;
-                if (TIME_FORMAT.matcher(result).matches()) return LocalDateTime.parse(result, FORMATTER);
+                if (TIME_FORMAT.matcher(result).matches()) {
+                    LocalDateTime parsedTime = LocalDateTime.parse(result, FORMATTER);
+                    // 確保時間為整分（秒數為0，納秒為0）
+                    return parsedTime.withSecond(0).withNano(0);
+                }
 
                 logger.warn("AI returned invalid format: {}", result);
             } else {

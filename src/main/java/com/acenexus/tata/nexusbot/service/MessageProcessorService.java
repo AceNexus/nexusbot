@@ -181,7 +181,8 @@ public class MessageProcessorService {
                     // 先嘗試標準格式，失敗則使用 AI 解析
                     if (input.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")) {
                         try {
-                            reminderTime = LocalDateTime.parse(input, TIME_FORMATTER);
+                            reminderTime = LocalDateTime.parse(input, TIME_FORMATTER)
+                                    .withSecond(0).withNano(0); // 確保為整分
                         } catch (Exception e) {
                             reminderTime = AnalyzerUtil.parseTime(input);
                         }
