@@ -5,6 +5,9 @@ import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.lock.DistributedLock;
 import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
 import com.acenexus.tata.nexusbot.repository.ReminderRepository;
+import com.linecorp.bot.client.LineMessagingClient;
+import com.linecorp.bot.model.PushMessage;
+import com.linecorp.bot.model.message.TextMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +33,7 @@ public class ReminderScheduler {
     private final ReminderRepository reminderRepository;
     private final ReminderLogRepository reminderLogRepository;
     private final DistributedLock distributedLock;
+    private final LineMessagingClient lineMessagingClient;
 
     /**
      * 每分鐘執行一次，掃描並發送到期提醒
@@ -103,14 +107,58 @@ public class ReminderScheduler {
     private void sendReminderMessage(Reminder reminder) {
         logger.info("Room [{}] 提醒訊息：{}", reminder.getRoomId(), reminder.getContent());
 
-        // TODO 發送 Line 通知
+        try {
+            String reminderMessage = buildReminderMessage(reminder);
 
-        // TODO 記錄日誌
-        ReminderLog log = new ReminderLog();
-        log.setReminderId(reminder.getId());
-        log.setRoomId(reminder.getRoomId());
-        log.setStatus("SENT");
-        reminderLogRepository.save(log);
+            // 發送 Line 通知
+            TextMessage textMessage = new TextMessage(reminderMessage);
+            PushMessage pushMessage = new PushMessage(reminder.getRoomId(), textMessage);
+            lineMessagingClient.pushMessage(pushMessage);
+
+            saveReminderLog(reminder, "SENT", null);
+
+        } catch (Exception e) {
+            logger.error("Failed to send reminder message for reminder [{}]: {}", reminder.getId(), e.getMessage(), e);
+            saveReminderLog(reminder, "FAILED", e.getMessage());
+        }
+    }
+
+
+    /**
+     * 構建提醒訊息內容
+     */
+    private String buildReminderMessage(Reminder reminder) {
+        StringBuilder message = new StringBuilder();
+
+        message.append("提醒時間到了！\n\n");
+        message.append("📝 ").append(reminder.getContent()).append("\n");
+
+        switch (reminder.getRepeatType().toUpperCase()) {
+            case "DAILY" -> message.append("\n每日提醒");
+            case "WEEKLY" -> message.append("\n每週提醒");
+            case "ONCE" -> message.append("\n這是一次性提醒");
+        }
+
+        return message.toString();
+    }
+
+    /**
+     * 保存提醒日誌
+     */
+    private void saveReminderLog(Reminder reminder, String status, String errorMessage) {
+        try {
+            ReminderLog log = new ReminderLog();
+            log.setReminderId(reminder.getId());
+            log.setRoomId(reminder.getRoomId());
+            log.setStatus(status);
+            log.setErrorMessage(errorMessage);
+            reminderLogRepository.save(log);
+
+            logger.debug("Reminder log saved for reminder [{}] with status [{}]", reminder.getId(), status);
+
+        } catch (Exception e) {
+            logger.error("Failed to save reminder log for reminder [{}]: {}", reminder.getId(), e.getMessage(), e);
+        }
     }
 
 
