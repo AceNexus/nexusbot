@@ -21,6 +21,6 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     /**
      * 查詢指定時間範圍內的到期提醒
      */
-    @Query("SELECT r FROM Reminder r WHERE r.status = 'ACTIVE' AND r.reminderTime >= :startTime AND r.reminderTime <= :endTime ORDER BY r.reminderTime ASC")
+    @Query("SELECT r FROM Reminder r WHERE r.status = 'ACTIVE' AND r.reminderTime >= :startTime AND r.reminderTime < :endTime ORDER BY r.reminderTime ASC")
     List<Reminder> findDueReminders(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
 }
