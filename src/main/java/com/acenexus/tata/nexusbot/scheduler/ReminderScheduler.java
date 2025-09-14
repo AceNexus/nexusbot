@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.scheduler;
 
+import com.acenexus.tata.nexusbot.ai.AIService;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.lock.DistributedLock;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 
@@ -36,6 +38,7 @@ public class ReminderScheduler {
     private final DistributedLock distributedLock;
     private final LineMessagingClient lineMessagingClient;
     private final MessageTemplateProvider messageTemplateProvider;
+    private final AIService aiService;
 
     /**
      * 每分鐘整分執行一次，掃描並發送到期提醒
@@ -105,29 +108,57 @@ public class ReminderScheduler {
     }
 
     /**
-     * 發送提醒訊息
+     * 發送提醒訊息（非同步處理，AI 情感回復）
      */
     private void sendReminderMessage(Reminder reminder) {
         logger.info("Room [{}] 提醒訊息：{}", reminder.getRoomId(), reminder.getContent());
 
-        try {
-            Message reminderMessage = messageTemplateProvider.buildReminderNotification(
-                    reminder.getContent(),
-                    reminder.getRepeatType(),
-                    reminder.getId()
-            );
+        CompletableFuture.runAsync(() -> {
+            try {
+                String enhancedContent = enhanceReminderWithAI(reminder.getContent());
+                Message reminderMessage = messageTemplateProvider.buildReminderNotification(enhancedContent, reminder.getRepeatType(), reminder.getId());
+                PushMessage pushMessage = new PushMessage(reminder.getRoomId(), reminderMessage);
+                lineMessagingClient.pushMessage(pushMessage);
 
-            // 發送 Line 通知
-            PushMessage pushMessage = new PushMessage(reminder.getRoomId(), reminderMessage);
-            lineMessagingClient.pushMessage(pushMessage);
+                saveReminderLog(reminder, "SENT", null);
+                logger.debug("Async notification sent successfully for reminder [{}]", reminder.getId());
 
-            saveReminderLog(reminder, "SENT", null);
-
-        } catch (Exception e) {
-            logger.error("Failed to send reminder message for reminder [{}]: {}", reminder.getId(), e.getMessage(), e);
-            saveReminderLog(reminder, "FAILED", e.getMessage());
-        }
+            } catch (Exception e) {
+                logger.error("Failed to send async notification for reminder [{}]: {}", reminder.getId(), e.getMessage());
+                saveReminderLog(reminder, "FAILED", e.getMessage());
+            }
+        });
     }
+
+    /**
+     * 用 AI 美化提醒內容，增加情感回復
+     */
+    private String enhanceReminderWithAI(String originalContent) {
+        String promptTemplate = """
+                將以下提醒改寫給長輩，語氣溫馨、禮貌、體貼，最後加上適合的 emoji。
+                文字請簡短，控制在 10 字以內，並帶鼓勵或祝福。
+                原內容：%s
+                請直接回覆改寫後的文字，不要其他說明。
+                """;
+
+        try {
+            String prompt = String.format(promptTemplate, originalContent);
+
+            AIService.ChatResponse response = aiService.chatWithContext("reminder_enhancement", prompt, "llama-3.1-8b-instant");
+
+            if (response != null && response.success() && response.content() != null && !response.content().trim().isEmpty()) {
+                return response.content().trim();
+            }
+
+            logger.warn("AI enhancement returned empty or unsuccessful response, fallback to original content.");
+        } catch (Exception e) {
+            logger.error("AI enhancement failed, using original content. Cause: {}", e.getMessage(), e);
+        }
+
+        // AI 失敗時返回原始內容
+        return originalContent;
+    }
+
 
     /**
      * 保存提醒日誌
