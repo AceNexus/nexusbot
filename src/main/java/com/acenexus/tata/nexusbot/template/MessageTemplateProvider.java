@@ -69,5 +69,5 @@ public interface MessageTemplateProvider {
 
     Message reminderList(List<Reminder> reminders, Map<Long, String> userResponseStatuses);
 
-    Message buildReminderNotification(String content, String repeatType, Long reminderId);
+    Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType, Long reminderId);
 }

@@ -642,7 +642,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     }
 
     @Override
-    public Message buildReminderNotification(String content, String repeatType, Long reminderId) {
+    public Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType, Long reminderId) {
         String repeatDescription = switch (repeatType.toUpperCase()) {
             case "DAILY" -> "每日提醒";
             case "WEEKLY" -> "每週提醒";
@@ -661,13 +661,12 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .align(FlexAlign.CENTER)
                 .build();
 
-        // 提醒內容
-        Text contentText = Text.builder()
-                .text(content)
-                .size(FlexFontSize.LG)
+        // 原始內
+        Text originalLabel = Text.builder()
+                .text("提醒: " + originalContent)
+                .size(FlexFontSize.XS)
+                .color(Colors.TEXT_SECONDARY)
                 .weight(Text.TextWeight.BOLD)
-                .color(Colors.TEXT_PRIMARY)
-                .wrap(true)
                 .build();
 
         // 提醒類型
@@ -689,6 +688,15 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .margin(FlexMarginSize.LG)
                 .build();
 
+        // AI 優化內容
+        Text enhancedText = Text.builder()
+                .text(enhancedContent)
+                .size(FlexFontSize.LG)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.TEXT_PRIMARY)
+                .wrap(true)
+                .build();
+
         // 說明文字
         Text instructionText = Text.builder()
                 .text("請確認您是否已執行此提醒:")
@@ -704,16 +712,18 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
         // 主容器內容
         List<FlexComponent> bodyContents = new ArrayList<>();
-        bodyContents.add(titleText);
+        bodyContents.add(titleText);           // 標題
         bodyContents.add(createSpacer());
-        bodyContents.add(contentText);
+        bodyContents.add(originalLabel);       // 原始提醒標籤
+        bodyContents.add(typeText);            // 提醒類型
+        bodyContents.add(timeText);            // 時間
+        bodyContents.add(separator);           // 分隔線
+        bodyContents.add(enhancedText);        // AI 優化內容 (主要內容)
         bodyContents.add(createSpacer());
-        bodyContents.add(typeText);
-        bodyContents.add(timeText);
-        bodyContents.add(separator);
-        bodyContents.add(instructionText);
+        bodyContents.add(separator);           // 分隔線
+        bodyContents.add(instructionText);     // 說明文字
         bodyContents.add(createSpacer());
-        bodyContents.addAll(buttonComponents);
+        bodyContents.addAll(buttonComponents); // 確認按鈕
 
         // 主容器
         Box mainBox = Box.builder()
@@ -729,7 +739,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .build();
 
         return FlexMessage.builder()
-                .altText("提醒通知: " + content)
+                .altText("提醒通知: " + enhancedContent + " (" + originalContent + ")")
                 .contents(bubble)
                 .build();
     }

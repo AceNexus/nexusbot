@@ -116,7 +116,7 @@ public class ReminderScheduler {
         CompletableFuture.runAsync(() -> {
             try {
                 String enhancedContent = enhanceReminderWithAI(reminder.getContent());
-                Message reminderMessage = messageTemplateProvider.buildReminderNotification(enhancedContent, reminder.getRepeatType(), reminder.getId());
+                Message reminderMessage = messageTemplateProvider.buildReminderNotification(enhancedContent, reminder.getContent(), reminder.getRepeatType(), reminder.getId());
                 PushMessage pushMessage = new PushMessage(reminder.getRoomId(), reminderMessage);
                 lineMessagingClient.pushMessage(pushMessage);
 
