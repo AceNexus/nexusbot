@@ -205,7 +205,9 @@ architecture with Flex Message interactive menus.
 - **Entity Lifecycle Management**: JPA entities use `@PrePersist` and `@PreUpdate` for automatic timestamp handling, but explicit field setting is preferred for critical fields like `expiresAt`
 - **Constants Management**: Use `Actions` class for postback constants, `UIConstants` for UI styling
 - **Message Template Pattern**: All user-facing messages should be defined in `MessageTemplateProvider` interface and implemented in `MessageTemplateProviderImpl` for consistency
+  - **Professional UI System**: All templates use the unified `createCard()` method with consistent header-description-button structure
   - **Method Overloading**: Support parameterized templates (e.g., `reminderInputError(String originalInput, String aiAnalysis)`) for enhanced context-aware messaging
+  - **Design Consistency**: Follow white/light gray backgrounds with blue-green accents for professional appearance
 - **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based passwords
 - **Reminder Services**: `ReminderService` handles CRUD operations, `ReminderStateManager` manages multi-step creation flow with database persistence
 - **Utility Classes**: 
@@ -237,13 +239,16 @@ architecture with Flex Message interactive menus.
   import static com.acenexus.tata.nexusbot.constants.Actions.*;
   // Use TOGGLE_AI, ENABLE_AI, DISABLE_AI, etc.
   ```
-- **UI Constants**: Colors, icons, and sizing in `template/UIConstants.java`
+- **UI Constants**: Professional color system and 8px grid spacing in `template/UIConstants.java`
   ```java
   import static com.acenexus.tata.nexusbot.template.UIConstants.*;
-  // Use Colors.PRIMARY, Icons.AI, Sizes.SPACING_MD
+  // Use Colors.PRIMARY (#00A8CC), Colors.GRAY_500, Sizes.SPACING_MD (16px)
+  // Professional gray scale: GRAY_50, GRAY_100, GRAY_500, GRAY_900
+  // 8px grid system: SPACING_SM (8px), SPACING_MD (16px), SPACING_LG (24px)
   ```
-- **Consistent Styling**: iOS-inspired color palette with semantic color usage
-- **Icon Management**: Centralized emoji icons with semantic meaning
+- **Professional Color Palette**: Modern blue-green primary with comprehensive gray scale system
+- **8px Grid System**: Consistent spacing using 8px baseline grid for professional alignment
+- **Design Consistency**: White backgrounds with subtle professional accents
 
 ### SOLID Principles
 
@@ -340,58 +345,78 @@ architecture with Flex Message interactive menus.
 
 ### UI Design System Architecture
 
-**Constants-Based UI System**:
+**Professional Design System**:
 
-- **UIConstants**: Centralized design constants (colors, icons, spacing)
+- **UIConstants**: Centralized professional design constants with modern color palette and 8px grid system
 - **Actions**: Postback action constants for button interactions
-- **Template Pattern**: `MessageTemplateProvider` creates consistent Flex Message layouts
+- **Template Pattern**: `MessageTemplateProvider` creates consistent professional Flex Message layouts
+- **Modernized Approach**: Clean white/light gray backgrounds with professional blue-green accents
 
-**Design System Structure**:
-
-```java
-// UI Constants
-Colors.PRIMARY ="#E4405F"    // Instagram pink
-Colors.SUCCESS ="#00C896"    // Mint green
-Colors.ERROR ="#FF6B6B"      // Coral red
-Icons.AI ="🤖"               // Robot emoji
-Sizes.SPACING_MD ="12px"     // Standard spacing
-
-// Action Constants  
-Actions.TOGGLE_AI ="action=toggle_ai"
-Actions.ENABLE_AI ="action=enable_ai"
-Actions.MAIN_MENU ="action=main_menu"
-Actions.REMINDER_MENU ="action=reminder_menu"
-```
-
-**Flex Message Creation Pattern**:
+**Professional Color System**:
 
 ```java
-// In MessageTemplateProviderImpl
-createButton(Icons.AI +" AI 回應開關", TOGGLE_AI, Colors.PRIMARY)
+// Primary Colors - Modern Blue-Green Palette
+Colors.PRIMARY = "#00A8CC"         // Professional blue-green
+Colors.PRIMARY_LIGHT = "#E3F8FF"   // Light blue-green background
+Colors.PRIMARY_DARK = "#006B7D"    // Deep blue-green
+
+// Functional Colors
+Colors.SUCCESS = "#10B981"         // Modern green
+Colors.ERROR = "#EF4444"           // Error red
+Colors.WARNING = "#F59E0B"         // Warning orange
+Colors.INFO = "#0EA5E9"            // Information blue
+
+// Professional Gray Scale System
+Colors.GRAY_50 = "#F9FAFB"         // Lightest gray
+Colors.GRAY_100 = "#F3F4F6"        // Light background
+Colors.GRAY_500 = "#6B7280"        // Secondary text
+Colors.GRAY_900 = "#111827"        // Primary text
+
+// Background System
+Colors.BACKGROUND = "#FFFFFF"       // Pure white
+Colors.CARD_BACKGROUND = "#FFFFFF"  // Card background
+Colors.SECTION_BACKGROUND = "#F9FAFB" // Section background
 ```
 
-**Event Processing Integration**:
+**8px Grid System**:
 
 ```java
-// In PostbackEventHandler
-switch(data){
-        case TOGGLE_AI ->
+// Spacing System (8px baseline grid)
+Sizes.SPACING_XS = "4px"    // 4px
+Sizes.SPACING_SM = "8px"    // 8px
+Sizes.SPACING_MD = "16px"   // 16px (2x grid)
+Sizes.SPACING_LG = "24px"   // 24px (3x grid)
+Sizes.SPACING_XL = "32px"   // 32px (4x grid)
 
-handleToggleAI();
-    case ENABLE_AI ->
-
-handleEnableAI();
-// Actions constants ensure consistency
-}
+// Border Radius
+Sizes.RADIUS_SM = "4px"     // Small radius
+Sizes.RADIUS_MD = "8px"     // Standard radius
+Sizes.RADIUS_LG = "12px"    // Large radius
 ```
 
-**UI Color Palette** (Instagram-inspired):
+**Professional Template System**:
 
-- Primary: `#E4405F` (Instagram pink)
-- Success: `#00C896` (mint green)
-- Info: `#5B51D8` (dream purple)
-- Error: `#FF6B6B` (coral red)
-- Secondary: `#95A5A6` (elegant gray)
+```java
+// Core template methods in MessageTemplateProviderImpl
+createCard(title, description, buttons)           // Unified card template
+createNotification(title, message, statusColor)   // Status notification with indicator
+createHeaderSection(title, description)           // Standardized header
+createButtonSection(buttons)                       // Consistent button layout
+createProfessionalCard(altText, components)        // Professional card container
+
+// Button creation methods
+createPrimaryButton(label, action)    // Primary action (blue-green)
+createButton(label, action)           // Secondary action (gray)
+createSuccessButton(label, action)    // Success action (green)
+```
+
+**Design Principles**:
+
+- **Consistency**: All templates use unified `createCard()` method
+- **Professional**: Modern SaaS product design language
+- **Clean**: White backgrounds with subtle blue-green accents
+- **Readable**: Proper text hierarchy and color contrast
+- **User Experience**: Clear operation guidance and status feedback
 
 ## Common Issues and Solutions
 

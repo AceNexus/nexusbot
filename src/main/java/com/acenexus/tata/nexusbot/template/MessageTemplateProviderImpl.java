@@ -11,7 +11,6 @@ import com.linecorp.bot.model.message.flex.component.FlexComponent;
 import com.linecorp.bot.model.message.flex.component.Separator;
 import com.linecorp.bot.model.message.flex.component.Text;
 import com.linecorp.bot.model.message.flex.container.Bubble;
-import com.linecorp.bot.model.message.flex.unit.FlexAlign;
 import com.linecorp.bot.model.message.flex.unit.FlexFontSize;
 import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
@@ -28,7 +27,6 @@ import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
-import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
@@ -49,145 +47,147 @@ import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
-import static com.acenexus.tata.nexusbot.template.UIConstants.Sizes;
 
 @Service
 public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
+    @Override
     public Message welcome() {
-        return TextMessage.builder()
-                .text("""
-                        歡迎加入 NexusBot！
-                                                
-                        感謝您的支持，我將為您提供最佳的服務體驗。
-                                                
-                        可用功能：
-                        - 輸入 'menu' 查看選單
-                        - AI 智能對話
-                                                
-                        如有任何問題，請隨時與我互動！
-                        """)
-                .build();
+        return createCard(
+                "歡迎使用 NexusBot",
+                "您的智能助手已準備就緒。我們提供 AI 對話服務、智慧提醒管理，以及完整的功能支援。",
+                Arrays.asList(
+                        createPrimaryButton("開始使用", MAIN_MENU),
+                        createNeutralButton("功能說明", HELP_MENU)
+                )
+        );
     }
 
+    @Override
     public Message about() {
-        return TextMessage.builder()
-                .text("""
-                        NexusBot v2.0
-                                                
-                        我是您的智能助手，具備以下功能：
-                        - AI 智能對話回應
-                                                
-                        技術支援：Spring Boot 3.4.3 + LINE Bot SDK 6.0.0
-                        """)
-                .build();
+        return createCard(
+                "NexusBot v2.0",
+                "專業 AI 智能助手平台\n\n核心功能包括智能對話、提醒管理、多模型支援等服務。採用現代化架構設計，提供穩定可靠的使用體驗。",
+                Arrays.asList(
+                        createNavigateButton("返回主選單", MAIN_MENU)
+                )
+        );
     }
 
+    @Override
     public Message success(String message) {
-        return TextMessage.builder()
-                .text(message)
-                .build();
+        return createStatusCard("操作成功", message, Colors.SUCCESS);
     }
 
+    @Override
     public Message error(String message) {
-        return TextMessage.builder()
-                .text(message)
-                .build();
+        return createStatusCard("操作失敗", message, Colors.ERROR);
     }
 
+    @Override
     public Message mainMenu() {
-        return createFlexMenu(
-                "NexusBot 功能選單",
-                "請選擇一項功能開始操作",
+        return createCard(
+                "功能選單",
+                "請選擇您需要使用的功能服務",
                 Arrays.asList(
-                        createButton("AI 回應功能", TOGGLE_AI, Colors.PRIMARY),
-                        createButton("提醒功能", REMINDER_MENU, Colors.SUCCESS),
-                        createButton("說明與支援", HELP_MENU, Colors.INFO)
+                        createPrimaryButton("AI 智能對話", TOGGLE_AI),
+                        createNeutralButton("提醒管理", REMINDER_MENU),
+                        createNeutralButton("說明與支援", HELP_MENU)
                 )
         );
     }
 
-    public Message aiSettingsMenu() {
-        return aiSettingsMenu(false); // 預設狀態為關閉
-    }
-
+    @Override
     public Message aiSettingsMenu(boolean currentStatus) {
-        String statusText = currentStatus ? "目前狀態：已開啟" : "目前狀態：已關閉";
+        String title = currentStatus ? "AI 智能對話已啟用" : "AI 智能對話已停用";
+        String description = currentStatus
+                ? "系統將自動回應您的訊息並提供智能助手服務。您可以隨時調整設定或選擇不同的 AI 模型。"
+                : "目前為手動模式，系統不會自動回應訊息。您可以啟用 AI 功能來獲得智能助手服務。";
 
-        return createFlexMenu(
-                "AI 回應設定",
-                "管理 AI 功能相關設定\n" + statusText,
-                Arrays.asList(
-                        createButton("開啟 AI 回應", ENABLE_AI, Colors.SUCCESS),
-                        createButton("關閉 AI 回應", DISABLE_AI, Colors.ERROR),
-                        createButton("選擇 AI 模型", SELECT_MODEL, Colors.INFO),
-                        createButton("清除歷史對話", CLEAR_HISTORY, Colors.ERROR),
-                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
-                )
-        );
+        List<Button> buttons = new ArrayList<>();
+        if (currentStatus) {
+            buttons.add(createWarningButton("停用 AI", DISABLE_AI));
+            buttons.add(createNeutralButton("選擇模型", SELECT_MODEL));
+            buttons.add(createDangerButton("清除歷史", CLEAR_HISTORY));
+        } else {
+            buttons.add(createPrimaryButton("啟用 AI", ENABLE_AI));
+            buttons.add(createNeutralButton("選擇模型", SELECT_MODEL));
+        }
+        buttons.add(createNavigateButton("返回主選單", MAIN_MENU));
+
+        return createCard(title, description, buttons);
     }
 
     @Override
     public Message aiModelSelectionMenu(String currentModel) {
         String modelDisplayName = getModelDisplayName(currentModel);
 
-        return createFlexMenu(
+        return createCard(
                 "AI 模型選擇",
-                "選擇您偏好的 AI 模型\n目前使用：" + modelDisplayName,
+                "目前使用：" + modelDisplayName + "\n\n請選擇您希望使用的 AI 模型",
                 Arrays.asList(
-                        createButton("Llama 3.1 8B (快速創意)", MODEL_LLAMA_3_1_8B, currentModel.equals("llama-3.1-8b-instant") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton("Llama 3.3 70B (精準強力)", MODEL_LLAMA_3_3_70B, currentModel.equals("llama-3.3-70b-versatile") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton("Llama 3 70B (詳細平衡)", MODEL_LLAMA3_70B, currentModel.equals("llama3-70b-8192") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton("Gemma2 9B (高度創意)", MODEL_GEMMA2_9B, currentModel.equals("gemma2-9b-it") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton("DeepSeek R1 (邏輯推理)", MODEL_DEEPSEEK_R1, currentModel.equals("deepseek-r1-distill-llama-70b") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton("Qwen3 32B (多語平衡)", MODEL_QWEN3_32B, currentModel.equals("qwen/qwen3-32b") ? Colors.SUCCESS : Colors.PRIMARY),
-                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
+                        createModelButton("Llama 3.1 8B", "快速回應", MODEL_LLAMA_3_1_8B, currentModel.equals("llama-3.1-8b-instant")),
+                        createModelButton("Llama 3.3 70B", "高精度回應", MODEL_LLAMA_3_3_70B, currentModel.equals("llama-3.3-70b-versatile")),
+                        createModelButton("Llama 3 70B", "平衡性能", MODEL_LLAMA3_70B, currentModel.equals("llama3-70b-8192")),
+                        createModelButton("Gemma2 9B", "創意對話", MODEL_GEMMA2_9B, currentModel.equals("gemma2-9b-it")),
+                        createModelButton("DeepSeek R1", "邏輯推理", MODEL_DEEPSEEK_R1, currentModel.equals("deepseek-r1-distill-llama-70b")),
+                        createModelButton("Qwen3 32B", "中文優化", MODEL_QWEN3_32B, currentModel.equals("qwen/qwen3-32b")),
+                        createNavigateButton("返回 AI 設定", TOGGLE_AI),
+                        createNavigateButton("返回主選單", MAIN_MENU)
                 )
         );
     }
 
+    @Override
     public Message helpMenu() {
-        return createFlexMenu(
+        return createCard(
                 "說明與支援",
-                "瞭解如何使用 NexusBot",
+                "NexusBot 提供完整的使用指南和技術支援服務。您可以查看功能說明、系統狀態，或聯繫我們的支援團隊。",
                 Arrays.asList(
-                        createButton("關於 NexusBot", ABOUT, Colors.INFO),
-                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
+                        createNeutralButton("查看系統資訊", ABOUT),
+                        createNavigateButton("返回主選單", MAIN_MENU)
                 )
         );
     }
 
+    @Override
     public Message clearHistoryConfirmation() {
-        return createFlexMenu(
-                "確認清除歷史對話",
-                "此動作將清除所有歷史對話記錄\n請確認是否繼續",
+        return createCard(
+                "清除對話歷史",
+                "確認要清除所有 AI 對話記錄嗎？\n\n此操作將永久刪除所有對話內容、AI 學習記錄及聊天上下文。\n\n請注意：此操作無法復原。",
                 Arrays.asList(
-                        createButton("確認清除", CONFIRM_CLEAR_HISTORY, Colors.ERROR),
-                        createButton("返回設定", TOGGLE_AI, Colors.SECONDARY)
+                        createDangerButton("確認清除", CONFIRM_CLEAR_HISTORY),
+                        createPrimaryButton("取消操作", TOGGLE_AI)
                 )
         );
     }
 
+    @Override
     public String imageResponse(String messageId) {
         return "收到您的圖片\n圖片ID: " + messageId;
     }
 
+    @Override
     public String stickerResponse(String packageId, String stickerId) {
         return String.format("很可愛的貼圖\n貼圖包ID: %s\n貼圖ID: %s", packageId, stickerId);
     }
 
+    @Override
     public String videoResponse(String messageId) {
         return "收到您的影片\n影片ID: " + messageId;
     }
 
+    @Override
     public String audioResponse(String messageId) {
         return "收到您的音檔\n音檔ID: " + messageId;
     }
 
+    @Override
     public String fileResponse(String fileName, long fileSize) {
         return String.format("收到您的檔案\n檔名: %s\n大小: %d bytes", fileName, fileSize);
     }
 
+    @Override
     public String locationResponse(String title, String address, double latitude, double longitude) {
         StringBuilder response = new StringBuilder("收到您的位置資訊");
         if (title != null && !title.trim().isEmpty()) {
@@ -200,25 +200,30 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         return response.toString();
     }
 
+    @Override
     public Message postbackResponse(String data) {
         return TextMessage.builder()
                 .text("按鈕點擊: " + data + "\n感謝您的互動！")
                 .build();
     }
 
+    @Override
     public String unknownMessage() {
         return "收到您的訊息，但目前無法識別此類型。";
     }
 
+    @Override
     public String defaultTextResponse(String messageText) {
         return "我們已收到您的訊息：「" + messageText + "」\n輸入 menu 查看支援的指令。";
     }
 
+    @Override
     public String groupJoinMessage(String sourceType) {
         return "Hello everyone! I'm NexusBot!\nHappy to join this " +
                 ("group".equals(sourceType) ? "group" : "room") + "!";
     }
 
+    @Override
     public String memberJoinedMessage(int memberCount) {
         return "Welcome new members!\n" + memberCount + " new friends joined the group!";
     }
@@ -230,286 +235,113 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
         double aiEnabledPercent = totalRooms > 0 ? (aiEnabledRooms * 100.0 / totalRooms) : 0.0;
 
-        return createStatsCard(
-                "NexusBot 系統狀態",
-                Arrays.asList(
-                        createStatRow("■", "聊天室統計", String.format("總計：%,d 間\nAI啟用：%,d 間 (%.1f%%)\n管理員：%,d 間", totalRooms, aiEnabledRooms, aiEnabledPercent, adminRooms)),
-                        createStatRow("●", "訊息統計", String.format("總計：%,d 條\n用戶：%,d 條\nAI回應：%,d 條", totalMessages, userMessages, aiMessages)),
-                        createStatRow("▲", "活躍度", String.format("今日：%,d 間\n本週：%,d 間", todayActiveRooms, weekActiveRooms)),
-                        createStatRow("◆", "AI 性能", "平均響應時間：" + avgProcessingTime)
-                )
+        String statsText = String.format(
+                "聊天室統計\n總計：%,d 間｜AI啟用：%,d 間 (%.1f%%)｜管理員：%,d 間\n\n" +
+                        "訊息統計\n總計：%,d 條｜用戶：%,d 條｜AI回應：%,d 條\n\n" +
+                        "活躍度\n今日：%,d 間｜本週：%,d 間\n\n" +
+                        "AI 性能\n平均響應時間：%s",
+                totalRooms, aiEnabledRooms, aiEnabledPercent, adminRooms,
+                totalMessages, userMessages, aiMessages,
+                todayActiveRooms, weekActiveRooms, avgProcessingTime
         );
+
+        return createCard("NexusBot 系統狀態", statsText, Arrays.asList(
+                createNavigateButton("返回主選單", MAIN_MENU)
+        ));
     }
 
-    private FlexMessage createFlexMenu(String title, String subtitle, List<Button> buttons) {
-        // 標題
-        Text titleText = Text.builder()
-                .text(title)
-                .size(FlexFontSize.XL)
-                .align(FlexAlign.CENTER)
-                .color(Colors.TEXT_PRIMARY)
-                .weight(Text.TextWeight.BOLD)
-                .wrap(true)
-                .build();
-
-        // 副標題
-        Text subtitleText = Text.builder()
-                .text(subtitle)
-                .size(FlexFontSize.SM)
-                .color(Colors.TEXT_SECONDARY)
-                .align(FlexAlign.CENTER)
-                .wrap(true)
-                .margin(FlexMarginSize.SM)
-                .build();
-
-        // 分隔線
-        Separator separator = Separator.builder()
-                .margin(FlexMarginSize.LG)
-                .color(Colors.SEPARATOR)
-                .build();
-
-        // 組合按鈕和間隔
-        List<FlexComponent> components = new ArrayList<>();
-        components.add(titleText);
-        components.add(subtitleText);
-        components.add(separator);
-
-        for (int i = 0; i < buttons.size(); i++) {
-            components.add(buttons.get(i));
-            if (i < buttons.size() - 1) {
-                components.add(createSpacer());
-            }
-        }
-
-        // 主容器
-        Box mainBox = Box.builder()
-                .layout(FlexLayout.VERTICAL)
-                .contents(components)
-                .paddingAll(FlexPaddingSize.LG)
-                .backgroundColor(Colors.BACKGROUND)
-                .build();
-
-        // Bubble 容器
-        Bubble bubble = Bubble.builder()
-                .body(mainBox)
-                .build();
-
-        return FlexMessage.builder()
-                .altText(title)
-                .contents(bubble)
-                .build();
-    }
-
-    private String getModelDisplayName(String modelId) {
-        return switch (modelId) {
-            case "llama-3.1-8b-instant" -> "Llama 3.1 8B (快速創意)";
-            case "llama-3.3-70b-versatile" -> "Llama 3.3 70B (精準強力)";
-            case "llama3-70b-8192" -> "Llama 3 70B (詳細平衡)";
-            case "gemma2-9b-it" -> "Gemma2 9B (高度創意)";
-            case "deepseek-r1-distill-llama-70b" -> "DeepSeek R1 (邏輯推理)";
-            case "qwen/qwen3-32b" -> "Qwen3 32B (多語平衡)";
-            default -> modelId; // 如果找不到匹配，返回原始ID
-        };
-    }
-
-    private Button createButton(String label, String action, String color) {
-        return Button.builder()
-                .style(Button.ButtonStyle.PRIMARY)
-                .color(color)
-                .action(PostbackAction.builder()
-                        .label(label)
-                        .data(action)
-                        .displayText(label)
-                        .build())
-                .build();
-    }
-
-    private Box createSpacer() {
-        return Box.builder()
-                .layout(FlexLayout.VERTICAL)
-                .contents(Arrays.asList())
-                .height(Sizes.SPACING_MD)
-                .build();
-    }
-
-    private FlexMessage createStatsCard(String title, List<Box> statRows) {
-        // 標題
-        Text titleText = Text.builder()
-                .text(title)
-                .size(FlexFontSize.LG)
-                .weight(Text.TextWeight.BOLD)
-                .color(Colors.PRIMARY)
-                .align(FlexAlign.CENTER)
-                .build();
-
-        // 建立內容容器
-        List<FlexComponent> components = new ArrayList<>();
-        components.add(titleText);
-        components.add(createSpacer());
-        components.addAll(statRows);
-
-        // 主容器
-        Box mainBox = Box.builder()
-                .layout(FlexLayout.VERTICAL)
-                .contents(components)
-                .paddingAll(FlexPaddingSize.LG)
-                .backgroundColor(Colors.BACKGROUND)
-                .spacing(FlexMarginSize.SM)
-                .build();
-
-        // Bubble 容器
-        Bubble bubble = Bubble.builder()
-                .body(mainBox)
-                .build();
-
-        return FlexMessage.builder()
-                .altText(title)
-                .contents(bubble)
-                .build();
-    }
-
-    private Box createStatRow(String icon, String category, String value) {
-        // 標題行（圖示 + 類別）
-        Text headerText = Text.builder()
-                .text(icon + " " + category)
-                .size(FlexFontSize.SM)
-                .weight(Text.TextWeight.BOLD)
-                .color(Colors.PRIMARY)
-                .build();
-
-        // 數值行
-        Text valueText = Text.builder()
-                .text(value)
-                .size(FlexFontSize.XS)
-                .color(Colors.SECONDARY)
-                .wrap(true)
-                .build();
-
-        return Box.builder()
-                .layout(FlexLayout.VERTICAL)
-                .contents(Arrays.asList(headerText, valueText))
-                .spacing(FlexMarginSize.XS)
-                .build();
-    }
-
+    @Override
     public Message reminderMenu() {
-        return createFlexMenu(
-                "提醒功能",
-                "管理您的提醒設定",
+        return createCard(
+                "提醒管理",
+                "智慧提醒管理系統可以幫助您設定重要事項的提醒通知。支援單次提醒和週期性提醒設定。",
                 Arrays.asList(
-                        createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
-                        createButton("提醒列表", LIST_REMINDERS, Colors.INFO),
-                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
+                        createPrimaryButton("新增提醒", ADD_REMINDER),
+                        createNeutralButton("檢視提醒列表", LIST_REMINDERS),
+                        createNavigateButton("返回主選單", MAIN_MENU)
                 )
         );
     }
 
+    @Override
     public Message reminderRepeatTypeMenu() {
-        return createFlexMenu(
-                "選擇提醒頻率",
-                "請選擇您希望的提醒頻率",
+        return createCard(
+                "提醒頻率設定",
+                "請選擇提醒的重複頻率。單次提醒適合一次性事件，重複提醒適合定期任務。",
                 Arrays.asList(
-                        createButton("僅一次", REPEAT_ONCE, Colors.INFO),
-                        createButton("每日重複", REPEAT_DAILY, Colors.SUCCESS),
-                        createButton("每週重複", REPEAT_WEEKLY, Colors.PRIMARY),
-                        createButton("取消新增", CANCEL_REMINDER_INPUT, Colors.ERROR)
+                        createPrimaryButton("單次提醒", REPEAT_ONCE),
+                        createNeutralButton("每日提醒", REPEAT_DAILY),
+                        createNeutralButton("每週提醒", REPEAT_WEEKLY),
+                        createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT)
                 )
         );
     }
 
     @Override
     public Message reminderInputMenu(String step) {
-        String title = step.equals("time") ? "輸入提醒時間" : "輸入提醒內容";
-        String subtitle = step.equals("time") ?
-                "請輸入提醒時間\n輸入日期時間（如：2025-01-01 13:00）\n或自然語句（如：明天下午三點）" :
-                "請輸入提醒內容\n例如：吃藥、運動、開會等";
+        String title = step.equals("time") ? "設定提醒時間" : "設定提醒內容";
+        String description = step.equals("time") ?
+                "請輸入提醒時間。您可以使用標準格式（例如：2025-01-01 13:00）或自然語言（例如：明天下午三點、30分鐘後）。" :
+                "請輸入提醒內容。簡潔描述您需要被提醒的事項，例如：服藥、會議、運動等。";
 
-        return createFlexMenu(
-                title,
-                subtitle,
-                Arrays.asList(
-                        createButton("取消新增", CANCEL_REMINDER_INPUT, Colors.ERROR),
-                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
-                )
-        );
+        return createCard(title, description, Arrays.asList(
+                createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT),
+                createNavigateButton("返回提醒管理", REMINDER_MENU)
+        ));
     }
 
     @Override
     public Message reminderInputMenu(String step, String reminderTime) {
-        String title = step.equals("time") ? "輸入提醒時間" : "輸入提醒內容";
-        String subtitle = step.equals("time") ?
-                "請輸入提醒時間\n輸入日期時間（如：2025-01-01 13:00）\n或自然語句（如：明天下午三點）" :
-                "設定提醒時間：" + reminderTime + "\n\n請輸入提醒內容\n例如：吃藥、運動、開會等";
+        String title = step.equals("time") ? "設定提醒時間" : "設定提醒內容";
+        String description = step.equals("time") ?
+                "請輸入提醒時間。您可以使用標準格式（例如：2025-01-01 13:00）或自然語言（例如：明天下午三點、30分鐘後）。" :
+                "提醒時間已設定：" + reminderTime + "\n\n請輸入提醒內容。簡潔描述您需要被提醒的事項。";
 
-        return createFlexMenu(
-                title,
-                subtitle,
-                Arrays.asList(
-                        createButton("取消新增", CANCEL_REMINDER_INPUT, Colors.ERROR),
-                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
-                )
-        );
+        return createCard(title, description, Arrays.asList(
+                createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT),
+                createNavigateButton("返回提醒管理", REMINDER_MENU)
+        ));
     }
 
     @Override
     public Message reminderCreatedSuccess(String reminderTime, String repeatType, String content) {
-        String subtitle = String.format("""
-                時間：%s
-                頻率：%s
-                內容：%s
-                                
-                系統將在指定時間為您發送提醒""", reminderTime, repeatType, content);
+        String description = String.format(
+                "提醒已成功建立：\n\n時間：%s\n頻率：%s\n內容：%s\n\n系統將在指定時間發送提醒通知。",
+                reminderTime, repeatType, content);
 
-        return createFlexMenu(
-                "提醒設定完成",
-                subtitle,
-                Arrays.asList(
-                        createButton("返回提醒功能", REMINDER_MENU, Colors.SUCCESS),
-                        createButton("返回主選單", MAIN_MENU, Colors.SECONDARY)
-                )
-        );
+        return createCard("提醒建立成功", description, Arrays.asList(
+                createSuccessButton("返回提醒管理", REMINDER_MENU),
+                createNavigateButton("返回主選單", MAIN_MENU)
+        ));
     }
-
 
     @Override
     public Message reminderInputError(String userInput, String aiResult) {
-        return createFlexMenu(
-                "時間輸入錯誤",
-                "您的輸入：" + userInput + "\n解析結果：" + aiResult + "\n\n請重新輸入時間\n例如：「明天下午3點」或「2025-09-07 15:00」",
-                Arrays.asList(
-                        createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
-                        createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
-                )
-        );
+        String description = String.format(
+                "無法解析您輸入的時間格式：\n\n您的輸入：%s\n系統解析：%s\n\n請使用正確的時間格式，例如：\n• 標準格式：2025-01-01 15:00\n• 自然語言：明天下午3點\n• 相對時間：30分鐘後",
+                userInput, aiResult);
+
+        return createCard("時間格式錯誤", description, Arrays.asList(
+                createPrimaryButton("重新設定", ADD_REMINDER),
+                createSecondaryButton("返回提醒管理", REMINDER_MENU)
+        ));
     }
 
     @Override
-    public Message reminderList(java.util.List<com.acenexus.tata.nexusbot.entity.Reminder> reminders, Map<Long, String> userResponseStatuses) {
+    public Message reminderList(List<Reminder> reminders, Map<Long, String> userResponseStatuses) {
         if (reminders.isEmpty()) {
-            return createFlexMenu(
+            return createCard(
                     "提醒列表",
                     "目前沒有任何提醒",
                     Arrays.asList(
-                            createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY),
-                            createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY)
+                            createPrimaryButton("新增提醒", ADD_REMINDER),
+                            createSecondaryButton("返回提醒管理", REMINDER_MENU)
                     )
             );
         }
 
-        // 創建標題
-        Text titleText = Text.builder()
-                .text("提醒列表")
-                .size(FlexFontSize.LG)
-                .weight(Text.TextWeight.BOLD)
-                .color(Colors.PRIMARY)
-                .align(FlexAlign.CENTER)
-                .build();
-
-        // 創建提醒卡片列表
-        List<FlexComponent> reminderCards = new ArrayList<>();
-        reminderCards.add(titleText);
-        reminderCards.add(createSpacer());
-
+        // 建構提醒列表內容
+        StringBuilder contentBuilder = new StringBuilder();
         for (int i = 0; i < reminders.size(); i++) {
             Reminder reminder = reminders.get(i);
             String repeatTypeText = switch (reminder.getRepeatType()) {
@@ -518,127 +350,23 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 default -> "僅一次";
             };
 
-            // 獲取用戶回應狀態
             String userStatus = userResponseStatuses.getOrDefault(reminder.getId(), "無回應");
+            String statusDisplay = "COMPLETED".equals(userStatus) ? "已執行" : "無回應";
 
-            // 提醒內容卡片
-            Box reminderCard = createReminderCard(
+            contentBuilder.append(String.format(
+                    "%d. %s\n時間：%s\n頻率：%s\n狀態：%s\n\n",
                     i + 1,
                     reminder.getContent(),
                     reminder.getReminderTime().format(STANDARD_TIME),
                     repeatTypeText,
-                    userStatus,
-                    reminder.getId()
-            );
-
-            reminderCards.add(reminderCard);
-            if (i < reminders.size() - 1) {
-                reminderCards.add(createSpacer());
-            }
+                    statusDisplay
+            ));
         }
 
-        // 底部按鈕
-        reminderCards.add(createSpacer());
-        reminderCards.add(createButton("新增提醒", ADD_REMINDER, Colors.PRIMARY));
-        reminderCards.add(createButton("返回提醒功能", REMINDER_MENU, Colors.SECONDARY));
-
-        // 主容器
-        Box mainBox = Box.builder()
-                .layout(FlexLayout.VERTICAL)
-                .contents(reminderCards)
-                .paddingAll(FlexPaddingSize.LG)
-                .spacing(FlexMarginSize.MD)
-                .build();
-
-        // Bubble 容器
-        Bubble bubble = Bubble.builder()
-                .body(mainBox)
-                .build();
-
-        return FlexMessage.builder()
-                .altText("提醒列表")
-                .contents(bubble)
-                .build();
-    }
-
-    private Box createReminderCard(int index, String content, String time, String repeatType, String userStatus, Long reminderId) {
-        // 序號和內容
-        Text indexText = Text.builder()
-                .text(String.valueOf(index))
-                .size(FlexFontSize.SM)
-                .weight(Text.TextWeight.BOLD)
-                .color(Colors.PRIMARY)
-                .flex(0)
-                .build();
-
-        Text contentText = Text.builder()
-                .text(content)
-                .size(FlexFontSize.SM)
-                .weight(Text.TextWeight.BOLD)
-                .color(Colors.TEXT_PRIMARY)
-                .flex(1)
-                .wrap(true)
-                .build();
-
-        Box headerBox = Box.builder()
-                .layout(FlexLayout.HORIZONTAL)
-                .contents(Arrays.asList(indexText, contentText))
-                .spacing(FlexMarginSize.MD)
-                .build();
-
-        // 時間資訊
-        Text timeText = Text.builder()
-                .text("時間: " + time)
-                .size(FlexFontSize.SM)
-                .color(Colors.INFO)
-                .build();
-
-        // 頻率資訊
-        Text repeatText = Text.builder()
-                .text("頻率: " + repeatType)
-                .size(FlexFontSize.SM)
-                .color(Colors.SUCCESS)
-                .build();
-
-        // 用戶狀態資訊
-        String statusColor = "COMPLETED".equals(userStatus) ? Colors.SUCCESS : Colors.SECONDARY;
-        String statusDisplay = "COMPLETED".equals(userStatus) ? "已執行" : "無回應";
-
-        Text statusText = Text.builder()
-                .text("狀態: " + statusDisplay)
-                .size(FlexFontSize.SM)
-                .color(statusColor)
-                .build();
-
-        // 刪除按鈕
-        String buttonText = content.length() > 8 ?
-                content.substring(0, 8) + "..." : content;
-        Button deleteButton = Button.builder()
-                .style(Button.ButtonStyle.SECONDARY)
-                .action(PostbackAction.builder()
-                        .label("刪除")
-                        .data(DELETE_REMINDER + "&id=" + reminderId)
-                        .build())
-                .build();
-
-        // 組合卡片內容
-        List<FlexComponent> cardContents = Arrays.asList(
-                headerBox,
-                timeText,
-                repeatText,
-                statusText,
-                createSpacer(),
-                deleteButton
-        );
-
-        return Box.builder()
-                .layout(FlexLayout.VERTICAL)
-                .contents(cardContents)
-                .paddingAll(FlexPaddingSize.MD)
-                .backgroundColor("#F8F9FA")
-                .cornerRadius("8px")
-                .spacing(FlexMarginSize.SM)
-                .build();
+        return createCard("提醒列表", contentBuilder.toString(), Arrays.asList(
+                createPrimaryButton("新增提醒", ADD_REMINDER),
+                createSecondaryButton("返回提醒管理", REMINDER_MENU)
+        ));
     }
 
     @Override
@@ -652,95 +380,252 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
         String currentTime = java.time.LocalDateTime.now().format(STANDARD_TIME);
 
-        // 主標題
+        String description = String.format(
+                "%s\n\n類型：%s\n時間：%s\n\n請確認您是否已執行此提醒。",
+                enhancedContent, repeatDescription, currentTime
+        );
+
+        return createCard("提醒時間到了", description, Arrays.asList(
+                createSuccessButton("確認已執行", REMINDER_COMPLETED + "&id=" + reminderId)
+        ));
+    }
+
+    /**
+     * 卡片模板 - 現代化垂直佈局，優化按鈕間距和視覺層次
+     */
+    private FlexMessage createCard(String title, String description, List<Button> buttons) {
+        // 標題區塊
         Text titleText = Text.builder()
-                .text("提醒時間到了")
-                .size(FlexFontSize.XL)
-                .weight(Text.TextWeight.BOLD)
-                .color(Colors.PRIMARY)
-                .align(FlexAlign.CENTER)
-                .build();
-
-        // 原始內
-        Text originalLabel = Text.builder()
-                .text("提醒: " + originalContent)
-                .size(FlexFontSize.XS)
-                .color(Colors.TEXT_SECONDARY)
-                .weight(Text.TextWeight.BOLD)
-                .build();
-
-        // 提醒類型
-        Text typeText = Text.builder()
-                .text("類型: " + repeatDescription)
-                .size(FlexFontSize.SM)
-                .color(Colors.INFO)
-                .build();
-
-        // 時間
-        Text timeText = Text.builder()
-                .text("時間: " + currentTime)
-                .size(FlexFontSize.SM)
-                .color(Colors.SECONDARY)
-                .build();
-
-        // 分隔線
-        Separator separator = Separator.builder()
-                .margin(FlexMarginSize.LG)
-                .build();
-
-        // AI 優化內容
-        Text enhancedText = Text.builder()
-                .text(enhancedContent)
+                .text(title)
                 .size(FlexFontSize.LG)
                 .weight(Text.TextWeight.BOLD)
                 .color(Colors.TEXT_PRIMARY)
                 .wrap(true)
                 .build();
 
-        // 說明文字
-        Text instructionText = Text.builder()
-                .text("請確認您是否已執行此提醒:")
+        // 描述區塊
+        Text descText = Text.builder()
+                .text(description)
                 .size(FlexFontSize.SM)
-                .color(Colors.TEXT_PRIMARY)
-                .align(FlexAlign.CENTER)
+                .color(Colors.TEXT_SECONDARY)
+                .wrap(true)
+                .margin(FlexMarginSize.MD)
                 .build();
 
-        // 確認按鈕
-        List<FlexComponent> buttonComponents = Arrays.asList(
-                createButton("確認已執行", REMINDER_COMPLETED + "&id=" + reminderId, Colors.SUCCESS)
-        );
+        // 內容組合
+        List<FlexComponent> components = new ArrayList<>();
+        components.add(titleText);
+        components.add(descText);
 
-        // 主容器內容
-        List<FlexComponent> bodyContents = new ArrayList<>();
-        bodyContents.add(titleText);           // 標題
-        bodyContents.add(createSpacer());
-        bodyContents.add(originalLabel);       // 原始提醒標籤
-        bodyContents.add(typeText);            // 提醒類型
-        bodyContents.add(timeText);            // 時間
-        bodyContents.add(separator);           // 分隔線
-        bodyContents.add(enhancedText);        // AI 優化內容 (主要內容)
-        bodyContents.add(createSpacer());
-        bodyContents.add(separator);           // 分隔線
-        bodyContents.add(instructionText);     // 說明文字
-        bodyContents.add(createSpacer());
-        bodyContents.addAll(buttonComponents); // 確認按鈕
+        // 按鈕區塊（專業垂直佈局）
+        if (!buttons.isEmpty()) {
+            // 添加分隔線
+            components.add(Separator.builder()
+                    .margin(FlexMarginSize.LG)
+                    .color(Colors.BORDER)
+                    .build());
 
-        // 主容器
+            // 按鈕區塊容器 - 確保垂直對齊和統一間距
+            Box buttonBox = createVerticalButtonBox(buttons);
+            components.add(buttonBox);
+        }
+
+        // 主容器 - 專業卡片設計
         Box mainBox = Box.builder()
                 .layout(FlexLayout.VERTICAL)
-                .contents(bodyContents)
+                .contents(components)
                 .paddingAll(FlexPaddingSize.LG)
+                .backgroundColor(Colors.BACKGROUND)
                 .spacing(FlexMarginSize.SM)
                 .build();
 
-        // Bubble 容器
         Bubble bubble = Bubble.builder()
                 .body(mainBox)
                 .build();
 
         return FlexMessage.builder()
-                .altText("提醒通知: " + enhancedContent + " (" + originalContent + ")")
+                .altText(title)
                 .contents(bubble)
                 .build();
+    }
+
+    private Box createVerticalButtonBox(List<Button> buttons) {
+        List<FlexComponent> buttonComponents = new ArrayList<>();
+
+        for (int i = 0; i < buttons.size(); i++) {
+            Button button = buttons.get(i);
+
+            // 為每個按鈕添加適當的上邊距（除了第一個）
+            if (i > 0) {
+                buttonComponents.add(Box.builder()
+                        .layout(FlexLayout.VERTICAL)
+                        .contents(Arrays.asList())
+                        .height("8px")
+                        .build());
+            }
+
+            buttonComponents.add(button);
+        }
+
+        return Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(buttonComponents)
+                .paddingTop(FlexPaddingSize.MD)    // 按鈕區塊上邊距
+                .spacing(FlexMarginSize.SM)        // 統一按鈕間距
+                .build();
+    }
+
+    /**
+     * 狀態卡片模板 - 帶色彩指示器
+     */
+    private FlexMessage createStatusCard(String title, String message, String statusColor) {
+        // 狀態指示器
+        Box statusIndicator = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList())
+                .width("4px")
+                .backgroundColor(statusColor)
+                .build();
+
+        // 標題
+        Text titleText = Text.builder()
+                .text(title)
+                .size(FlexFontSize.LG)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.TEXT_PRIMARY)
+                .wrap(true)
+                .build();
+
+        // 內容
+        Text messageText = Text.builder()
+                .text(message)
+                .size(FlexFontSize.SM)
+                .color(Colors.TEXT_SECONDARY)
+                .wrap(true)
+                .margin(FlexMarginSize.SM)
+                .build();
+
+        // 內容區域
+        Box contentBox = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList(titleText, messageText))
+                .flex(1)
+                .spacing(FlexMarginSize.XS)
+                .build();
+
+        // 主容器
+        Box mainContainer = Box.builder()
+                .layout(FlexLayout.HORIZONTAL)
+                .contents(Arrays.asList(statusIndicator, contentBox))
+                .spacing(FlexMarginSize.MD)
+                .paddingAll(FlexPaddingSize.LG)
+                .backgroundColor(Colors.BACKGROUND)
+                .build();
+
+        Bubble bubble = Bubble.builder()
+                .body(mainContainer)
+                .build();
+
+        return FlexMessage.builder()
+                .altText(title)
+                .contents(bubble)
+                .build();
+    }
+
+    enum ButtonType {
+        PRIMARY,    // 主要操作：開始使用、啟用功能等
+        SECONDARY,  // 次要操作：返回、取消等
+        SUCCESS,    // 成功操作：確認、完成等
+        DANGER,     // 危險操作：刪除、清除等
+        WARNING,    // 警告操作：需要謹慎的操作
+        NEUTRAL,    // 中性操作：查看、選擇等
+        NAVIGATE    // 導航操作：返回主選單、功能說明等
+    }
+
+    private Button createButton(String label, String action, ButtonType type) {
+        var buttonStyle = getButtonStyle(type);
+        var buttonColor = getButtonColor(type);
+
+        return Button.builder()
+                .style(buttonStyle)
+                .color(buttonColor)
+                .margin(FlexMarginSize.SM)
+                .action(PostbackAction.builder()
+                        .label(label)
+                        .data(action)
+                        .displayText(label)
+                        .build())
+                .build();
+    }
+
+    private Button createSelectionButton(String label, String action, boolean isSelected) {
+        String displayLabel = isSelected ? label + " ✓" : label;
+        String color = isSelected ? UIConstants.Button.SELECTED : UIConstants.Button.UNSELECTED;
+
+        return Button.builder()
+                .style(Button.ButtonStyle.SECONDARY)
+                .color(color)
+                .margin(FlexMarginSize.SM)
+                .action(PostbackAction.builder()
+                        .label(displayLabel)
+                        .data(action)
+                        .displayText(label)
+                        .build())
+                .build();
+    }
+
+    private Button createPrimaryButton(String label, String action) {
+        return createButton(label, action, ButtonType.PRIMARY);
+    }
+
+    private Button createSecondaryButton(String label, String action) {
+        return createButton(label, action, ButtonType.SECONDARY);
+    }
+
+    private Button createSuccessButton(String label, String action) {
+        return createButton(label, action, ButtonType.SUCCESS);
+    }
+
+    private Button createDangerButton(String label, String action) {
+        return createButton(label, action, ButtonType.DANGER);
+    }
+
+    private Button createNavigateButton(String label, String action) {
+        return createButton(label, action, ButtonType.NAVIGATE);
+    }
+
+    private Button createNeutralButton(String label, String action) {
+        return createButton(label, action, ButtonType.NEUTRAL);
+    }
+
+    private Button createWarningButton(String label, String action) {
+        return createButton(label, action, ButtonType.WARNING);
+    }
+
+    private Button createModelButton(String name, String description, String action, boolean isSelected) {
+        return createSelectionButton(name, action, isSelected);
+    }
+
+    private Button.ButtonStyle getButtonStyle(ButtonType type) {
+        return switch (type) {
+            case PRIMARY, SUCCESS, DANGER, WARNING -> Button.ButtonStyle.PRIMARY;
+            case SECONDARY, NEUTRAL, NAVIGATE -> Button.ButtonStyle.SECONDARY;
+        };
+    }
+
+    private String getButtonColor(ButtonType type) {
+        return UIConstants.Button.PRIMARY;
+    }
+
+    private String getModelDisplayName(String modelId) {
+        return switch (modelId) {
+            case "llama-3.1-8b-instant" -> "Llama 3.1 8B";
+            case "llama-3.3-70b-versatile" -> "Llama 3.3 70B";
+            case "llama3-70b-8192" -> "Llama 3 70B";
+            case "gemma2-9b-it" -> "Gemma2 9B";
+            case "deepseek-r1-distill-llama-70b" -> "DeepSeek R1";
+            case "qwen/qwen3-32b" -> "Qwen3 32B";
+            default -> modelId;
+        };
     }
 }
