@@ -6,17 +6,47 @@ public final class UIConstants {
     }
 
     public static final class Colors {
-        public static final String BACKGROUND = "#1F2937";      // 統一深灰背景
-        public static final String TEXT_PRIMARY = "#F9FAFB";    // 統一亮白文字
-        public static final String TEXT_SECONDARY = "#E5E7EB";  // 統一淺灰文字
-        public static final String SUCCESS = "#10B981";         // 成功綠色
-        public static final String ERROR = "#EF4444";           // 錯誤紅色
-        public static final String BORDER = "#4B5563";          // 統一深灰邊框
+        public static final String SUCCESS = "#16A34A";
+        public static final String ERROR = "#DC2626";
+        public static final String BACKGROUND = "#F8FAFC";
+        public static final String PRIMARY_LIGHT = "#EFF6FF";
+        public static final String TEXT_PRIMARY = "#1E293B";
+        public static final String TEXT_SECONDARY = "#64748B";
+        public static final String BORDER = "#E2E8F0";
+    }
+
+    public static final class Spacing {
+        public static final String SM = "8px";
+    }
+
+    public static final class BorderRadius {
+        public static final String SM = "4px";
+        public static final String MD = "8px";
     }
 
     public static final class Button {
-        public static final String PRIMARY = "#4B5563";         // 統一深灰按鈕背景
-        public static final String SELECTED = "#6B7280";        // 選中狀態（稍亮深灰）
-        public static final String UNSELECTED = "#4B5563";      // 未選中狀態（標準深灰）
+        // 統一使用適合 SECONDARY 樣式的顏色，確保協調性
+        public static final String PRIMARY = "#E5E7EB";
+        public static final String SECONDARY = "#E5E7EB";
+        public static final String SUCCESS = "#E5E7EB";
+        public static final String DANGER = "#E5E7EB";
+        public static final String WARNING = "#E5E7EB";
+        public static final String INFO = "#E5E7EB";
+
+        // 狀態按鈕 - 選中時使用強調色
+        public static final String SELECTED = "#3B82F6";
+        public static final String UNSELECTED = "#E5E7EB";
+    }
+
+    public static final class Status {
+        public static final String SUCCESS_BACKGROUND = "#F0FDF4";
+        public static final String WARNING_BACKGROUND = "#FFF7ED";
+        public static final String ERROR_BACKGROUND = "#FEF2F2";
+        public static final String INFO_BACKGROUND = "#EFF6FF";
+
+        public static final String SUCCESS_BORDER = "#16A34A";
+        public static final String WARNING_BORDER = "#EA580C";
+        public static final String ERROR_BORDER = "#DC2626";
+        public static final String INFO_BORDER = "#3B82F6";
     }
 }

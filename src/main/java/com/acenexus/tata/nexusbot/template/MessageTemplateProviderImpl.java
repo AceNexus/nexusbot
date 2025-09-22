@@ -46,7 +46,10 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
+import static com.acenexus.tata.nexusbot.template.UIConstants.BorderRadius;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
+import static com.acenexus.tata.nexusbot.template.UIConstants.Spacing;
+import static com.acenexus.tata.nexusbot.template.UIConstants.Status;
 
 @Service
 public class MessageTemplateProviderImpl implements MessageTemplateProvider {
@@ -390,53 +393,34 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         ));
     }
 
-    /**
-     * 卡片模板 - 現代化垂直佈局，優化按鈕間距和視覺層次
-     */
     private FlexMessage createCard(String title, String description, List<Button> buttons) {
+        return createProfessionalCard(title, title, description, buttons, false);
+    }
+
+    private FlexMessage createProfessionalCard(String altText, String title, String description,
+                                               List<Button> buttons, boolean isHighlight) {
+        List<FlexComponent> components = new ArrayList<>();
+
         // 標題區塊
-        Text titleText = Text.builder()
-                .text(title)
-                .size(FlexFontSize.LG)
-                .weight(Text.TextWeight.BOLD)
-                .color(Colors.TEXT_PRIMARY)
-                .wrap(true)
-                .build();
+        components.add(createTitleComponent(title));
 
         // 描述區塊
-        Text descText = Text.builder()
-                .text(description)
-                .size(FlexFontSize.SM)
-                .color(Colors.TEXT_SECONDARY)
-                .wrap(true)
-                .margin(FlexMarginSize.MD)
-                .build();
+        components.add(createDescriptionComponent(description));
 
-        // 內容組合
-        List<FlexComponent> components = new ArrayList<>();
-        components.add(titleText);
-        components.add(descText);
-
-        // 按鈕區塊（專業垂直佈局）
+        // 按鈕區塊
         if (!buttons.isEmpty()) {
-            // 添加分隔線
-            components.add(Separator.builder()
-                    .margin(FlexMarginSize.LG)
-                    .color(Colors.BORDER)
-                    .build());
-
-            // 按鈕區塊容器 - 確保垂直對齊和統一間距
-            Box buttonBox = createVerticalButtonBox(buttons);
-            components.add(buttonBox);
+            components.add(createSeparator());
+            components.add(createButtonContainer(buttons));
         }
 
-        // 主容器 - 專業卡片設計
+        // 主容器
         Box mainBox = Box.builder()
                 .layout(FlexLayout.VERTICAL)
                 .contents(components)
                 .paddingAll(FlexPaddingSize.LG)
-                .backgroundColor(Colors.BACKGROUND)
+                .backgroundColor(isHighlight ? Colors.PRIMARY_LIGHT : Colors.BACKGROUND)
                 .spacing(FlexMarginSize.SM)
+                .cornerRadius(BorderRadius.MD)
                 .build();
 
         Bubble bubble = Bubble.builder()
@@ -444,50 +428,79 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .build();
 
         return FlexMessage.builder()
-                .altText(title)
+                .altText(altText)
                 .contents(bubble)
                 .build();
     }
 
-    private Box createVerticalButtonBox(List<Button> buttons) {
+    private Text createTitleComponent(String title) {
+        return Text.builder()
+                .text(title)
+                .size(FlexFontSize.LG)
+                .weight(Text.TextWeight.BOLD)
+                .color(Colors.TEXT_PRIMARY)
+                .wrap(true)
+                .build();
+    }
+
+    private Text createDescriptionComponent(String description) {
+        return Text.builder()
+                .text(description)
+                .size(FlexFontSize.SM)
+                .color(Colors.TEXT_SECONDARY)
+                .wrap(true)
+                .margin(FlexMarginSize.MD)
+                .build();
+    }
+
+    private Separator createSeparator() {
+        return Separator.builder()
+                .margin(FlexMarginSize.LG)
+                .color(Colors.BORDER)
+                .build();
+    }
+
+    private Box createButtonContainer(List<Button> buttons) {
         List<FlexComponent> buttonComponents = new ArrayList<>();
 
         for (int i = 0; i < buttons.size(); i++) {
-            Button button = buttons.get(i);
-
-            // 為每個按鈕添加適當的上邊距（除了第一個）
             if (i > 0) {
-                buttonComponents.add(Box.builder()
-                        .layout(FlexLayout.VERTICAL)
-                        .contents(Arrays.asList())
-                        .height("8px")
-                        .build());
+                buttonComponents.add(createSpacing(Spacing.SM));
             }
-
-            buttonComponents.add(button);
+            buttonComponents.add(buttons.get(i));
         }
 
         return Box.builder()
                 .layout(FlexLayout.VERTICAL)
                 .contents(buttonComponents)
-                .paddingTop(FlexPaddingSize.MD)    // 按鈕區塊上邊距
-                .spacing(FlexMarginSize.SM)        // 統一按鈕間距
+                .paddingTop(FlexPaddingSize.MD)
                 .build();
     }
 
-    /**
-     * 狀態卡片模板 - 帶色彩指示器
-     */
+    private Box createSpacing(String height) {
+        return Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList())
+                .height(height)
+                .build();
+    }
+
+
     private FlexMessage createStatusCard(String title, String message, String statusColor) {
-        // 狀態指示器
-        Box statusIndicator = Box.builder()
+        // 確定狀態類型和對應的背景色
+        String backgroundColor = getStatusBackground(statusColor);
+        String borderColor = getStatusBorderColor(statusColor);
+
+        // 狀態圖示區域
+        Box statusIcon = Box.builder()
                 .layout(FlexLayout.VERTICAL)
                 .contents(Arrays.asList())
                 .width("4px")
-                .backgroundColor(statusColor)
+                .backgroundColor(borderColor)
+                .cornerRadius(BorderRadius.SM)
                 .build();
 
-        // 標題
+        // 標題文字
         Text titleText = Text.builder()
                 .text(title)
                 .size(FlexFontSize.LG)
@@ -496,7 +509,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .wrap(true)
                 .build();
 
-        // 內容
+        // 訊息內容
         Text messageText = Text.builder()
                 .text(message)
                 .size(FlexFontSize.SM)
@@ -506,20 +519,21 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .build();
 
         // 內容區域
-        Box contentBox = Box.builder()
+        Box contentArea = Box.builder()
                 .layout(FlexLayout.VERTICAL)
                 .contents(Arrays.asList(titleText, messageText))
                 .flex(1)
-                .spacing(FlexMarginSize.XS)
+                .paddingStart(FlexPaddingSize.MD)
                 .build();
 
         // 主容器
         Box mainContainer = Box.builder()
                 .layout(FlexLayout.HORIZONTAL)
-                .contents(Arrays.asList(statusIndicator, contentBox))
+                .contents(Arrays.asList(statusIcon, contentArea))
                 .spacing(FlexMarginSize.MD)
                 .paddingAll(FlexPaddingSize.LG)
-                .backgroundColor(Colors.BACKGROUND)
+                .backgroundColor(backgroundColor)
+                .cornerRadius(BorderRadius.MD)
                 .build();
 
         Bubble bubble = Bubble.builder()
@@ -532,14 +546,35 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .build();
     }
 
+    private String getStatusBackground(String statusColor) {
+        return switch (statusColor) {
+            case "#059669", "#10B981" -> Status.SUCCESS_BACKGROUND;
+            case "#D97706", "#F59E0B" -> Status.WARNING_BACKGROUND;
+            case "#DC2626", "#EF4444" -> Status.ERROR_BACKGROUND;
+            case "#0EA5E9", "#06B6D4" -> Status.INFO_BACKGROUND;
+            default -> Colors.BACKGROUND;
+        };
+    }
+
+    private String getStatusBorderColor(String statusColor) {
+        return switch (statusColor) {
+            case "#059669", "#10B981" -> Status.SUCCESS_BORDER;
+            case "#D97706", "#F59E0B" -> Status.WARNING_BORDER;
+            case "#DC2626", "#EF4444" -> Status.ERROR_BORDER;
+            case "#0EA5E9", "#06B6D4" -> Status.INFO_BORDER;
+            default -> Colors.BORDER;
+        };
+    }
+
     enum ButtonType {
         PRIMARY,    // 主要操作：開始使用、啟用功能等
         SECONDARY,  // 次要操作：返回、取消等
-        SUCCESS,    // 成功操作：確認、完成等
+        SUCCESS,    // 成功操作：磺認、完成等
         DANGER,     // 危險操作：刪除、清除等
         WARNING,    // 警告操作：需要謹慎的操作
         NEUTRAL,    // 中性操作：查看、選擇等
-        NAVIGATE    // 導航操作：返回主選單、功能說明等
+        NAVIGATE,   // 導航操作：返回主選單、功能說明等
+        INFO        // 資訊操作：資訊查詢、說明等
     }
 
     private Button createButton(String label, String action, ButtonType type) {
@@ -549,7 +584,6 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         return Button.builder()
                 .style(buttonStyle)
                 .color(buttonColor)
-                .margin(FlexMarginSize.SM)
                 .action(PostbackAction.builder()
                         .label(label)
                         .data(action)
@@ -559,13 +593,13 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     }
 
     private Button createSelectionButton(String label, String action, boolean isSelected) {
-        String displayLabel = isSelected ? label + " ✓" : label;
-        String color = isSelected ? UIConstants.Button.SELECTED : UIConstants.Button.UNSELECTED;
+        String displayLabel = isSelected ? "\u2713 " + label : label;
+        String buttonColor = isSelected ? UIConstants.Button.SELECTED : UIConstants.Button.UNSELECTED;
+        Button.ButtonStyle style = isSelected ? Button.ButtonStyle.PRIMARY : Button.ButtonStyle.SECONDARY;
 
         return Button.builder()
-                .style(Button.ButtonStyle.SECONDARY)
-                .color(color)
-                .margin(FlexMarginSize.SM)
+                .style(style)
+                .color(buttonColor)
                 .action(PostbackAction.builder()
                         .label(displayLabel)
                         .data(action)
@@ -608,13 +642,20 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
     private Button.ButtonStyle getButtonStyle(ButtonType type) {
         return switch (type) {
-            case PRIMARY, SUCCESS, DANGER, WARNING -> Button.ButtonStyle.PRIMARY;
+            case PRIMARY, SUCCESS, DANGER, WARNING, INFO -> Button.ButtonStyle.SECONDARY;
             case SECONDARY, NEUTRAL, NAVIGATE -> Button.ButtonStyle.SECONDARY;
         };
     }
 
     private String getButtonColor(ButtonType type) {
-        return UIConstants.Button.PRIMARY;
+        return switch (type) {
+            case PRIMARY -> UIConstants.Button.PRIMARY;
+            case SUCCESS -> UIConstants.Button.SUCCESS;
+            case DANGER -> UIConstants.Button.DANGER;
+            case WARNING -> UIConstants.Button.WARNING;
+            case INFO -> UIConstants.Button.INFO;
+            case SECONDARY, NEUTRAL, NAVIGATE -> UIConstants.Button.SECONDARY;
+        };
     }
 
     private String getModelDisplayName(String modelId) {
