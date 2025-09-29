@@ -240,4 +240,68 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
         ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
         return Boolean.TRUE.equals(chatRoom.getIsAdmin());
     }
+
+    /**
+     * 設定聊天室的廁所搜尋狀態（等待位置）
+     */
+    @Override
+    @Transactional
+    public boolean setWaitingForToiletSearch(String roomId, ChatRoom.RoomType roomType, boolean waitingForToiletSearch) {
+        try {
+            ChatRoom chatRoom = getOrCreateChatRoom(roomId, roomType);
+            chatRoom.setWaitingForLocation(waitingForToiletSearch);
+
+            chatRoomRepository.save(chatRoom);
+            logger.info("Toilet search waiting status updated for room {}: waitingForToiletSearch={}", roomId, waitingForToiletSearch);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to update toilet search waiting status for room {}: {}", roomId, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 檢查聊天室是否正在等待位置進行廁所搜尋
+     */
+    @Override
+    public boolean isWaitingForToiletSearch(String roomId) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            logger.warn("Room ID is null or empty, not waiting for toilet search");
+            return false;
+        }
+
+        // 對於查詢操作，如果記錄不存在直接返回 false，不需要建立新記錄
+        return chatRoomRepository.findByRoomId(roomId)
+                .map(chatRoom -> Boolean.TRUE.equals(chatRoom.getWaitingForLocation()))
+                .orElse(false);
+    }
+
+    /**
+     * 設定聊天室的廁所搜尋狀態（僅修改現有記錄）
+     */
+    @Override
+    @Transactional
+    public boolean updateWaitingForToiletSearch(String roomId, boolean waitingForToiletSearch) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            logger.warn("Room ID is null or empty, cannot update toilet search status");
+            return false;
+        }
+
+        try {
+            return chatRoomRepository.findByRoomId(roomId)
+                    .map(chatRoom -> {
+                        chatRoom.setWaitingForLocation(waitingForToiletSearch);
+                        chatRoomRepository.save(chatRoom);
+                        logger.info("Updated toilet search waiting status for room {}: waitingForToiletSearch={}", roomId, waitingForToiletSearch);
+                        return true;
+                    })
+                    .orElseGet(() -> {
+                        logger.warn("Cannot update toilet search status for non-existent room: {}", roomId);
+                        return false;
+                    });
+        } catch (Exception e) {
+            logger.error("Failed to update toilet search waiting status for room {}: {}", roomId, e.getMessage(), e);
+            return false;
+        }
+    }
 }

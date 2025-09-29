@@ -30,6 +30,9 @@ public final class Actions {
     public static final String HELP_MENU = "action=help_menu";
     public static final String ABOUT = "action=about";
 
+    // ============= 位置服務動作 =============
+    public static final String FIND_TOILETS = "action=find_toilets";
+
     // ============= 提醒功能動作 =============
     public static final String REMINDER_MENU = "action=reminder_menu";
     public static final String ADD_REMINDER = "action=add_reminder";

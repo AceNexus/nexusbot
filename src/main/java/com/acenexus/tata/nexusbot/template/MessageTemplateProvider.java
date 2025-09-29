@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.template;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
+import com.acenexus.tata.nexusbot.location.ToiletLocation;
 import com.linecorp.bot.model.message.Message;
 
 import java.util.List;
@@ -42,6 +43,10 @@ public interface MessageTemplateProvider {
     String fileResponse(String fileName, long fileSize);
 
     String locationResponse(String title, String address, double latitude, double longitude);
+
+    Message nearbyToiletsResponse(List<ToiletLocation> toilets, double userLatitude, double userLongitude);
+
+    Message findToiletsInstruction();
 
     String unknownMessage();
 

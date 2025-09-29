@@ -29,6 +29,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY
 import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.FIND_TOILETS;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.LIST_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
@@ -79,6 +80,13 @@ public class PostbackEventHandler {
                     case HELP_MENU -> messageTemplateProvider.helpMenu();
                     case MAIN_MENU -> messageTemplateProvider.mainMenu();
                     case ABOUT -> messageTemplateProvider.about();
+
+                    // 找廁所功能
+                    case FIND_TOILETS -> {
+                        chatRoomManager.setWaitingForToiletSearch(roomId, roomType, true);
+                        logger.info("Set waiting for toilet search for room {}", roomId);
+                        yield messageTemplateProvider.findToiletsInstruction();
+                    }
 
                     // AI 功能
                     case TOGGLE_AI -> {

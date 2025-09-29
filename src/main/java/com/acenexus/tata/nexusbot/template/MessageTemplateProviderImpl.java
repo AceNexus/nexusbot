@@ -1,7 +1,9 @@
 package com.acenexus.tata.nexusbot.template;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
+import com.acenexus.tata.nexusbot.location.ToiletLocation;
 import com.linecorp.bot.model.action.PostbackAction;
+import com.linecorp.bot.model.action.URIAction;
 import com.linecorp.bot.model.message.FlexMessage;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TextMessage;
@@ -11,12 +13,17 @@ import com.linecorp.bot.model.message.flex.component.FlexComponent;
 import com.linecorp.bot.model.message.flex.component.Separator;
 import com.linecorp.bot.model.message.flex.component.Text;
 import com.linecorp.bot.model.message.flex.container.Bubble;
+import com.linecorp.bot.model.message.flex.container.Carousel;
+import com.linecorp.bot.model.message.flex.unit.FlexAlign;
 import com.linecorp.bot.model.message.flex.unit.FlexFontSize;
 import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
 import com.linecorp.bot.model.message.flex.unit.FlexPaddingSize;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -29,6 +36,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.FIND_TOILETS;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.LIST_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
@@ -50,9 +58,13 @@ import static com.acenexus.tata.nexusbot.template.UIConstants.BorderRadius;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Spacing;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Status;
+import static com.acenexus.tata.nexusbot.template.UIConstants.Toilet;
 
 @Service
+@RequiredArgsConstructor
 public class MessageTemplateProviderImpl implements MessageTemplateProvider {
+
+    // ToiletDisplayTemplate 已整合到此類中
 
     @Override
     public Message welcome() {
@@ -95,6 +107,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 Arrays.asList(
                         createPrimaryButton("AI 智能對話", TOGGLE_AI),
                         createNeutralButton("提醒管理", REMINDER_MENU),
+                        createNeutralButton("找附近廁所", FIND_TOILETS),
                         createNeutralButton("說明與支援", HELP_MENU)
                 )
         );
@@ -201,6 +214,22 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         }
         response.append(String.format("\n座標: %.6f, %.6f", latitude, longitude));
         return response.toString();
+    }
+
+    @Override
+    public Message nearbyToiletsResponse(List<ToiletLocation> toilets, double userLatitude, double userLongitude) {
+        return createToiletSearchResult(toilets, userLatitude, userLongitude);
+    }
+
+    @Override
+    public Message findToiletsInstruction() {
+        return createCard(
+                "找附近廁所",
+                "請分享您的目前位置，我會為您搜尋附近的廁所。\n\n• 點擊 LINE 輸入框旁的「+」按鈕\n• 選擇「位置」\n• 選擇「目前位置」或手動選擇地點",
+                Arrays.asList(
+                        createNavigateButton("返回主選單", MAIN_MENU)
+                )
+        );
     }
 
     @Override
@@ -401,26 +430,27 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                                                List<Button> buttons, boolean isHighlight) {
         List<FlexComponent> components = new ArrayList<>();
 
-        // 標題區塊
+        // 標題區塊 - 使用官方推薦的文字大小和權重
         components.add(createTitleComponent(title));
 
-        // 描述區塊
-        components.add(createDescriptionComponent(description));
+        // 描述區塊 - 改善可讀性
+        if (description != null && !description.trim().isEmpty()) {
+            components.add(createDescriptionComponent(description));
+        }
 
-        // 按鈕區塊
-        if (!buttons.isEmpty()) {
+        // 按鈕區塊 - 遵循官方按鈕設計指南
+        if (buttons != null && !buttons.isEmpty()) {
             components.add(createSeparator());
             components.add(createButtonContainer(buttons));
         }
 
-        // 主容器
+        // 主容器 - 遵循官方推薦的間距和背景設計
         Box mainBox = Box.builder()
                 .layout(FlexLayout.VERTICAL)
                 .contents(components)
                 .paddingAll(FlexPaddingSize.LG)
-                .backgroundColor(isHighlight ? Colors.PRIMARY_LIGHT : Colors.BACKGROUND)
-                .spacing(FlexMarginSize.SM)
-                .cornerRadius(BorderRadius.MD)
+                .backgroundColor(Colors.BACKGROUND)
+                .spacing(FlexMarginSize.MD) // 改善間距一致性
                 .build();
 
         Bubble bubble = Bubble.builder()
@@ -436,7 +466,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     private Text createTitleComponent(String title) {
         return Text.builder()
                 .text(title)
-                .size(FlexFontSize.LG)
+                .size(FlexFontSize.XL) // 使用更大字體提升標題層級
                 .weight(Text.TextWeight.BOLD)
                 .color(Colors.TEXT_PRIMARY)
                 .wrap(true)
@@ -446,10 +476,10 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     private Text createDescriptionComponent(String description) {
         return Text.builder()
                 .text(description)
-                .size(FlexFontSize.SM)
+                .size(FlexFontSize.SM) // 使用標準描述文字大小
                 .color(Colors.TEXT_SECONDARY)
                 .wrap(true)
-                .margin(FlexMarginSize.MD)
+                .margin(FlexMarginSize.LG) // 增加與標題的間距
                 .build();
     }
 
@@ -593,7 +623,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     }
 
     private Button createSelectionButton(String label, String action, boolean isSelected) {
-        String displayLabel = isSelected ? "\u2713 " + label : label;
+        String displayLabel = isSelected ? "✓ " + label : label;
         String buttonColor = isSelected ? UIConstants.Button.SELECTED : UIConstants.Button.UNSELECTED;
         Button.ButtonStyle style = isSelected ? Button.ButtonStyle.PRIMARY : Button.ButtonStyle.SECONDARY;
 
@@ -603,7 +633,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .action(PostbackAction.builder()
                         .label(displayLabel)
                         .data(action)
-                        .displayText(label)
+                        .displayText(label + (isSelected ? " (已選擇)" : "")) // 改善無障礙設計
                         .build())
                 .build();
     }
@@ -668,5 +698,221 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
             case "qwen/qwen3-32b" -> "Qwen3 32B";
             default -> modelId;
         };
+    }
+
+    // 廁所相關常數已移至 UIConstants.Toilet 和 UIConstants.Colors
+
+    /**
+     * 創建廁所搜尋結果的主要顯示訊息
+     */
+    private FlexMessage createToiletSearchResult(List<ToiletLocation> toilets, double userLat, double userLon) {
+        if (toilets == null || toilets.isEmpty()) {
+            return createNoToiletsFoundMessage();
+        }
+
+        // 限制顯示數量，避免資訊過載
+        int displayCount = Math.min(toilets.size(), Toilet.MAX_CAROUSEL_ITEMS);
+        List<ToiletLocation> displayToilets = toilets.subList(0, displayCount);
+
+        return createToiletCarousel(displayToilets);
+    }
+
+    /**
+     * 創建廁所 Carousel 展示
+     */
+    private FlexMessage createToiletCarousel(List<ToiletLocation> toilets) {
+        List<Bubble> bubbles = new ArrayList<>();
+
+        for (int i = 0; i < toilets.size(); i++) {
+            ToiletLocation toilet = toilets.get(i);
+            bubbles.add(createToiletBubble(toilet, i + 1));
+        }
+
+        return FlexMessage.builder()
+                .altText(String.format("找到 %d 個附近廁所", toilets.size()))
+                .contents(Carousel.builder()
+                        .contents(bubbles)
+                        .build())
+                .build();
+    }
+
+    /**
+     * 創建單個廁所的 Bubble 卡片
+     */
+    private Bubble createToiletBubble(ToiletLocation toilet, int index) {
+        // 標頭
+        Box header = createToiletHeader(toilet, index);
+
+        // 主體內容
+        List<FlexComponent> bodyComponents = new ArrayList<>();
+        bodyComponents.add(createToiletTitle(toilet));
+
+        if (toilet.getVicinity() != null && !toilet.getVicinity().trim().isEmpty()) {
+            bodyComponents.add(createToiletAddress(toilet));
+        }
+
+        bodyComponents.add(createToiletStatus(toilet));
+
+        if (toilet.getRating() != null && !toilet.getRating().isEmpty()) {
+            bodyComponents.add(createToiletRating(toilet));
+        }
+
+        Box body = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(bodyComponents)
+                .spacing(FlexMarginSize.XS)
+                .paddingAll(FlexPaddingSize.MD)
+                .build();
+
+        // 底部按鈕
+        Box footer = createToiletFooter(toilet);
+
+        return Bubble.builder()
+                .header(header)
+                .body(body)
+                .footer(footer)
+                .build();
+    }
+
+    private Box createToiletHeader(ToiletLocation toilet, int index) {
+        return Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList(
+                        Text.builder()
+                                .text(String.format("🚻 第 %d 選擇", index))
+                                .size(FlexFontSize.SM)
+                                .color("#FFFFFF")
+                                .weight(Text.TextWeight.BOLD)
+                                .align(FlexAlign.CENTER)
+                                .build(),
+                        Text.builder()
+                                .text(toilet.getDistanceFormatted())
+                                .size(FlexFontSize.XS)
+                                .color("#E3F8FF")
+                                .align(FlexAlign.CENTER)
+                                .build()
+                ))
+                .paddingAll(FlexPaddingSize.MD)
+                .backgroundColor(Colors.PRIMARY)
+                .build();
+    }
+
+    private Text createToiletTitle(ToiletLocation toilet) {
+        return Text.builder()
+                .text(toilet.getName())
+                .size(FlexFontSize.LG)
+                .weight(Text.TextWeight.BOLD)
+                .color("#1F2937")
+                .wrap(true)
+                .maxLines(2)
+                .build();
+    }
+
+    private Text createToiletAddress(ToiletLocation toilet) {
+        return Text.builder()
+                .text("📍 " + toilet.getVicinity())
+                .size(FlexFontSize.SM)
+                .color(Colors.GRAY)
+                .wrap(true)
+                .maxLines(2)
+                .margin(FlexMarginSize.SM)
+                .build();
+    }
+
+    private Box createToiletStatus(ToiletLocation toilet) {
+        String statusText = toilet.isOpen() ? "營業中" : "已關閉";
+        String statusColor = toilet.isOpen() ? Colors.SUCCESS : Colors.ERROR;
+        String statusEmoji = toilet.isOpen() ? "✅" : "❌";
+
+        return Box.builder()
+                .layout(FlexLayout.HORIZONTAL)
+                .contents(Arrays.asList(
+                        Text.builder()
+                                .text(statusEmoji + " " + statusText)
+                                .size(FlexFontSize.SM)
+                                .color(statusColor)
+                                .weight(Text.TextWeight.BOLD)
+                                .flex(1)
+                                .build(),
+                        Text.builder()
+                                .text("🚻 免費")
+                                .size(FlexFontSize.SM)
+                                .color(Colors.SUCCESS)
+                                .flex(1)
+                                .align(FlexAlign.END)
+                                .build()
+                ))
+                .margin(FlexMarginSize.SM)
+                .build();
+    }
+
+    private Text createToiletRating(ToiletLocation toilet) {
+        return Text.builder()
+                .text("⭐ " + toilet.getRating())
+                .size(FlexFontSize.SM)
+                .color(Colors.WARNING)
+                .margin(FlexMarginSize.SM)
+                .build();
+    }
+
+    private Box createToiletFooter(ToiletLocation toilet) {
+        return Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList(
+                        Button.builder()
+                                .style(Button.ButtonStyle.PRIMARY)
+                                .action(createToiletNavigationAction(toilet))
+                                .color(Colors.PRIMARY)
+                                .build()
+                ))
+                .spacing(FlexMarginSize.SM)
+                .paddingAll(FlexPaddingSize.MD)
+                .build();
+    }
+
+    private URIAction createToiletNavigationAction(ToiletLocation toilet) {
+        try {
+            String url = String.format("https://www.google.com/maps/dir/?api=1&destination=%f,%f&travelmode=walking",
+                    toilet.getLatitude(), toilet.getLongitude());
+            URI uri = new URI(url);
+            return new URIAction("🗺️ 導航", uri, null);
+        } catch (URISyntaxException e) {
+            return new URIAction("🗺️ 導航", URI.create("https://www.google.com/maps"), null);
+        }
+    }
+
+    private FlexMessage createNoToiletsFoundMessage() {
+        return FlexMessage.builder()
+                .altText("找不到附近廁所")
+                .contents(Bubble.builder()
+                        .body(Box.builder()
+                                .layout(FlexLayout.VERTICAL)
+                                .contents(Arrays.asList(
+                                        Text.builder()
+                                                .text("😔")
+                                                .size(FlexFontSize.XXL)
+                                                .align(FlexAlign.CENTER)
+                                                .build(),
+                                        Text.builder()
+                                                .text("找不到附近廁所")
+                                                .size(FlexFontSize.LG)
+                                                .weight(Text.TextWeight.BOLD)
+                                                .align(FlexAlign.CENTER)
+                                                .color("#1F2937")
+                                                .margin(FlexMarginSize.MD)
+                                                .build(),
+                                        Text.builder()
+                                                .text("建議：\n• 移動到商業區或交通要道\n• 尋找便利商店、購物中心\n• 擴大搜尋範圍")
+                                                .size(FlexFontSize.SM)
+                                                .color(Colors.GRAY)
+                                                .wrap(true)
+                                                .margin(FlexMarginSize.MD)
+                                                .build()
+                                ))
+                                .paddingAll(FlexPaddingSize.XL)
+                                .spacing(FlexMarginSize.SM)
+                                .build())
+                        .build())
+                .build();
     }
 }

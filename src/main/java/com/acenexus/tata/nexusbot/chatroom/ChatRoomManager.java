@@ -105,4 +105,33 @@ public interface ChatRoomManager {
      * @return 是否為管理員聊天室
      */
     boolean isAdminRoom(String roomId, ChatRoom.RoomType roomType);
+
+    /**
+     * 設定聊天室的廁所搜尋狀態（等待位置）
+     * 智能處理：如果記錄不存在且需要建立新記錄，則需要 roomType
+     *
+     * @param roomId                 聊天室 ID
+     * @param roomType               聊天室類型（可選，僅在建立新記錄時需要）
+     * @param waitingForToiletSearch 是否正在等待位置進行廁所搜尋
+     * @return 是否成功設定
+     */
+    boolean setWaitingForToiletSearch(String roomId, ChatRoom.RoomType roomType, boolean waitingForToiletSearch);
+
+    /**
+     * 設定聊天室的廁所搜尋狀態（僅修改現有記錄）
+     * 用於已確定記錄存在的情況
+     *
+     * @param roomId                 聊天室 ID
+     * @param waitingForToiletSearch 是否正在等待位置進行廁所搜尋
+     * @return 是否成功設定
+     */
+    boolean updateWaitingForToiletSearch(String roomId, boolean waitingForToiletSearch);
+
+    /**
+     * 檢查聊天室是否正在等待位置進行廁所搜尋
+     *
+     * @param roomId 聊天室 ID
+     * @return 是否正在等待位置進行廁所搜尋
+     */
+    boolean isWaitingForToiletSearch(String roomId);
 }

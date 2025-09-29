@@ -83,6 +83,14 @@ public class ChatRoom {
     private Boolean authPending = false;
 
     /**
+     * 是否正在等待位置以搜尋廁所
+     * 預設：false (非等待狀態)
+     */
+    @Column(name = "waiting_for_location", nullable = false)
+    @Builder.Default
+    private Boolean waitingForLocation = false;
+
+    /**
      * 建立時間
      */
     @Column(name = "created_at", nullable = false)

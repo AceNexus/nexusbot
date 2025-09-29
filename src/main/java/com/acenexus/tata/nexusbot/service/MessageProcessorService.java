@@ -5,6 +5,7 @@ import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.entity.ReminderState;
+import com.acenexus.tata.nexusbot.location.LocationService;
 import com.acenexus.tata.nexusbot.reminder.ReminderService;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
@@ -35,6 +36,7 @@ public class MessageProcessorService {
     private final AdminService adminService;
     private final ReminderService reminderService;
     private final ReminderStateManager reminderStateManager;
+    private final LocationService locationService;
 
     public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
@@ -155,9 +157,41 @@ public class MessageProcessorService {
     }
 
     public void processLocationMessage(String roomId, String title, String address, double latitude, double longitude, String replyToken) {
-        String response = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
         logger.info("Location message processed from room {}: title={}, address={}, lat={}, lon={}", roomId, title, address, latitude, longitude);
-        messageService.sendReply(replyToken, response);
+
+        // 檢查是否正在等待位置以搜尋廁所
+        boolean isWaitingForToiletSearch = chatRoomManager.isWaitingForToiletSearch(roomId);
+
+        if (isWaitingForToiletSearch) {
+            // 清除廁所搜尋等待狀態（記錄肯定存在，因為上面返回了 true）
+            chatRoomManager.updateWaitingForToiletSearch(roomId, false);
+            logger.info("Processing toilet search for room {} with location: lat={}, lon={}", roomId, latitude, longitude);
+
+            CompletableFuture.runAsync(() -> {
+                try {
+                    locationService.findNearbyToilets(latitude, longitude, 1000)
+                            .thenAccept(toilets -> {
+                                Message response = messageTemplateProvider.nearbyToiletsResponse(toilets, latitude, longitude);
+                                messageService.sendMessage(replyToken, response);
+                            })
+                            .exceptionally(throwable -> {
+                                logger.error("Error finding nearby toilets", throwable);
+                                String fallbackResponse = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
+                                messageService.sendReply(replyToken, fallbackResponse);
+                                return null;
+                            });
+                } catch (Exception e) {
+                    logger.error("Error processing location for toilet search", e);
+                    String fallbackResponse = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
+                    messageService.sendReply(replyToken, fallbackResponse);
+                }
+            });
+        } else {
+            // 一般位置訊息處理，僅回覆位置資訊
+            String response = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
+            messageService.sendReply(replyToken, response);
+            logger.info("General location message processed for room {}", roomId);
+        }
     }
 
     public void processDefaultMessage(String roomId, String replyToken) {

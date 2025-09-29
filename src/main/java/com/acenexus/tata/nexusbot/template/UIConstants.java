@@ -6,9 +6,12 @@ public final class UIConstants {
     }
 
     public static final class Colors {
+        public static final String PRIMARY = "#00A8CC";
         public static final String PRIMARY_LIGHT = "#E3F8FF";
         public static final String SUCCESS = "#10B981";
+        public static final String WARNING = "#F59E0B";
         public static final String ERROR = "#EF4444";
+        public static final String GRAY = "#6B7280";
         public static final String BACKGROUND = "#FFFFFF";
         public static final String TEXT_PRIMARY = "#111827";
         public static final String TEXT_SECONDARY = "#6B7280";
@@ -49,5 +52,10 @@ public final class UIConstants {
         public static final String WARNING_BORDER = "#F59E0B";
         public static final String ERROR_BORDER = "#EF4444";
         public static final String INFO_BORDER = "#0EA5E9";
+    }
+
+    public static final class Toilet {
+        public static final int MAX_CAROUSEL_ITEMS = 5;
+        public static final int MAX_LIST_ITEMS = 10;
     }
 }

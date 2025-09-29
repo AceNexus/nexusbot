@@ -12,6 +12,15 @@ ai:
   conversation:
     history-limit: ${AI_HISTORY_LIMIT:15}
 
+# OpenStreetMap API 設定（使用預設值，可透過環境變數覆寫）
+osm:
+  overpass:
+    timeout-ms: ${OSM_TIMEOUT:15000}
+  nominatim:
+    timeout-ms: ${OSM_TIMEOUT:10000}
+  search:
+    max-results: ${OSM_MAX_RESULTS:5}  # 配合 UI 顯示限制
+
 # 管理員設定
 admin:
   password-seed: ${ADMIN_PASSWORD_SEED:1103}
