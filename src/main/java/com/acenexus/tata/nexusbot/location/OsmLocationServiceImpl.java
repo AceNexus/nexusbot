@@ -31,28 +31,16 @@ public class OsmLocationServiceImpl implements LocationService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private RestTemplate overpassRestTemplate;
-    private RestTemplate nominatimRestTemplate;
 
     @PostConstruct
     public void init() {
-        // Overpass API 專用 RestTemplate
         SimpleClientHttpRequestFactory overpassFactory = new SimpleClientHttpRequestFactory();
-        overpassFactory.setConnectTimeout(osmProperties.getOverpass().getTimeoutMs());
-        overpassFactory.setReadTimeout(osmProperties.getOverpass().getTimeoutMs());
+        overpassFactory.setConnectTimeout(osmProperties.getTimeoutMs());
+        overpassFactory.setReadTimeout(osmProperties.getTimeoutMs());
 
         this.overpassRestTemplate = restTemplateBuilder
                 .requestFactory(() -> overpassFactory)
-                .defaultHeader("User-Agent", osmProperties.getOverpass().getUserAgent())
-                .build();
-
-        // Nominatim API 專用 RestTemplate
-        SimpleClientHttpRequestFactory nominatimFactory = new SimpleClientHttpRequestFactory();
-        nominatimFactory.setConnectTimeout(osmProperties.getNominatim().getTimeoutMs());
-        nominatimFactory.setReadTimeout(osmProperties.getNominatim().getTimeoutMs());
-
-        this.nominatimRestTemplate = restTemplateBuilder
-                .requestFactory(() -> nominatimFactory)
-                .defaultHeader("User-Agent", osmProperties.getNominatim().getUserAgent())
+                .defaultHeader("User-Agent", osmProperties.getUserAgent())
                 .build();
     }
 
@@ -79,7 +67,7 @@ public class OsmLocationServiceImpl implements LocationService {
 
                 // 按距離排序並限制結果數量
                 toilets.sort(Comparator.comparingDouble(ToiletLocation::getDistance));
-                int maxResults = Math.min(toilets.size(), osmProperties.getSearch().getMaxResults());
+                int maxResults = Math.min(toilets.size(), osmProperties.getCarouselMaxItems());
 
                 List<ToiletLocation> result = toilets.subList(0, maxResults);
                 log.info("Found {} toilets within {}m", result.size(), radius);
@@ -97,7 +85,7 @@ public class OsmLocationServiceImpl implements LocationService {
      * 建立 Overpass API 查詢語句
      */
     private String buildOverpassQuery(double latitude, double longitude, int radius) {
-        // 將半徑轉換為度數（粗略計算）
+        // TODO 將半徑轉換為度數（粗略計算）
         double radiusInDegrees = radius / 111320.0; // 1度約等於111320公尺
 
         double minLat = latitude - radiusInDegrees;
@@ -110,19 +98,15 @@ public class OsmLocationServiceImpl implements LocationService {
         query.append("(\n");
 
         // 搜尋直接的廁所設施
-        for (String tag : osmProperties.getSearch().getToiletTags()) {
-            query.append(String.format("  node[%s](%.6f,%.6f,%.6f,%.6f);\n",
-                    tag, minLat, minLon, maxLat, maxLon));
-            query.append(String.format("  way[%s](%.6f,%.6f,%.6f,%.6f);\n",
-                    tag, minLat, minLon, maxLat, maxLon));
+        for (String tag : osmProperties.getToiletTags()) {
+            query.append(String.format("  node[%s](%.6f,%.6f,%.6f,%.6f);\n", tag, minLat, minLon, maxLat, maxLon));
+            query.append(String.format("  way[%s](%.6f,%.6f,%.6f,%.6f);\n", tag, minLat, minLon, maxLat, maxLon));
         }
 
         // 搜尋可能包含廁所的設施
-        for (String tag : osmProperties.getSearch().getFacilityTags()) {
-            query.append(String.format("  node[%s][\"toilets\"=\"yes\"](%.6f,%.6f,%.6f,%.6f);\n",
-                    tag, minLat, minLon, maxLat, maxLon));
-            query.append(String.format("  way[%s][\"toilets\"=\"yes\"](%.6f,%.6f,%.6f,%.6f);\n",
-                    tag, minLat, minLon, maxLat, maxLon));
+        for (String tag : osmProperties.getFacilityTags()) {
+            query.append(String.format("  node[%s][\"toilets\"=\"yes\"](%.6f,%.6f,%.6f,%.6f);\n", tag, minLat, minLon, maxLat, maxLon));
+            query.append(String.format("  way[%s][\"toilets\"=\"yes\"](%.6f,%.6f,%.6f,%.6f);\n", tag, minLat, minLon, maxLat, maxLon));
         }
 
         query.append(");\n");
@@ -141,11 +125,7 @@ public class OsmLocationServiceImpl implements LocationService {
 
             HttpEntity<String> request = new HttpEntity<>(query, headers);
 
-            ResponseEntity<String> response = overpassRestTemplate.postForEntity(
-                    osmProperties.getOverpass().getBaseUrl(),
-                    request,
-                    String.class
-            );
+            ResponseEntity<String> response = overpassRestTemplate.postForEntity(osmProperties.getOverpassBaseUrl(), request, String.class);
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
                 log.warn("Overpass API returned status: {}", response.getStatusCode());
@@ -185,14 +165,12 @@ public class OsmLocationServiceImpl implements LocationService {
             toilet.setLatitude(elementLat);
             toilet.setLongitude(elementLon);
             toilet.setDistance(calculateDistance(userLat, userLon, elementLat, elementLon));
-            toilet.setPlaceId(element.getType() + "/" + element.getId()); // OSM 格式的 ID
 
             // 地址資訊（如果有）
             String address = element.getTag("addr:full");
             if (address == null) {
                 address = buildAddressFromTags(element);
             }
-            toilet.setAddress(address);
             toilet.setVicinity(address);
 
             // 評分資訊（OSM 沒有評分系統，使用其他指標）
@@ -303,15 +281,14 @@ public class OsmLocationServiceImpl implements LocationService {
     }
 
     /**
-     * 決定營業狀態
+     * TODO 決定營業狀態
      */
     private boolean determineOpenStatus(OsmElement element) {
         String openingHours = element.getOpeningHours();
 
         if (openingHours == null) {
             // 公共廁所假設 24 小時開放
-            return element.hasTagValue("amenity", "toilets") ||
-                    element.hasTagValue("building", "toilets");
+            return element.hasTagValue("amenity", "toilets") || element.hasTagValue("building", "toilets");
         }
 
         // 24/7 或 24 小時
@@ -319,8 +296,6 @@ public class OsmLocationServiceImpl implements LocationService {
             return true;
         }
 
-        // TODO: 可以實作更複雜的營業時間解析
-        // 目前簡單假設有營業時間就是營業中
         return true;
     }
 

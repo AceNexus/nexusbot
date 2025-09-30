@@ -1,7 +1,9 @@
 package com.acenexus.tata.nexusbot.config;
 
+import com.acenexus.tata.nexusbot.config.properties.AdminProperties;
 import com.acenexus.tata.nexusbot.config.properties.GroqProperties;
 import com.acenexus.tata.nexusbot.config.properties.LineBotProperties;
+import com.acenexus.tata.nexusbot.config.properties.OsmProperties;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +12,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 @Component
-@EnableConfigurationProperties({LineBotProperties.class, GroqProperties.class})
+@EnableConfigurationProperties({
+        LineBotProperties.class,
+        GroqProperties.class,
+        AdminProperties.class,
+        OsmProperties.class
+})
 public class ConfigValidator {
     private static final Logger logger = LoggerFactory.getLogger(ConfigValidator.class);
     private final LineBotProperties lineBotProperties;

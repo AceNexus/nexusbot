@@ -9,11 +9,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ToiletLocation {
     private String name;
-    private String address;
     private double latitude;
     private double longitude;
     private double distance;
-    private String placeId;
     private String vicinity;
     private boolean isOpen;
     private String rating;

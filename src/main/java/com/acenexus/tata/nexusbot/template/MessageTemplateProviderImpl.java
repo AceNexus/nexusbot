@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.template;
 
+import com.acenexus.tata.nexusbot.config.properties.OsmProperties;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.location.ToiletLocation;
 import com.linecorp.bot.model.action.PostbackAction;
@@ -58,13 +59,12 @@ import static com.acenexus.tata.nexusbot.template.UIConstants.BorderRadius;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Spacing;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Status;
-import static com.acenexus.tata.nexusbot.template.UIConstants.Toilet;
 
 @Service
 @RequiredArgsConstructor
 public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
-    // ToiletDisplayTemplate 已整合到此類中
+    private final OsmProperties osmProperties;
 
     @Override
     public Message welcome() {
@@ -700,8 +700,6 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         };
     }
 
-    // 廁所相關常數已移至 UIConstants.Toilet 和 UIConstants.Colors
-
     /**
      * 創建廁所搜尋結果的主要顯示訊息
      */
@@ -710,8 +708,8 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
             return createNoToiletsFoundMessage();
         }
 
-        // 限制顯示數量，避免資訊過載
-        int displayCount = Math.min(toilets.size(), Toilet.MAX_CAROUSEL_ITEMS);
+        // 限制顯示數量，避免資訊過載（LINE Carousel 上限）
+        int displayCount = Math.min(toilets.size(), osmProperties.getCarouselMaxItems());
         List<ToiletLocation> displayToilets = toilets.subList(0, displayCount);
 
         return createToiletCarousel(displayToilets);

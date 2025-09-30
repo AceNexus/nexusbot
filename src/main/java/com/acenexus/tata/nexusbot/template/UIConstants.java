@@ -19,11 +19,9 @@ public final class UIConstants {
     }
 
     public static final class Spacing {
-        public static final String XS = "4px";
         public static final String SM = "8px";
         public static final String MD = "16px";
         public static final String LG = "24px";
-        public static final String XL = "32px";
     }
 
     public static final class BorderRadius {
@@ -52,10 +50,5 @@ public final class UIConstants {
         public static final String WARNING_BORDER = "#F59E0B";
         public static final String ERROR_BORDER = "#EF4444";
         public static final String INFO_BORDER = "#0EA5E9";
-    }
-
-    public static final class Toilet {
-        public static final int MAX_CAROUSEL_ITEMS = 5;
-        public static final int MAX_LIST_ITEMS = 10;
     }
 }

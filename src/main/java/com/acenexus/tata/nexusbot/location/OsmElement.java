@@ -15,13 +15,6 @@ public class OsmElement {
     private Double lon;
     private Map<String, String> tags;
 
-    // Overpass API 額外欄位
-    private String timestamp;
-    private Integer version;
-    private Long changeset;
-    private String user;
-    private Long uid;
-
     // way 元素的幾何資訊
     private List<GeometryNode> geometry;
 
@@ -37,13 +30,6 @@ public class OsmElement {
      */
     public String getTag(String key) {
         return tags != null ? tags.get(key) : null;
-    }
-
-    /**
-     * 檢查是否有指定標籤
-     */
-    public boolean hasTag(String key) {
-        return tags != null && tags.containsKey(key);
     }
 
     /**
@@ -67,13 +53,6 @@ public class OsmElement {
         if (name != null && !name.trim().isEmpty()) return name;
 
         return tags.get("name");
-    }
-
-    /**
-     * 獲取廁所類型
-     */
-    public String getToiletAccess() {
-        return getTag("access");
     }
 
     /**
