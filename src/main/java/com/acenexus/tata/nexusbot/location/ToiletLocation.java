@@ -15,6 +15,7 @@ public class ToiletLocation {
     private String vicinity;
     private boolean isOpen;
     private String rating;
+    private boolean hasWheelchairAccess;  // 無障礙廁所
 
     public String getDistanceFormatted() {
         if (distance < 1000) {

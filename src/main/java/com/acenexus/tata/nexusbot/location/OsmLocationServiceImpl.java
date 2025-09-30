@@ -85,13 +85,17 @@ public class OsmLocationServiceImpl implements LocationService {
      * 建立 Overpass API 查詢語句
      */
     private String buildOverpassQuery(double latitude, double longitude, int radius) {
-        // TODO 將半徑轉換為度數（粗略計算）
-        double radiusInDegrees = radius / 111320.0; // 1度約等於111320公尺
+        // 將半徑轉換為度數
+        // 緯度：1度 ≈ 111,320 公尺（全球固定）
+        double latRadiusInDegrees = radius / 111320.0;
 
-        double minLat = latitude - radiusInDegrees;
-        double maxLat = latitude + radiusInDegrees;
-        double minLon = longitude - radiusInDegrees;
-        double maxLon = longitude + radiusInDegrees;
+        // 經度：1度距離隨緯度變化，使用 cos(lat) 修正
+        double lonRadiusInDegrees = radius / (111320.0 * Math.cos(Math.toRadians(latitude)));
+
+        double minLat = latitude - latRadiusInDegrees;
+        double maxLat = latitude + latRadiusInDegrees;
+        double minLon = longitude - lonRadiusInDegrees;
+        double maxLon = longitude + lonRadiusInDegrees;
 
         StringBuilder query = new StringBuilder();
         query.append("[out:json][timeout:25];\n");
@@ -178,6 +182,9 @@ public class OsmLocationServiceImpl implements LocationService {
 
             // 營業狀態（基於營業時間）
             toilet.setOpen(determineOpenStatus(element));
+
+            // 無障礙設施資訊
+            toilet.setHasWheelchairAccess(determineWheelchairAccess(element));
 
             toilets.add(toilet);
         }
@@ -281,22 +288,53 @@ public class OsmLocationServiceImpl implements LocationService {
     }
 
     /**
-     * TODO 決定營業狀態
+     * 決定營業狀態（保守評估）
+     * <p>
+     * 邏輯：
+     * 1. 無營業時間資訊 -> 公共廁所假設開放，其他假設關閉
+     * 2. 明確標示 24/7 -> 開放
+     * 3. 有營業時間但無法解析 -> 保守假設關閉（避免誤導使用者）
      */
     private boolean determineOpenStatus(OsmElement element) {
         String openingHours = element.getOpeningHours();
 
-        if (openingHours == null) {
+        // 1. 沒有營業時間資訊
+        if (openingHours == null || openingHours.trim().isEmpty()) {
             // 公共廁所假設 24 小時開放
-            return element.hasTagValue("amenity", "toilets") || element.hasTagValue("building", "toilets");
+            return element.hasTagValue("amenity", "toilets") ||
+                    element.hasTagValue("building", "toilets");
         }
 
-        // 24/7 或 24 小時
-        if ("24/7".equals(openingHours) || "24 hours".equalsIgnoreCase(openingHours)) {
+        // 2. 明確標示 24 小時營業
+        String hoursLower = openingHours.toLowerCase().trim();
+        if ("24/7".equals(hoursLower) ||
+                "24 hours".equals(hoursLower) ||
+                "24hours".equals(hoursLower)) {
             return true;
         }
 
-        return true;
+        // 3. 有營業時間但無法準確判斷當前是否營業，保守策略：顯示為關閉，避免誤導使用者前往已關閉的設施
+        return false;
+    }
+
+    /**
+     * 判斷是否有無障礙廁所設施
+     */
+    private boolean determineWheelchairAccess(OsmElement element) {
+        // 檢查 wheelchair 標籤
+        String wheelchair = element.getTag("wheelchair");
+        if ("yes".equals(wheelchair)) {
+            return true;
+        }
+
+        // 檢查 toilets:wheelchair 標籤（專門針對廁所）
+        String toiletsWheelchair = element.getTag("toilets:wheelchair");
+        if ("yes".equals(toiletsWheelchair)) {
+            return true;
+        }
+
+        // 預設為無無障礙設施
+        return false;
     }
 
     @Override

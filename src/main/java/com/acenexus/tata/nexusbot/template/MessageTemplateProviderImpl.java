@@ -738,42 +738,8 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
      * 創建單個廁所的 Bubble 卡片
      */
     private Bubble createToiletBubble(ToiletLocation toilet, int index) {
-        // 標頭
-        Box header = createToiletHeader(toilet, index);
-
-        // 主體內容
-        List<FlexComponent> bodyComponents = new ArrayList<>();
-        bodyComponents.add(createToiletTitle(toilet));
-
-        if (toilet.getVicinity() != null && !toilet.getVicinity().trim().isEmpty()) {
-            bodyComponents.add(createToiletAddress(toilet));
-        }
-
-        bodyComponents.add(createToiletStatus(toilet));
-
-        if (toilet.getRating() != null && !toilet.getRating().isEmpty()) {
-            bodyComponents.add(createToiletRating(toilet));
-        }
-
-        Box body = Box.builder()
-                .layout(FlexLayout.VERTICAL)
-                .contents(bodyComponents)
-                .spacing(FlexMarginSize.XS)
-                .paddingAll(FlexPaddingSize.MD)
-                .build();
-
-        // 底部按鈕
-        Box footer = createToiletFooter(toilet);
-
-        return Bubble.builder()
-                .header(header)
-                .body(body)
-                .footer(footer)
-                .build();
-    }
-
-    private Box createToiletHeader(ToiletLocation toilet, int index) {
-        return Box.builder()
+        // 標頭：序號和距離
+        Box header = Box.builder()
                 .layout(FlexLayout.VERTICAL)
                 .contents(Arrays.asList(
                         Text.builder()
@@ -793,36 +759,40 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .paddingAll(FlexPaddingSize.MD)
                 .backgroundColor(Colors.PRIMARY)
                 .build();
-    }
 
-    private Text createToiletTitle(ToiletLocation toilet) {
-        return Text.builder()
+        // 主體：名稱、地址、狀態資訊
+        List<FlexComponent> bodyComponents = new ArrayList<>();
+
+        // 名稱
+        bodyComponents.add(Text.builder()
                 .text(toilet.getName())
                 .size(FlexFontSize.LG)
                 .weight(Text.TextWeight.BOLD)
                 .color("#1F2937")
                 .wrap(true)
                 .maxLines(2)
-                .build();
-    }
+                .build());
 
-    private Text createToiletAddress(ToiletLocation toilet) {
-        return Text.builder()
-                .text("📍 " + toilet.getVicinity())
-                .size(FlexFontSize.SM)
-                .color(Colors.GRAY)
-                .wrap(true)
-                .maxLines(2)
-                .margin(FlexMarginSize.SM)
-                .build();
-    }
+        // 地址
+        if (toilet.getVicinity() != null && !toilet.getVicinity().trim().isEmpty()) {
+            bodyComponents.add(Text.builder()
+                    .text("📍 " + toilet.getVicinity())
+                    .size(FlexFontSize.SM)
+                    .color(Colors.GRAY)
+                    .wrap(true)
+                    .maxLines(2)
+                    .margin(FlexMarginSize.SM)
+                    .build());
+        }
 
-    private Box createToiletStatus(ToiletLocation toilet) {
+        // 狀態：營業中/已關閉 + 無障礙
         String statusText = toilet.isOpen() ? "營業中" : "已關閉";
         String statusColor = toilet.isOpen() ? Colors.SUCCESS : Colors.ERROR;
         String statusEmoji = toilet.isOpen() ? "✅" : "❌";
+        String wheelchairText = toilet.isHasWheelchairAccess() ? "♿ 有" : "♿ 無";
+        String wheelchairColor = toilet.isHasWheelchairAccess() ? Colors.SUCCESS : Colors.GRAY;
 
-        return Box.builder()
+        bodyComponents.add(Box.builder()
                 .layout(FlexLayout.HORIZONTAL)
                 .contents(Arrays.asList(
                         Text.builder()
@@ -833,28 +803,26 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                                 .flex(1)
                                 .build(),
                         Text.builder()
-                                .text("🚻 免費")
+                                .text(wheelchairText)
                                 .size(FlexFontSize.SM)
-                                .color(Colors.SUCCESS)
+                                .color(wheelchairColor)
+                                .weight(Text.TextWeight.BOLD)
                                 .flex(1)
                                 .align(FlexAlign.END)
                                 .build()
                 ))
                 .margin(FlexMarginSize.SM)
-                .build();
-    }
+                .build());
 
-    private Text createToiletRating(ToiletLocation toilet) {
-        return Text.builder()
-                .text("⭐ " + toilet.getRating())
-                .size(FlexFontSize.SM)
-                .color(Colors.WARNING)
-                .margin(FlexMarginSize.SM)
+        Box body = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(bodyComponents)
+                .spacing(FlexMarginSize.XS)
+                .paddingAll(FlexPaddingSize.MD)
                 .build();
-    }
 
-    private Box createToiletFooter(ToiletLocation toilet) {
-        return Box.builder()
+        // 底部：導航按鈕
+        Box footer = Box.builder()
                 .layout(FlexLayout.VERTICAL)
                 .contents(Arrays.asList(
                         Button.builder()
@@ -865,6 +833,12 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 ))
                 .spacing(FlexMarginSize.SM)
                 .paddingAll(FlexPaddingSize.MD)
+                .build();
+
+        return Bubble.builder()
+                .header(header)
+                .body(body)
+                .footer(footer)
                 .build();
     }
 

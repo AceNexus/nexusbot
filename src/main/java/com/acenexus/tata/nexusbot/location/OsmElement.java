@@ -18,6 +18,10 @@ public class OsmElement {
     // way 元素的幾何資訊
     private List<GeometryNode> geometry;
 
+    // 額外實用資訊
+    private String access;        // 存取權限：yes, permissive, private 等
+    private String description;   // 描述資訊
+
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class GeometryNode {
@@ -76,6 +80,13 @@ public class OsmElement {
      */
     public String getOpeningHours() {
         return getTag("opening_hours");
+    }
+
+    /**
+     * 獲取存取權限
+     */
+    public String getAccess() {
+        return getTag("access");
     }
 
     /**
