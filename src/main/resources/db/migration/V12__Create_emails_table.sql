@@ -16,8 +16,8 @@ CREATE TABLE emails (
     email VARCHAR(255) NOT NULL,                                                 -- 電子郵件地址
     is_enabled BOOLEAN NOT NULL DEFAULT TRUE,                                    -- 是否啟用此信箱的通知
     is_active BOOLEAN NOT NULL DEFAULT TRUE,                                     -- 是否為啟用狀態（軟刪除用）
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,                     -- 建立時間
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP  -- 更新時間
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,                              -- 建立時間
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP   -- 更新時間
 );
 
 -- 建立索引

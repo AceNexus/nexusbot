@@ -20,10 +20,11 @@ public interface EmailService {
     /**
      * 發送提醒通知郵件（快捷方法）
      *
-     * @param to           收件者電子郵件地址
-     * @param reminderTime 提醒時間
-     * @param reminderText 提醒內容
+     * @param to              收件者電子郵件地址
+     * @param reminderTime    提醒時間
+     * @param enhancedContent AI 增強內容
+     * @param originalContent 原始內容
      * @return 發送是否成功
      */
-    boolean sendReminderEmail(String to, String reminderTime, String reminderText);
+    boolean sendReminderEmail(String to, String reminderTime, String enhancedContent, String originalContent);
 }

@@ -159,7 +159,7 @@ public class ReminderScheduler {
             // 發送 Email 到所有已啟用的地址
             for (String email : enabledEmails) {
                 try {
-                    boolean emailSent = emailService.sendReminderEmail(email, reminderTime, enhancedContent);
+                    boolean emailSent = emailService.sendReminderEmail(email, reminderTime, enhancedContent, reminder.getContent());
 
                     if (emailSent) {
                         logger.info("Email notification sent successfully to {} for reminder [{}]", email, reminder.getId());
@@ -181,10 +181,12 @@ public class ReminderScheduler {
      */
     private String enhanceReminderWithAI(String originalContent) {
         String promptTemplate = """
-                將以下提醒改寫給長輩，語氣溫馨、禮貌、體貼，最後加上適合的 emoji。
-                文字請簡短，控制在 10 字以內，並帶鼓勵或祝福。
+                請將以下提醒改寫成適合長輩看的文字，
+                語氣溫馨、體貼、禮貌，
+                簡短不超過10字，帶點鼓勵或祝福，
+                最後加上合適的 emoji。
                 原內容：%s
-                請直接回覆改寫後的文字，不要其他說明。
+                請只回覆改寫後的文字，勿附其他說明，保持自然。
                 """;
 
         try {

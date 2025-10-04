@@ -76,11 +76,11 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public boolean sendReminderEmail(String to, String reminderTime, String reminderText) {
-        String subject = "⏰ NexusBot 提醒通知";
+    public boolean sendReminderEmail(String to, String reminderTime, String enhancedContent, String originalContent) {
+        String subject = "NexusBot 提醒通知";
 
         // 建立 HTML 郵件內容
-        String htmlContent = buildReminderEmailContent(reminderTime, reminderText);
+        String htmlContent = buildReminderEmailContent(reminderTime, enhancedContent, originalContent);
 
         return sendEmail(to, subject, htmlContent, true);
     }
@@ -88,7 +88,7 @@ public class EmailServiceImpl implements EmailService {
     /**
      * 建立提醒郵件的 HTML 內容
      */
-    private String buildReminderEmailContent(String reminderTime, String reminderText) {
+    private String buildReminderEmailContent(String reminderTime, String enhancedContent, String originalContent) {
         return String.format("""
                 <!DOCTYPE html>
                 <html lang="zh-TW">
@@ -99,15 +99,19 @@ public class EmailServiceImpl implements EmailService {
                 </head>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
                     <div style="background-color: #00A8CC; color: white; padding: 20px; border-radius: 8px 8px 0 0;">
-                        <h1 style="margin: 0; font-size: 24px;">⏰ 提醒通知</h1>
+                        <h1 style="margin: 0; font-size: 24px;">提醒時間到了</h1>
                     </div>
                     <div style="background-color: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px; border: 1px solid #ddd; border-top: none;">
                         <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                            <h2 style="color: #00A8CC; margin-top: 0; font-size: 18px;">📅 提醒時間</h2>
+                            <h2 style="color: #00A8CC; margin-top: 0; font-size: 18px;">提醒時間</h2>
                             <p style="font-size: 16px; margin: 10px 0; color: #555;">%s</p>
                         </div>
+                        <div style="background-color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                            <h2 style="color: #00A8CC; margin-top: 0; font-size: 18px;">提醒事項</h2>
+                            <p style="font-size: 16px; margin: 10px 0; white-space: pre-wrap; color: #555;">%s</p>
+                        </div>
                         <div style="background-color: white; padding: 20px; border-radius: 8px;">
-                            <h2 style="color: #00A8CC; margin-top: 0; font-size: 18px;">📝 提醒內容</h2>
+                            <h2 style="color: #00A8CC; margin-top: 0; font-size: 18px;">貼心小提醒</h2>
                             <p style="font-size: 16px; margin: 10px 0; white-space: pre-wrap; color: #555;">%s</p>
                         </div>
                     </div>
@@ -117,6 +121,6 @@ public class EmailServiceImpl implements EmailService {
                     </div>
                 </body>
                 </html>
-                """, reminderTime, reminderText);
+                """, reminderTime, originalContent, enhancedContent);
     }
 }

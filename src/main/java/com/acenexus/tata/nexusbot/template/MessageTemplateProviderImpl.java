@@ -419,8 +419,8 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         String currentTime = java.time.LocalDateTime.now().format(STANDARD_TIME);
 
         String description = String.format(
-                "%s\n\n類型：%s\n時間：%s\n\n請確認您是否已執行此提醒。",
-                enhancedContent, repeatDescription, currentTime
+                "提醒時間\n%s\n\n提醒事項\n%s\n\n貼心小提醒\n%s\n\n類型：%s",
+                currentTime, originalContent, enhancedContent, repeatDescription
         );
 
         return createCard("提醒時間到了", description, Arrays.asList(

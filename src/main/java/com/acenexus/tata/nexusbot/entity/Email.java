@@ -62,13 +62,13 @@ public class Email {
     /**
      * 建立時間
      */
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     /**
      * 最後更新時間
      */
-    @Column(name = "updated_at", nullable = false)
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
 }
