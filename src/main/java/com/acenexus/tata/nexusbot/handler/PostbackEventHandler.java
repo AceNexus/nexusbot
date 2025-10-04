@@ -2,9 +2,11 @@ package com.acenexus.tata.nexusbot.handler;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.entity.EmailInputState;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
+import com.acenexus.tata.nexusbot.repository.EmailInputStateRepository;
 import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
@@ -63,9 +65,7 @@ public class PostbackEventHandler {
     private final com.acenexus.tata.nexusbot.reminder.ReminderService reminderService;
     private final ReminderLogRepository reminderLogRepository;
     private final com.acenexus.tata.nexusbot.email.EmailManager emailManager;
-
-    // 追蹤正在等待輸入 Email 的聊天室
-    private final java.util.Set<String> waitingForEmailInput = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final EmailInputStateRepository emailInputStateRepository;
 
     public void handle(JsonNode event) {
         try {
@@ -174,12 +174,12 @@ public class PostbackEventHandler {
                         yield messageTemplateProvider.emailSettingsMenu(emails);
                     }
                     case ADD_EMAIL -> {
-                        waitingForEmailInput.add(roomId);
+                        setWaitingForEmailInput(roomId);
                         logger.info("Room {} is now waiting for email input", roomId);
                         yield messageTemplateProvider.emailInputPrompt();
                     }
                     case CANCEL_EMAIL_INPUT -> {
-                        waitingForEmailInput.remove(roomId);
+                        clearWaitingForEmailInput(roomId);
                         logger.info("Cancelled email input for room {}", roomId);
                         yield messageTemplateProvider.success("已取消新增 Email");
                     }
@@ -360,7 +360,26 @@ public class PostbackEventHandler {
      * @return 是否正在等待 Email 輸入
      */
     public boolean isWaitingForEmailInput(String roomId) {
-        return waitingForEmailInput.contains(roomId);
+        return emailInputStateRepository.existsByRoomIdAndNotExpired(roomId, LocalDateTime.now());
+    }
+
+    /**
+     * 設定聊天室為等待 Email 輸入狀態
+     *
+     * @param roomId 聊天室 ID
+     */
+    private void setWaitingForEmailInput(String roomId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime expiresAt = now.plusMinutes(30);
+
+        EmailInputState state = EmailInputState.builder()
+                .roomId(roomId)
+                .createdAt(now)
+                .expiresAt(expiresAt)
+                .build();
+
+        emailInputStateRepository.save(state);
+        logger.info("Set email input state for room {}, expires at {}", roomId, expiresAt);
     }
 
     /**
@@ -368,8 +387,17 @@ public class PostbackEventHandler {
      *
      * @param roomId 聊天室 ID
      */
-    public void clearEmailInputState(String roomId) {
-        waitingForEmailInput.remove(roomId);
+    private void clearWaitingForEmailInput(String roomId) {
+        emailInputStateRepository.deleteById(roomId);
         logger.info("Cleared email input state for room {}", roomId);
+    }
+
+    /**
+     * 清除聊天室的 Email 輸入等待狀態（公開方法，供外部調用）
+     *
+     * @param roomId 聊天室 ID
+     */
+    public void clearEmailInputState(String roomId) {
+        clearWaitingForEmailInput(roomId);
     }
 }

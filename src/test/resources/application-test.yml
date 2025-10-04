@@ -22,3 +22,12 @@ line:
 
 groq:
   api-key: test-api-key
+
+email:
+  host: smtp.gmail.com
+  port: 587
+  username: test@example.com
+  password: test-password
+  auth: true
+  starttls: true
+  debug: false
