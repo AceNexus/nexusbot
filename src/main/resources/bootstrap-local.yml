@@ -31,3 +31,14 @@ line:
 
 groq:
   api-key: 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
+
+email:
+  host: smtp.gmail.com
+  port: 587
+  username: ace.sie.cwo@gmail.com
+  password: ${EMAIL_PASSWORD:drux vukj bbne cnuj}
+  from: ace.sie.cwo@gmail.com
+  from-name: NexusBot 提醒通知
+  auth: true
+  starttls: true
+  debug: false

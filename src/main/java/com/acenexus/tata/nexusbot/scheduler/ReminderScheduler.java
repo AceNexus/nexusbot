@@ -1,6 +1,8 @@
 package com.acenexus.tata.nexusbot.scheduler;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
+import com.acenexus.tata.nexusbot.email.EmailManager;
+import com.acenexus.tata.nexusbot.email.EmailService;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.lock.DistributedLock;
@@ -39,6 +41,8 @@ public class ReminderScheduler {
     private final LineMessagingClient lineMessagingClient;
     private final MessageTemplateProvider messageTemplateProvider;
     private final AIService aiService;
+    private final EmailService emailService;
+    private final EmailManager emailManager;
 
     /**
      * 每分鐘整分執行一次，掃描並發送到期提醒
@@ -109,6 +113,7 @@ public class ReminderScheduler {
 
     /**
      * 發送提醒訊息（非同步處理，AI 情感回復）
+     * 同時發送 LINE 訊息和 Email（如果啟用）
      */
     private void sendReminderMessage(Reminder reminder) {
         logger.info("Room [{}] 提醒訊息：{}", reminder.getRoomId(), reminder.getContent());
@@ -116,18 +121,59 @@ public class ReminderScheduler {
         CompletableFuture.runAsync(() -> {
             try {
                 String enhancedContent = enhanceReminderWithAI(reminder.getContent());
+
+                // 1. 發送 LINE 訊息
                 Message reminderMessage = messageTemplateProvider.buildReminderNotification(enhancedContent, reminder.getContent(), reminder.getRepeatType(), reminder.getId());
                 PushMessage pushMessage = new PushMessage(reminder.getRoomId(), reminderMessage);
                 lineMessagingClient.pushMessage(pushMessage);
 
+                logger.debug("LINE notification sent successfully for reminder [{}]", reminder.getId());
+
+                // 2. 發送 Email（如果啟用）
+                sendEmailIfEnabled(reminder, enhancedContent);
+
                 saveReminderLog(reminder, "SENT", null);
-                logger.debug("Async notification sent successfully for reminder [{}]", reminder.getId());
 
             } catch (Exception e) {
                 logger.error("Failed to send async notification for reminder [{}]: {}", reminder.getId(), e.getMessage());
                 saveReminderLog(reminder, "FAILED", e.getMessage());
             }
         });
+    }
+
+    /**
+     * 如果啟用 Email 通知，則發送郵件到所有已啟用的 Email 地址
+     */
+    private void sendEmailIfEnabled(Reminder reminder, String enhancedContent) {
+        try {
+            // 獲取所有已啟用的 Email 地址
+            List<String> enabledEmails = emailManager.getEnabledEmailAddresses(reminder.getRoomId());
+
+            if (enabledEmails.isEmpty()) {
+                logger.debug("No enabled email addresses for room [{}]", reminder.getRoomId());
+                return;
+            }
+
+            String reminderTime = reminder.getReminderTime().format(STANDARD_TIME);
+
+            // 發送 Email 到所有已啟用的地址
+            for (String email : enabledEmails) {
+                try {
+                    boolean emailSent = emailService.sendReminderEmail(email, reminderTime, enhancedContent);
+
+                    if (emailSent) {
+                        logger.info("Email notification sent successfully to {} for reminder [{}]", email, reminder.getId());
+                    } else {
+                        logger.error("Failed to send email notification to {} for reminder [{}]", email, reminder.getId());
+                    }
+                } catch (Exception e) {
+                    logger.error("Error sending email to {} for reminder [{}]: {}", email, reminder.getId(), e.getMessage(), e);
+                }
+            }
+
+        } catch (Exception e) {
+            logger.error("Error sending email notifications for reminder [{}]: {}", reminder.getId(), e.getMessage(), e);
+        }
     }
 
     /**

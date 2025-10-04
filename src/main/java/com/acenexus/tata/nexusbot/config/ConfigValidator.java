@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.config;
 
 import com.acenexus.tata.nexusbot.config.properties.AdminProperties;
+import com.acenexus.tata.nexusbot.config.properties.EmailProperties;
 import com.acenexus.tata.nexusbot.config.properties.GroqProperties;
 import com.acenexus.tata.nexusbot.config.properties.LineBotProperties;
 import com.acenexus.tata.nexusbot.config.properties.OsmProperties;
@@ -16,7 +17,8 @@ import org.springframework.util.StringUtils;
         LineBotProperties.class,
         GroqProperties.class,
         AdminProperties.class,
-        OsmProperties.class
+        OsmProperties.class,
+        EmailProperties.class
 })
 public class ConfigValidator {
     private static final Logger logger = LoggerFactory.getLogger(ConfigValidator.class);

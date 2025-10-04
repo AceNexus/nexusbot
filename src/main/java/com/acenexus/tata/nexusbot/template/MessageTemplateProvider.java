@@ -75,4 +75,12 @@ public interface MessageTemplateProvider {
     Message reminderList(List<Reminder> reminders, Map<Long, String> userResponseStatuses);
 
     Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType, Long reminderId);
+
+    Message emailSettingsMenu(java.util.List<com.acenexus.tata.nexusbot.entity.Email> emails);
+
+    Message emailInputPrompt();
+
+    Message emailAddSuccess(String email);
+
+    Message emailInvalidFormat();
 }

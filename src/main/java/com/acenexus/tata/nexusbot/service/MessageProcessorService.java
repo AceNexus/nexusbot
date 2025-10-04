@@ -28,6 +28,8 @@ import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 public class MessageProcessorService {
     private static final Logger logger = LoggerFactory.getLogger(MessageProcessorService.class);
     private static final DateTimeFormatter TIME_FORMATTER = STANDARD_TIME;
+    private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
+
     private final MessageService messageService;
     private final AIService aiService;
     private final MessageTemplateProvider messageTemplateProvider;
@@ -37,6 +39,8 @@ public class MessageProcessorService {
     private final ReminderService reminderService;
     private final ReminderStateManager reminderStateManager;
     private final LocationService locationService;
+    private final com.acenexus.tata.nexusbot.handler.PostbackEventHandler postbackEventHandler;
+    private final com.acenexus.tata.nexusbot.email.EmailManager emailManager;
 
     public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
@@ -84,7 +88,12 @@ public class MessageProcessorService {
             return true;
         }
 
-        // 4. 預定義指令
+        // 4. Email 輸入處理
+        if (handleEmailInput(roomId, roomType, messageText, replyToken)) {
+            return true;
+        }
+
+        // 5. 預定義指令
         try {
             return switch (normalizedText) {
                 case "menu", "選單" -> {
@@ -274,5 +283,49 @@ public class MessageProcessorService {
         }
 
         return false;
+    }
+
+    /**
+     * 處理 Email 輸入
+     */
+    private boolean handleEmailInput(String roomId, ChatRoom.RoomType roomType, String messageText, String replyToken) {
+        // 檢查是否正在等待 Email 輸入
+        if (!postbackEventHandler.isWaitingForEmailInput(roomId)) {
+            return false;
+        }
+
+        try {
+            String email = messageText.trim();
+
+            // 驗證 Email 格式
+            if (!email.matches(EMAIL_REGEX)) {
+                logger.warn("Invalid email format from room {}: {}", roomId, email);
+                messageService.sendMessage(replyToken, messageTemplateProvider.emailInvalidFormat());
+                return true;
+            }
+
+            // 新增 Email
+            com.acenexus.tata.nexusbot.entity.Email addedEmail = emailManager.addEmail(roomId, email);
+
+            if (addedEmail != null) {
+                // 清除等待狀態
+                postbackEventHandler.clearEmailInputState(roomId);
+
+                // 發送成功訊息
+                messageService.sendMessage(replyToken, messageTemplateProvider.emailAddSuccess(email));
+                logger.info("Email added successfully for room {}: {}", roomId, email);
+            } else {
+                messageService.sendMessage(replyToken, messageTemplateProvider.error("新增 Email 時發生錯誤，請稍後再試。"));
+                logger.error("Failed to add email for room {}", roomId);
+            }
+
+            return true;
+
+        } catch (Exception e) {
+            logger.error("Error processing email input for room {}: {}", roomId, e.getMessage());
+            postbackEventHandler.clearEmailInputState(roomId);
+            messageService.sendMessage(replyToken, messageTemplateProvider.error("處理 Email 輸入時發生錯誤。"));
+            return true;
+        }
     }
 }

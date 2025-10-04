@@ -31,11 +31,15 @@ import java.util.List;
 import java.util.Map;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.ADD_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
+import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_EMAIL_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
+import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.EMAIL_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.FIND_TOILETS;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
@@ -54,6 +58,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_EMAIL_STATUS;
 import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 import static com.acenexus.tata.nexusbot.template.UIConstants.BorderRadius;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
@@ -107,6 +112,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 Arrays.asList(
                         createPrimaryButton("AI 智能對話", TOGGLE_AI),
                         createNeutralButton("提醒管理", REMINDER_MENU),
+                        createNeutralButton("Email 通知", EMAIL_MENU),
                         createNeutralButton("找附近廁所", FIND_TOILETS),
                         createNeutralButton("說明與支援", HELP_MENU)
                 )
@@ -886,5 +892,84 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                                 .build())
                         .build())
                 .build();
+    }
+
+    @Override
+    public Message emailSettingsMenu(List<com.acenexus.tata.nexusbot.entity.Email> emails) {
+        String title = "Email 通知設定";
+
+        StringBuilder description = new StringBuilder();
+        description.append("管理您的 Email 通知設定\n\n");
+
+        if (emails.isEmpty()) {
+            description.append("目前尚未新增任何 Email\n\n");
+            description.append("當有提醒事件發生時，系統會同時發送 LINE 和 Email 通知。");
+        } else {
+            description.append(String.format("已設定 %d 個 Email：\n\n", emails.size()));
+
+            for (int i = 0; i < emails.size(); i++) {
+                com.acenexus.tata.nexusbot.entity.Email email = emails.get(i);
+                String status = Boolean.TRUE.equals(email.getIsEnabled()) ? "✓ 啟用" : "✗ 停用";
+                description.append(String.format("%d. %s\n   狀態：%s\n\n", i + 1, email.getEmail(), status));
+            }
+        }
+
+        List<Button> buttons = new ArrayList<>();
+        buttons.add(createPrimaryButton("新增 Email", ADD_EMAIL));
+
+        // 為每個 email 新增操作按鈕（最多顯示前3個）
+        int displayCount = Math.min(emails.size(), 3);
+        for (int i = 0; i < displayCount; i++) {
+            com.acenexus.tata.nexusbot.entity.Email email = emails.get(i);
+            String toggleLabel = Boolean.TRUE.equals(email.getIsEnabled()) ? "停用" : "啟用";
+            buttons.add(createNeutralButton(
+                    toggleLabel + " #" + (i + 1),
+                    TOGGLE_EMAIL_STATUS + "&id=" + email.getId()
+            ));
+            buttons.add(createDangerButton(
+                    "刪除 #" + (i + 1),
+                    DELETE_EMAIL + "&id=" + email.getId()
+            ));
+        }
+
+        buttons.add(createNavigateButton("返回主選單", MAIN_MENU));
+
+        return createCard(title, description.toString(), buttons);
+    }
+
+    @Override
+    public Message emailInputPrompt() {
+        return createCard(
+                "新增 Email",
+                "請輸入您的電子郵件地址。\n\n請確保輸入正確的 Email 格式，例如：user@example.com",
+                Arrays.asList(
+                        createSecondaryButton("取消新增", CANCEL_EMAIL_INPUT),
+                        createNavigateButton("返回 Email 設定", EMAIL_MENU)
+                )
+        );
+    }
+
+    @Override
+    public Message emailAddSuccess(String email) {
+        return createCard(
+                "Email 新增成功",
+                String.format("已成功新增 Email：\n%s\n\n此 Email 已自動啟用通知功能。", email),
+                Arrays.asList(
+                        createSuccessButton("返回 Email 設定", EMAIL_MENU),
+                        createNavigateButton("返回主選單", MAIN_MENU)
+                )
+        );
+    }
+
+    @Override
+    public Message emailInvalidFormat() {
+        return createCard(
+                "Email 格式錯誤",
+                "您輸入的 Email 格式不正確。\n\n請輸入有效的電子郵件地址，例如：\n• user@gmail.com\n• example@outlook.com\n• name@company.com",
+                Arrays.asList(
+                        createPrimaryButton("重新輸入", ADD_EMAIL),
+                        createSecondaryButton("返回 Email 設定", EMAIL_MENU)
+                )
+        );
     }
 }

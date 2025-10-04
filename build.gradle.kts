@@ -39,7 +39,7 @@ dependencies {
     // DataBase
     implementation("com.mysql:mysql-connector-j:8.3.0")
     runtimeOnly("com.h2database:h2")
-    
+
     // Database Migration
     implementation("org.flywaydb:flyway-core")
 
@@ -47,10 +47,13 @@ dependencies {
     implementation("com.linecorp.bot:line-bot-spring-boot:6.0.0")
     implementation("com.linecorp.bot:line-bot-api-client:6.0.0")
     implementation("com.linecorp.bot:line-bot-model:6.0.0")
-    
+
     // HTTP Client for Groq API
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.core:jackson-databind")
+
+    // Email
+    implementation("org.springframework.boot:spring-boot-starter-mail")
 
     // Lombok
     compileOnly("org.projectlombok:lombok")

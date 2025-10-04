@@ -22,12 +22,16 @@ import java.util.Map;
 import java.util.Optional;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.ADD_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
+import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_EMAIL_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
+import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.EMAIL_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.FIND_TOILETS;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
@@ -46,6 +50,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_EMAIL_STATUS;
 
 @Component
 @RequiredArgsConstructor
@@ -57,6 +62,10 @@ public class PostbackEventHandler {
     private final ReminderStateManager reminderStateManager;
     private final com.acenexus.tata.nexusbot.reminder.ReminderService reminderService;
     private final ReminderLogRepository reminderLogRepository;
+    private final com.acenexus.tata.nexusbot.email.EmailManager emailManager;
+
+    // 追蹤正在等待輸入 Email 的聊天室
+    private final java.util.Set<String> waitingForEmailInput = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     public void handle(JsonNode event) {
         try {
@@ -158,11 +167,32 @@ public class PostbackEventHandler {
                         reminderStateManager.clearState(roomId);
                         yield messageTemplateProvider.success("已取消新增提醒");
                     }
+
+                    // Email 通知功能
+                    case EMAIL_MENU -> {
+                        List<com.acenexus.tata.nexusbot.entity.Email> emails = emailManager.getActiveEmails(roomId);
+                        yield messageTemplateProvider.emailSettingsMenu(emails);
+                    }
+                    case ADD_EMAIL -> {
+                        waitingForEmailInput.add(roomId);
+                        logger.info("Room {} is now waiting for email input", roomId);
+                        yield messageTemplateProvider.emailInputPrompt();
+                    }
+                    case CANCEL_EMAIL_INPUT -> {
+                        waitingForEmailInput.remove(roomId);
+                        logger.info("Cancelled email input for room {}", roomId);
+                        yield messageTemplateProvider.success("已取消新增 Email");
+                    }
+
                     default -> {
-                        if (data.startsWith(DELETE_REMINDER)) { // 刪除提醒
+                        if (data.startsWith(DELETE_REMINDER)) {
                             yield handleDeleteReminder(data, roomId);
-                        } else if (data.startsWith(REMINDER_COMPLETED)) { // 提醒已執行
+                        } else if (data.startsWith(REMINDER_COMPLETED)) {
                             yield handleReminderCompleted(data, roomId);
+                        } else if (data.startsWith(DELETE_EMAIL)) {
+                            yield handleDeleteEmail(data, roomId);
+                        } else if (data.startsWith(TOGGLE_EMAIL_STATUS)) {
+                            yield handleToggleEmailStatus(data, roomId);
                         } else {
                             yield messageTemplateProvider.postbackResponse(data);
                         }
@@ -267,5 +297,79 @@ public class PostbackEventHandler {
         }
 
         return statusMap;
+    }
+
+    /**
+     * 處理刪除 Email
+     */
+    private Message handleDeleteEmail(String data, String roomId) {
+        try {
+            String idStr = data.substring(data.indexOf("&id=") + 4);
+            Long emailId = Long.parseLong(idStr);
+
+            boolean success = emailManager.deleteEmail(emailId, roomId);
+            return success ? messageTemplateProvider.success("Email 已刪除") : messageTemplateProvider.error("刪除 Email 失敗");
+
+        } catch (Exception e) {
+            logger.error("Delete email error: {}", e.getMessage());
+            return messageTemplateProvider.error("刪除 Email 時發生錯誤");
+        }
+    }
+
+    /**
+     * 處理切換 Email 啟用狀態
+     */
+    private Message handleToggleEmailStatus(String data, String roomId) {
+        try {
+            String idStr = data.substring(data.indexOf("&id=") + 4);
+            Long emailId = Long.parseLong(idStr);
+
+            // 獲取當前狀態
+            List<com.acenexus.tata.nexusbot.entity.Email> emails = emailManager.getActiveEmails(roomId);
+            com.acenexus.tata.nexusbot.entity.Email targetEmail = emails.stream()
+                    .filter(e -> e.getId().equals(emailId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (targetEmail == null) {
+                return messageTemplateProvider.error("Email 不存在");
+            }
+
+            boolean success;
+            String message;
+            if (Boolean.TRUE.equals(targetEmail.getIsEnabled())) {
+                success = emailManager.disableEmail(emailId, roomId);
+                message = success ? "Email 通知已停用" : "停用 Email 通知失敗";
+            } else {
+                success = emailManager.enableEmail(emailId, roomId);
+                message = success ? "Email 通知已啟用" : "啟用 Email 通知失敗";
+            }
+
+            return success ? messageTemplateProvider.success(message) : messageTemplateProvider.error(message);
+
+        } catch (Exception e) {
+            logger.error("Toggle email status error: {}", e.getMessage());
+            return messageTemplateProvider.error("切換 Email 狀態時發生錯誤");
+        }
+    }
+
+    /**
+     * 檢查聊天室是否正在等待 Email 輸入
+     *
+     * @param roomId 聊天室 ID
+     * @return 是否正在等待 Email 輸入
+     */
+    public boolean isWaitingForEmailInput(String roomId) {
+        return waitingForEmailInput.contains(roomId);
+    }
+
+    /**
+     * 清除聊天室的 Email 輸入等待狀態
+     *
+     * @param roomId 聊天室 ID
+     */
+    public void clearEmailInputState(String roomId) {
+        waitingForEmailInput.remove(roomId);
+        logger.info("Cleared email input state for room {}", roomId);
     }
 }
