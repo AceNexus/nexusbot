@@ -898,43 +898,138 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     public Message emailSettingsMenu(List<com.acenexus.tata.nexusbot.entity.Email> emails) {
         String title = "Email 通知設定";
 
-        StringBuilder description = new StringBuilder();
-        description.append("管理您的 Email 通知設定\n\n");
+        // 建立主要內容組件
+        List<FlexComponent> components = new ArrayList<>();
+        components.add(createTitleComponent(title));
 
         if (emails.isEmpty()) {
-            description.append("目前尚未新增任何 Email\n\n");
-            description.append("當有提醒事件發生時，系統會同時發送 LINE 和 Email 通知。");
+            // 空狀態提示
+            Text emptyText = Text.builder()
+                    .text("目前尚未新增任何 Email 地址\n\n設定 Email 通知後，提醒將同時發送至您的信箱，確保不錯過重要事項。")
+                    .size(FlexFontSize.SM)
+                    .color(Colors.TEXT_SECONDARY)
+                    .wrap(true)
+                    .margin(FlexMarginSize.LG)
+                    .build();
+            components.add(emptyText);
         } else {
-            description.append(String.format("已設定 %d 個 Email：\n\n", emails.size()));
+            // 信箱數量統計
+            Text countText = Text.builder()
+                    .text(String.format("已設定 %d 個信箱", emails.size()))
+                    .size(FlexFontSize.SM)
+                    .color(Colors.TEXT_SECONDARY)
+                    .margin(FlexMarginSize.MD)
+                    .build();
+            components.add(countText);
 
-            for (int i = 0; i < emails.size(); i++) {
-                com.acenexus.tata.nexusbot.entity.Email email = emails.get(i);
-                String status = Boolean.TRUE.equals(email.getIsEnabled()) ? "✓ 啟用" : "✗ 停用";
-                description.append(String.format("%d. %s\n   狀態：%s\n\n", i + 1, email.getEmail(), status));
+            // Email 列表
+            for (com.acenexus.tata.nexusbot.entity.Email email : emails) {
+                components.add(createEmailItemBox(email));
             }
         }
 
-        List<Button> buttons = new ArrayList<>();
-        buttons.add(createPrimaryButton("新增 Email", ADD_EMAIL));
+        // 分隔線
+        components.add(createSeparator());
 
-        // 為每個 email 新增操作按鈕（最多顯示前3個）
-        int displayCount = Math.min(emails.size(), 3);
-        for (int i = 0; i < displayCount; i++) {
-            com.acenexus.tata.nexusbot.entity.Email email = emails.get(i);
-            String toggleLabel = Boolean.TRUE.equals(email.getIsEnabled()) ? "停用" : "啟用";
-            buttons.add(createNeutralButton(
-                    toggleLabel + " #" + (i + 1),
-                    TOGGLE_EMAIL_STATUS + "&id=" + email.getId()
-            ));
-            buttons.add(createDangerButton(
-                    "刪除 #" + (i + 1),
-                    DELETE_EMAIL + "&id=" + email.getId()
-            ));
-        }
+        // 底部按鈕區域
+        List<FlexComponent> bottomButtons = new ArrayList<>();
+        bottomButtons.add(createPrimaryButton("+ 新增信箱", ADD_EMAIL));
+        bottomButtons.add(createSpacing(Spacing.SM));
+        bottomButtons.add(createNavigateButton("返回主選單", MAIN_MENU));
 
-        buttons.add(createNavigateButton("返回主選單", MAIN_MENU));
+        Box buttonContainer = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(bottomButtons)
+                .paddingTop(FlexPaddingSize.MD)
+                .build();
 
-        return createCard(title, description.toString(), buttons);
+        components.add(buttonContainer);
+
+        // 主容器
+        Box mainBox = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(components)
+                .paddingAll(FlexPaddingSize.LG)
+                .backgroundColor(Colors.BACKGROUND)
+                .spacing(FlexMarginSize.MD)
+                .build();
+
+        Bubble bubble = Bubble.builder()
+                .body(mainBox)
+                .build();
+
+        return FlexMessage.builder()
+                .altText(title)
+                .contents(bubble)
+                .build();
+    }
+
+    private Box createEmailItemBox(com.acenexus.tata.nexusbot.entity.Email email) {
+        boolean isEnabled = Boolean.TRUE.equals(email.getIsEnabled());
+        String statusIcon = isEnabled ? "●" : "○";
+        String statusColor = isEnabled ? Colors.SUCCESS : Colors.GRAY;
+        String toggleLabel = isEnabled ? "停用" : "啟用";
+
+        // 狀態指示器 + Email 地址
+        Box emailInfo = Box.builder()
+                .layout(FlexLayout.HORIZONTAL)
+                .contents(Arrays.asList(
+                        Text.builder()
+                                .text(statusIcon)
+                                .size(FlexFontSize.SM)
+                                .color(statusColor)
+                                .flex(0)
+                                .build(),
+                        Text.builder()
+                                .text(email.getEmail())
+                                .size(FlexFontSize.SM)
+                                .color(Colors.TEXT_PRIMARY)
+                                .wrap(true)
+                                .margin(FlexMarginSize.XS)
+                                .build()
+                ))
+                .build();
+
+        // 操作按鈕行
+        Box actionButtons = Box.builder()
+                .layout(FlexLayout.HORIZONTAL)
+                .contents(Arrays.asList(
+                        createButtonWithFlex(toggleLabel,
+                                TOGGLE_EMAIL_STATUS + "&id=" + email.getId(),
+                                ButtonType.NEUTRAL, 1),
+                        createButtonWithFlex("刪除",
+                                DELETE_EMAIL + "&id=" + email.getId(),
+                                ButtonType.DANGER, 1)
+                ))
+                .spacing(FlexMarginSize.SM)
+                .margin(FlexMarginSize.XS)
+                .build();
+
+        // Email 項目容器（包含資訊和按鈕）
+        return Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(Arrays.asList(emailInfo, actionButtons))
+                .backgroundColor(Colors.BORDER)
+                .cornerRadius(BorderRadius.MD)
+                .paddingAll(FlexPaddingSize.SM)
+                .margin(FlexMarginSize.XS)
+                .build();
+    }
+
+    private Button createButtonWithFlex(String label, String action, ButtonType type, int flex) {
+        var buttonStyle = getButtonStyle(type);
+        var buttonColor = getButtonColor(type);
+
+        return Button.builder()
+                .style(buttonStyle)
+                .color(buttonColor)
+                .flex(flex)
+                .action(PostbackAction.builder()
+                        .label(label)
+                        .data(action)
+                        .displayText(label)
+                        .build())
+                .build();
     }
 
     @Override
