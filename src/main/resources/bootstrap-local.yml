@@ -42,3 +42,4 @@ email:
   auth: true
   starttls: true
   debug: false
+  confirmation-base-url: http://localhost:8080

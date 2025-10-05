@@ -37,6 +37,7 @@ public final class Actions {
     public static final String REMINDER_MENU = "action=reminder_menu";
     public static final String ADD_REMINDER = "action=add_reminder";
     public static final String LIST_REMINDERS = "action=list_reminders";
+    public static final String TODAY_REMINDERS = "action=today_reminders";
     public static final String DELETE_REMINDER = "action=delete_reminder";
     public static final String CANCEL_REMINDER_INPUT = "action=cancel_reminder_input";
 
@@ -47,6 +48,11 @@ public final class Actions {
     public static final String REPEAT_ONCE = "repeat=ONCE";
     public static final String REPEAT_DAILY = "repeat=DAILY";
     public static final String REPEAT_WEEKLY = "repeat=WEEKLY";
+
+    // 通知管道選擇
+    public static final String CHANNEL_LINE = "channel=LINE";
+    public static final String CHANNEL_EMAIL = "channel=EMAIL";
+    public static final String CHANNEL_BOTH = "channel=BOTH";
 
     // ============= Email 通知動作 =============
     public static final String EMAIL_MENU = "action=email_menu";

@@ -41,6 +41,15 @@ public class ReminderLog {
     @Column(name = "user_response_status")
     private String userResponseStatus;
 
+    @Column(name = "delivery_method", length = 20)
+    private String deliveryMethod;
+
+    @Column(name = "confirmation_token", length = 100, unique = true)
+    private String confirmationToken;
+
+    @Column(name = "confirmed_at")
+    private LocalDateTime confirmedAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 

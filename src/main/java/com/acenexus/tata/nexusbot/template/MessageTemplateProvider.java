@@ -64,6 +64,8 @@ public interface MessageTemplateProvider {
 
     Message reminderRepeatTypeMenu();
 
+    Message reminderNotificationChannelMenu();
+
     Message reminderInputMenu(String step);
 
     Message reminderInputMenu(String step, String reminderTime);
@@ -73,6 +75,8 @@ public interface MessageTemplateProvider {
     Message reminderInputError(String userInput, String aiResult);
 
     Message reminderList(List<Reminder> reminders, Map<Long, String> userResponseStatuses);
+
+    Message todayReminderLogs(java.util.List<com.acenexus.tata.nexusbot.reminder.ReminderLogService.TodayReminderLog> logs);
 
     Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType, Long reminderId);
 

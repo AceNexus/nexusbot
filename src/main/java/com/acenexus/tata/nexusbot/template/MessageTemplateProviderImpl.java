@@ -35,6 +35,9 @@ import static com.acenexus.tata.nexusbot.constants.Actions.ADD_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_EMAIL_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_BOTH;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_EMAIL;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_LINE;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_EMAIL;
@@ -57,6 +60,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_DAILY;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
+import static com.acenexus.tata.nexusbot.constants.Actions.TODAY_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_EMAIL_STATUS;
 import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
@@ -295,7 +299,8 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 "智慧提醒管理系統可以幫助您設定重要事項的提醒通知。支援單次提醒和週期性提醒設定。",
                 Arrays.asList(
                         createPrimaryButton("新增提醒", ADD_REMINDER),
-                        createNeutralButton("檢視提醒列表", LIST_REMINDERS),
+                        createNeutralButton("活躍提醒列表", LIST_REMINDERS),
+                        createNeutralButton("今日提醒記錄", TODAY_REMINDERS),
                         createNavigateButton("返回主選單", MAIN_MENU)
                 )
         );
@@ -310,6 +315,20 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                         createPrimaryButton("單次提醒", REPEAT_ONCE),
                         createNeutralButton("每日提醒", REPEAT_DAILY),
                         createNeutralButton("每週提醒", REPEAT_WEEKLY),
+                        createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT)
+                )
+        );
+    }
+
+    @Override
+    public Message reminderNotificationChannelMenu() {
+        return createCard(
+                "通知方式設定",
+                "請選擇提醒的通知方式。Email 通知可節省 LINE 訊息額度，適合日常使用。",
+                Arrays.asList(
+                        createPrimaryButton("LINE 通知", CHANNEL_LINE),
+                        createNeutralButton("Email 通知", CHANNEL_EMAIL),
+                        createNeutralButton("雙重通知", CHANNEL_BOTH),
                         createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT)
                 )
         );
@@ -403,6 +422,40 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
 
         return createCard("提醒列表", contentBuilder.toString(), Arrays.asList(
                 createPrimaryButton("新增提醒", ADD_REMINDER),
+                createSecondaryButton("返回提醒管理", REMINDER_MENU)
+        ));
+    }
+
+    @Override
+    public Message todayReminderLogs(java.util.List<com.acenexus.tata.nexusbot.reminder.ReminderLogService.TodayReminderLog> logs) {
+        if (logs.isEmpty()) {
+            return createCard(
+                    "今日提醒記錄",
+                    "今天還沒有發送任何提醒",
+                    Arrays.asList(
+                            createPrimaryButton("新增提醒", ADD_REMINDER),
+                            createSecondaryButton("返回提醒管理", REMINDER_MENU)
+                    )
+            );
+        }
+
+        StringBuilder contentBuilder = new StringBuilder();
+        for (int i = 0; i < logs.size(); i++) {
+            com.acenexus.tata.nexusbot.reminder.ReminderLogService.TodayReminderLog log = logs.get(i);
+
+            String status = log.isConfirmed() ? "已確認" : "待確認";
+
+            contentBuilder.append(String.format(
+                    "%d. %s\n發送時間：%s\n狀態：%s\n\n",
+                    i + 1,
+                    log.content(),
+                    log.sentTime().format(STANDARD_TIME),
+                    status
+            ));
+        }
+
+        return createCard("今日提醒記錄", contentBuilder.toString(), Arrays.asList(
+                createNeutralButton("查看活躍提醒", LIST_REMINDERS),
                 createSecondaryButton("返回提醒管理", REMINDER_MENU)
         ));
     }

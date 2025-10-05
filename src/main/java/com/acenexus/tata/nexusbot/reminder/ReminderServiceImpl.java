@@ -17,11 +17,18 @@ public class ReminderServiceImpl implements ReminderService {
     @Override
     public Reminder createReminder(String roomId, String content, LocalDateTime reminderTime,
                                    String repeatType, String createdBy) {
+        return createReminder(roomId, content, reminderTime, repeatType, createdBy, "LINE");
+    }
+
+    @Override
+    public Reminder createReminder(String roomId, String content, LocalDateTime reminderTime,
+                                   String repeatType, String createdBy, String notificationChannel) {
         Reminder reminder = Reminder.builder()
                 .roomId(roomId)
                 .content(content)
                 .reminderTime(reminderTime)
                 .repeatType(repeatType != null ? repeatType : "ONCE")
+                .notificationChannel(notificationChannel != null ? notificationChannel : "LINE")
                 .status("ACTIVE")
                 .createdBy(createdBy)
                 .createdAt(LocalDateTime.now())

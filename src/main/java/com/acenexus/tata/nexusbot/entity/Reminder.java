@@ -64,6 +64,13 @@ public class Reminder {
     private String createdBy;
 
     /**
+     * 通知管道：LINE, EMAIL, BOTH
+     */
+    @Column(name = "notification_channel", length = 20)
+    @Builder.Default
+    private String notificationChannel = "LINE";
+
+    /**
      * 建立時間
      */
     @Column(name = "created_at")

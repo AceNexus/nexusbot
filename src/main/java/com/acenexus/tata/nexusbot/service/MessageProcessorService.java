@@ -250,13 +250,14 @@ public class MessageProcessorService {
                     return true;
                 }
                 case WAITING_FOR_CONTENT -> {
-                    // 獲取之前輸入的時間和重複類型
+                    // 獲取之前輸入的時間、重複類型、通知管道
                     LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
                     String repeatType = reminderStateManager.getRepeatType(roomId);
+                    String notificationChannel = reminderStateManager.getNotificationChannel(roomId);
                     String content = messageText.trim();
 
                     // 創建提醒 (以聊天室為主，createdBy 使用 roomId)
-                    reminderService.createReminder(roomId, content, reminderTime, repeatType, roomId);
+                    reminderService.createReminder(roomId, content, reminderTime, repeatType, roomId, notificationChannel);
 
                     // 清除狀態
                     reminderStateManager.clearState(roomId);

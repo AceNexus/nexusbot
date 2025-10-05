@@ -14,7 +14,7 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class ReminderStateManager {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(ReminderStateManager.class);
     private final ReminderStateRepository reminderStateRepository;
 
@@ -24,7 +24,7 @@ public class ReminderStateManager {
     @Transactional
     public void startAddingReminder(String roomId) {
         LocalDateTime now = LocalDateTime.now();
-        
+
         ReminderState state = ReminderState.builder()
                 .roomId(roomId)
                 .step(ReminderState.Step.WAITING_FOR_REPEAT_TYPE.name())
@@ -32,7 +32,7 @@ public class ReminderStateManager {
                 .createdAt(now)
                 .expiresAt(now.plusMinutes(30))
                 .build();
-        
+
         reminderStateRepository.save(state);
         logger.info("Started reminder creation flow for room: {}", roomId);
     }
@@ -83,7 +83,7 @@ public class ReminderStateManager {
     }
 
     /**
-     * 設置重複類型並進入下一步
+     * 設置重複類型並進入下一步（通知管道選擇）
      */
     @Transactional
     public void setRepeatType(String roomId, String repeatType) {
@@ -92,11 +92,37 @@ public class ReminderStateManager {
             ReminderState state = optionalState.get();
             if (ReminderState.Step.WAITING_FOR_REPEAT_TYPE.name().equals(state.getStep())) {
                 state.setRepeatType(repeatType);
-                state.setStep(ReminderState.Step.WAITING_FOR_TIME.name());
+                state.setStep(ReminderState.Step.WAITING_FOR_NOTIFICATION_CHANNEL.name());
                 reminderStateRepository.save(state);
                 logger.info("Set repeat type for room {}: {}", roomId, repeatType);
             }
         }
+    }
+
+    /**
+     * 設置通知管道並進入下一步（時間輸入）
+     */
+    @Transactional
+    public void setNotificationChannel(String roomId, String notificationChannel) {
+        Optional<ReminderState> optionalState = reminderStateRepository.findById(roomId);
+        if (optionalState.isPresent()) {
+            ReminderState state = optionalState.get();
+            if (ReminderState.Step.WAITING_FOR_NOTIFICATION_CHANNEL.name().equals(state.getStep())) {
+                state.setNotificationChannel(notificationChannel);
+                state.setStep(ReminderState.Step.WAITING_FOR_TIME.name());
+                reminderStateRepository.save(state);
+                logger.info("Set notification channel for room {}: {}", roomId, notificationChannel);
+            }
+        }
+    }
+
+    /**
+     * 獲取通知管道
+     */
+    public String getNotificationChannel(String roomId) {
+        return reminderStateRepository.findById(roomId)
+                .map(ReminderState::getNotificationChannel)
+                .orElse("LINE");
     }
 
     /**

@@ -28,6 +28,9 @@ import static com.acenexus.tata.nexusbot.constants.Actions.ADD_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_EMAIL_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_BOTH;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_EMAIL;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_LINE;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_EMAIL;
@@ -51,6 +54,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_DAILY;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
+import static com.acenexus.tata.nexusbot.constants.Actions.TODAY_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_EMAIL_STATUS;
 
@@ -64,6 +68,7 @@ public class PostbackEventHandler {
     private final ReminderStateManager reminderStateManager;
     private final com.acenexus.tata.nexusbot.reminder.ReminderService reminderService;
     private final ReminderLogRepository reminderLogRepository;
+    private final com.acenexus.tata.nexusbot.reminder.ReminderLogService reminderLogService;
     private final com.acenexus.tata.nexusbot.email.EmailManager emailManager;
     private final EmailInputStateRepository emailInputStateRepository;
 
@@ -148,19 +153,36 @@ public class PostbackEventHandler {
                     }
                     case LIST_REMINDERS -> {
                         List<Reminder> reminders = reminderService.getActiveReminders(roomId);
-                        Map<Long, String> userResponseStatuses = getUserResponseStatuses(reminders);
+                        Map<Long, String> userResponseStatuses = getConfirmationStatuses(reminders);
                         yield messageTemplateProvider.reminderList(reminders, userResponseStatuses);
+                    }
+                    case TODAY_REMINDERS -> {
+                        List<com.acenexus.tata.nexusbot.reminder.ReminderLogService.TodayReminderLog> todayLogs =
+                                reminderLogService.getTodaysSentReminders(roomId);
+                        yield messageTemplateProvider.todayReminderLogs(todayLogs);
                     }
                     case REPEAT_ONCE -> {
                         reminderStateManager.setRepeatType(roomId, "ONCE");
-                        yield messageTemplateProvider.reminderInputMenu("time");
+                        yield messageTemplateProvider.reminderNotificationChannelMenu();
                     }
                     case REPEAT_DAILY -> {
                         reminderStateManager.setRepeatType(roomId, "DAILY");
-                        yield messageTemplateProvider.reminderInputMenu("time");
+                        yield messageTemplateProvider.reminderNotificationChannelMenu();
                     }
                     case REPEAT_WEEKLY -> {
                         reminderStateManager.setRepeatType(roomId, "WEEKLY");
+                        yield messageTemplateProvider.reminderNotificationChannelMenu();
+                    }
+                    case CHANNEL_LINE -> {
+                        reminderStateManager.setNotificationChannel(roomId, "LINE");
+                        yield messageTemplateProvider.reminderInputMenu("time");
+                    }
+                    case CHANNEL_EMAIL -> {
+                        reminderStateManager.setNotificationChannel(roomId, "EMAIL");
+                        yield messageTemplateProvider.reminderInputMenu("time");
+                    }
+                    case CHANNEL_BOTH -> {
+                        reminderStateManager.setNotificationChannel(roomId, "BOTH");
                         yield messageTemplateProvider.reminderInputMenu("time");
                     }
                     case CANCEL_REMINDER_INPUT -> {
@@ -294,6 +316,59 @@ public class PostbackEventHandler {
 
         } catch (Exception e) {
             logger.error("Failed to retrieve user response statuses: {}", e.getMessage());
+        }
+
+        return statusMap;
+    }
+
+    /**
+     * 獲取提醒的確認狀態
+     * 支援 LINE 用戶回應和 Email 確認兩種狀態
+     */
+    private Map<Long, String> getConfirmationStatuses(List<Reminder> reminders) {
+        Map<Long, String> statusMap = new HashMap<>();
+
+        if (reminders.isEmpty()) {
+            return statusMap;
+        }
+
+        try {
+            for (Reminder reminder : reminders) {
+                // 查詢最新的日誌記錄
+                Optional<ReminderLog> latestLog = reminderLogRepository.findLatestByReminderId(reminder.getId());
+
+                if (latestLog.isPresent()) {
+                    ReminderLog log = latestLog.get();
+
+                    // 檢查通知管道
+                    String channel = reminder.getNotificationChannel() != null ? reminder.getNotificationChannel() : "LINE";
+
+                    if ("EMAIL".equalsIgnoreCase(channel) || "BOTH".equalsIgnoreCase(channel)) {
+                        // Email 通知或雙重通知：檢查 Email 確認狀態
+                        if (log.getConfirmedAt() != null) {
+                            statusMap.put(reminder.getId(), "已確認");
+                        } else {
+                            statusMap.put(reminder.getId(), "待確認");
+                        }
+                    } else {
+                        // 僅 LINE 通知：檢查用戶回應狀態
+                        String userResponse = log.getUserResponseStatus();
+                        if ("COMPLETED".equals(userResponse)) {
+                            statusMap.put(reminder.getId(), "已執行");
+                        } else {
+                            statusMap.put(reminder.getId(), "無回應");
+                        }
+                    }
+                } else {
+                    // 沒有日誌記錄，表示提醒尚未發送
+                    statusMap.put(reminder.getId(), "未發送");
+                }
+            }
+
+            logger.debug("Retrieved confirmation statuses for {} reminders", reminders.size());
+
+        } catch (Exception e) {
+            logger.error("Failed to retrieve confirmation statuses: {}", e.getMessage(), e);
         }
 
         return statusMap;

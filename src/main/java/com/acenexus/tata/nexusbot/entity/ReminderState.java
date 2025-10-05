@@ -54,10 +54,18 @@ public class ReminderState {
     private LocalDateTime expiresAt;
 
     /**
+     * 通知管道：LINE, EMAIL, BOTH
+     */
+    @Column(name = "notification_channel", length = 20)
+    @Builder.Default
+    private String notificationChannel = "LINE";
+
+    /**
      * 步驟枚舉
      */
     public enum Step {
         WAITING_FOR_REPEAT_TYPE,
+        WAITING_FOR_NOTIFICATION_CHANNEL,
         WAITING_FOR_TIME,
         WAITING_FOR_CONTENT
     }
