@@ -4,9 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17/21. It integrates with LINE Messaging API (
-SDK 6.0.0) to handle various message types and provides AI-powered responses through the Groq API. Features a simplified
-architecture with Flex Message interactive menus.
+NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It integrates with LINE Messaging API (SDK 6.0.0) and provides AI-powered chat responses through Groq API. The architecture follows Domain-Driven Design principles with interface-implementation pattern throughout.
+
+### Core Features (Main Menu)
+
+1. **AI 智能對話** - AI chat with model selection and conversation history management
+2. **提醒管理** - Smart reminder system with notification channels (LINE/Email/Both)
+3. **Email 通知** - Email notification configuration and management
+4. **找附近廁所** - Location-based toilet search service
+5. **說明與支援** - Help and support documentation
+
+### Backend Features (No Menu Entry)
+
+6. **聊天室管理** - Chat room configuration and settings management
 
 ## Common Development Commands
 
@@ -29,17 +39,17 @@ architecture with Flex Message interactive menus.
 - Uses H2 in-memory database by default (local profile)
 - H2 Console available at: `http://localhost:5001/h2-console`
 - Application runs on port 5001 (configurable via `SERVER_PORT`)
-- **Java Environment**: Requires Java 17+ (configured for Java 17, tested with Java 21)
+- **Java Environment**: Requires Java 17+ (configured for Java 17)
 - **Critical**: Gradle must use Java 17+. Common issue is Gradle using Java 8, causing build failures
 - **Windows Development**: Set correct Java environment for Gradle:
   ```bash
   # For Windows Command Prompt
   set JAVA_HOME="C:\Program Files\Java\jdk-17"
-  
+
   # For Git Bash/WSL
   export JAVA_HOME="/c/Program Files/Java/jdk-17"
   export PATH="/c/Program Files/Java/jdk-17/bin:$PATH"
-  
+
   # Then run Gradle commands
   ./gradlew build
   ```
@@ -50,74 +60,77 @@ architecture with Flex Message interactive menus.
 - **Cross-Database Compatibility**: Single migration script works across H2 (local/test) and MySQL (dev/prod)
 - **Migration Scripts**: Located in `src/main/resources/db/migration`
 - **DDL Auto Strategy**:
-    - All environments: `validate` mode (no auto-generation)
-    - Local/Test: `baseline-on-migrate: true` for existing databases
-    - Dev/Prod: `baseline-on-migrate: false` for strict migration validation
+  - All environments: `validate` mode (no auto-generation)
+  - Local/Test: `baseline-on-migrate: true` for existing databases
+  - Dev/Prod: `baseline-on-migrate: false` for strict migration validation
 - **Schema Consistency**: Identical schema structure across all environments
 - **SQL Compatibility**: Uses standard SQL syntax supported by both H2 and MySQL
 
 ## Architecture Overview
 
-### Core Components
-
-**Event Processing Flow**:
+### Event Processing Flow
 
 1. `LineBotController` receives LINE webhook requests
 2. `EventHandlerService` routes events to specific handlers
 3. Event-specific handlers process different event types:
-    - `MessageEventHandler` - handles all message types
-    - `PostbackEventHandler` - handles button interactions
-    - `FollowEventHandler` - handles follow/unfollow events
-    - `GroupEventHandler` - handles group join/leave events
+   - `MessageEventHandler` - handles all message types
+   - `PostbackEventHandler` - handles button interactions
+   - `FollowEventHandler` - handles follow/unfollow events
+   - `GroupEventHandler` - handles group join/leave events
 
-**Message Processing Pipeline**:
+### Message Processing Pipeline
 
 1. `MessageEventHandler` receives message events and extracts `userId` from LINE payload
 2. Routes to `MessageProcessorService` based on message type
 3. For text messages:
-    - Stores user message to `chat_messages` table immediately
-    - First processes admin authentication commands via `AdminService`
-    - Then checks for predefined commands (menu, 選單)
-    - Falls back to AI processing via `AIService`
-    - Async processing with fallback responses
-    - Stores AI responses with analytics (processing time, model used)
+   - Stores user message to `chat_messages` table immediately
+   - First processes admin authentication commands via `AdminService`
+   - Then checks for predefined commands (menu, 選單)
+   - Falls back to AI processing via `AIService`
+   - Async processing with fallback responses
+   - Stores AI responses with analytics (processing time, model used)
 
-**Domain-Driven Package Structure**:
+### Domain-Driven Package Structure
 
 - `ai/` - AI service interface (`AIService`) and Groq implementation (`AIServiceImpl`)
 - `chatroom/` - Chat room management (`ChatRoomManager` interface, `ChatRoomManagerImpl`)
 - `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
-- `reminder/` - Reminder domain services (`ReminderService`, `ReminderStateManager`)
-- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`, `DynamicPasswordService`, `SystemStatsService`)
+- `reminder/` - Reminder domain services (`ReminderService`, `ReminderStateManager`, `ReminderLogService`, `EmailNotificationService`)
+- `email/` - Email management (`EmailService`, `EmailManager`)
+- `location/` - Location services (toilet search)
+- `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`)
 - `util/` - Utility classes (`AnalyzerUtil` for AI time parsing, `SignatureValidator` for LINE webhook validation)
-- `config/properties/` - Configuration properties classes (`AdminProperties`)
+- `config/properties/` - Configuration properties classes
 - `constants/` - Global constants management (`Actions` for postback actions)
-- `handler/` - Event processing handlers (`PostbackEventHandler`, `MessageEventHandler`)
-- `entity/` - JPA entities (`ChatRoom`, `ChatMessage`, `Reminder`, `ReminderState`)
-- `repository/` - Data access repositories (`ChatRoomRepository`, `ChatMessageRepository`, `ReminderRepository`, `ReminderStateRepository`)
+- `handler/` - Event processing handlers
+- `entity/` - JPA entities
+- `repository/` - Data access repositories
+- `controller/` - HTTP endpoints
+- `exception/` - Global exception handling
+- `scheduler/` - Scheduled tasks (reminder scheduler)
+- `lock/` - Distributed lock mechanism
 
-**Service Layer Architecture**:
+### Service Layer Architecture
 
 - All major services follow interface-implementation pattern with `Impl` suffix
 - `MessageProcessorService` orchestrates message processing (admin auth → predefined commands → AI fallback)
 - `AdminService` handles two-step authentication flow with state tracking
 - Dependency injection uses interfaces for loose coupling and testability
 
-### Configuration Management
+## Configuration Management
 
-**Profile-based Configuration**:
+### Profile-based Configuration
 
 - `bootstrap.yml` - base configuration
 - `bootstrap-local.yml` - local development (H2, no Eureka)
 - `bootstrap-dev.yml` - development environment
 - `bootstrap-prod.yml` - production environment
 
-**Key Configuration Classes**:
+### Key Configuration Classes
 
 - `LineBotConfig` - LINE Bot SDK 6.0.0 configuration with `LineMessagingClient`
 - `ConfigValidator` - validates configuration on startup
 - Properties classes in `config.properties` package
-- `AdminProperties` - admin authentication configuration with password seed
 
 ### Message Types Supported
 
@@ -126,10 +139,7 @@ architecture with Flex Message interactive menus.
 - File uploads, location sharing
 - All responses handled by `MessageTemplateProvider` implementations
 
-### Security & Validation
-
-- `SignatureValidator` - validates LINE webhook signatures
-- Request signature verification (can be disabled for development)
+## Key Features
 
 ### AI Integration
 
@@ -157,78 +167,100 @@ architecture with Flex Message interactive menus.
 - **Password Configuration**: Configurable via `admin.password-seed` (default: "1103")
 - **Simple Flow**: User types `/auth` → "請輸入密碼" → User enters password → Authentication complete
 - **Service Architecture**:
-    - `AdminService` handles authentication commands and state management
-    - `DynamicPasswordService` generates current valid password
-    - `ChatRoomManager` stores admin status per room
-    - `SystemStatsService` provides comprehensive system analytics for admins
+  - `AdminService` handles authentication commands and state management
+  - `DynamicPasswordService` generates current valid password
+  - `ChatRoomManager` stores admin status per room
+  - `SystemStatsService` provides comprehensive system analytics for admins
 - **Database Fields**: `is_admin` and `auth_pending` in `chat_rooms` table
-- **Admin Commands**: Authentication flow and system stats reporting with detailed metrics
 
 ### Reminder System
 
 - **Smart Reminders**: Scheduled reminder system with repeat options (ONCE, DAILY, WEEKLY)
 - **Database Design**: Four-table architecture for reliability and multi-server support:
-    - `reminders` - reminder configuration and scheduling  
-    - `reminder_logs` - delivery tracking and error logging
-    - `reminder_locks` - distributed lock mechanism for preventing duplicate sends
-    - `reminder_states` - stateful reminder creation flow (V8 migration) for multi-instance environments
+  - `reminders` - reminder configuration and scheduling
+  - `reminder_logs` - delivery tracking and error logging
+  - `reminder_locks` - distributed lock mechanism for preventing duplicate sends
+  - `reminder_states` - stateful reminder creation flow for multi-instance environments
 - **Multi-Instance Support**: State management moved from memory to database to support horizontal scaling
 - **Status Management**: ACTIVE, PAUSED, COMPLETED states for flexible reminder control
 - **Room-Scoped**: Each reminder belongs to a specific chat room with creator tracking
-- **Interactive Creation Flow**: Three-step process (repeat type → time input → content input) with 30-minute state expiration
+- **Interactive Creation Flow**: Multi-step process (repeat type → notification channel → time input → content input) with 30-minute state expiration
+- **Notification Channels**: LINE, Email, or BOTH (dual notification)
 - **Reliability Features**:
-    - Duplicate prevention via unique lock keys
-    - Comprehensive error logging and retry mechanisms
-    - Delivery status tracking for monitoring
-    - Automatic cleanup of expired creation states
+  - Duplicate prevention via unique lock keys
+  - Comprehensive error logging and retry mechanisms
+  - Delivery status tracking for monitoring
+  - Automatic cleanup of expired creation states
 - **UI Integration**: Accessible through LINE Bot menu system with postback actions
 - **AI-Powered Time Parsing**: Natural language time parsing via `AnalyzerUtil`
-    - Supports expressions like "明天下午3點", "30分鐘後", "2025-09-06 17:00"  
-    - Uses Groq AI service for semantic analysis and time resolution
-    - Strict format validation (YYYY-MM-DD HH:MM) with timezone handling (Asia/Taipei)
-    - **User Feedback System**: Real-time display of AI parsing process to users
-        - Shows original input, AI interpretation, and parsing results
-        - Provides detailed error messages with examples on failure
-        - Confirms successful parsing with formatted time display
+  - Supports expressions like "明天下午3點", "30分鐘後", "2025-09-06 17:00"
+  - Uses Groq AI service for semantic analysis and time resolution
+  - Strict format validation (YYYY-MM-DD HH:MM) with timezone handling (Asia/Taipei)
+  - **User Feedback System**: Real-time display of AI parsing process to users
+    - Shows original input, AI interpretation, and parsing results
+    - Provides detailed error messages with examples on failure
+    - Confirms successful parsing with formatted time display
 - **Service Architecture**:
-    - `ReminderService` handles reminder CRUD operations
-    - `ReminderStateManager` manages database-backed creation flow state
-    - `AnalyzerUtil` provides AI-driven time parsing with user feedback integration
-    - Template-based user messaging via `MessageTemplateProvider`
+  - `ReminderService` handles reminder CRUD operations
+  - `ReminderStateManager` manages database-backed creation flow state
+  - `ReminderScheduler` handles scheduled reminder execution
+  - `ReminderLogService` tracks delivery history and confirmation status
+  - `EmailNotificationService` handles email reminder delivery
+  - `AnalyzerUtil` provides AI-driven time parsing with user feedback integration
+  - Template-based user messaging via `MessageTemplateProvider`
+
+### Email Notification System
+
+- **Zero-Quota Design**: Email confirmations update database only, no LINE push message to save quota
+- **Multi-Email Support**: Users can bind multiple email addresses per chat room
+- **Confirmation Flow**: Email contains confirmation link → User clicks → Database updated → Status visible in LINE Bot
+- **Email Templates**: Thymeleaf-based HTML templates (simplified design)
+  - `reminder-email.html` - Reminder notification email
+  - `reminder-confirmation.html` - Confirmation result page
+- **Time Format**: Chinese format (yyyy年MM月dd日 HH:mm:ss)
+- **Controller**: `ReminderConfirmationController` handles web-based confirmation
+- **Service**: `EmailNotificationService` manages SMTP delivery with UUID tokens
+
+### Today's Reminder Logs
+
+- **Purpose**: View reminders sent today (solves "ONCE" reminder visibility issue after completion)
+- **Data Source**: Queries `reminder_logs` table instead of `reminders` table
+- **Deduplication**: Merges multiple logs (LINE + Email) into single display entry
+- **Status Display**: Simplified to "已確認" or "待確認" (removes emoji and notification type)
+- **Service**: `ReminderLogService.getTodaysSentReminders(roomId)`
+- **DTO**: `TodayReminderLog` record with `isConfirmed` flag
+- **UI**: Accessible via "今日提醒記錄" button in reminder menu
+
+### Location Services
+
+- **Toilet Search**: OSM (OpenStreetMap) API integration
+- **Location Input State**: Database-backed state management for multi-step location input
+- **Search Flow**: User shares location → System searches nearby toilets → Displays results with distance
 
 ## Development Guidelines
 
 ### Code Structure
 
-- **Domain-based packages**: `ai/`, `chatroom/`, `template/`, `reminder/` for domain logic; `service/`, `handler/`, `controller/` for technical concerns
+- **Domain-based packages**: `ai/`, `chatroom/`, `template/`, `reminder/`, `email/` for domain logic; `service/`, `handler/`, `controller/` for technical concerns
 - **Interface-implementation pattern**: All major services have interfaces with `Impl` suffix implementations
 - **Entity Lifecycle Management**: JPA entities use `@PrePersist` and `@PreUpdate` for automatic timestamp handling, but explicit field setting is preferred for critical fields like `expiresAt`
 - **Constants Management**: Use `Actions` class for postback constants, `UIConstants` for UI styling
 - **Message Template Pattern**: All user-facing messages should be defined in `MessageTemplateProvider` interface and implemented in `MessageTemplateProviderImpl` for consistency
   - **Professional UI System**: All templates use the unified `createCard()` method with consistent header-description-button structure
-  - **Method Overloading**: Support parameterized templates (e.g., `reminderInputError(String originalInput, String aiAnalysis)`) for enhanced context-aware messaging
+  - **Method Overloading**: Support parameterized templates for enhanced context-aware messaging
   - **Design Consistency**: Follow white/light gray backgrounds with blue-green accents for professional appearance
-- **Admin Services**: `AdminService` handles authentication flow, `DynamicPasswordService` generates time-based passwords
-- **Reminder Services**: `ReminderService` handles CRUD operations, `ReminderStateManager` manages multi-step creation flow with database persistence
-- **Utility Classes**: 
-  - `AnalyzerUtil` provides AI-powered time parsing with natural language support and user feedback, integrated as Spring `@Component` with static methods
-  - **Enhanced Error Reporting**: `TimeParseResult` class encapsulates parsing results with original input, AI analysis, and success status for detailed user feedback
-  - **Dynamic AI Prompts**: Time parsing uses real-time context including current date/time and calculated relative dates for improved accuracy
-  - **Performance Constants**: Extract commonly used `DateTimeFormatter` patterns as static final constants (e.g., `TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")`) to improve performance and maintainability
+- **Service Layer**: Use `@Transactional` for database operations, avoid in async contexts
+- **Async Pattern**: Use `CompletableFuture.runAsync()` for non-blocking operations, especially AI processing
+- **Multi-Instance Architecture**: State should be stored in database, not memory, to support horizontal scaling
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
-- **Async Pattern**: Use `CompletableFuture.runAsync()` for non-blocking operations, especially AI processing
-- **Transaction Management**: Use `@Transactional` for database operations, avoid in async contexts
-- **Simplicity over complexity**: Prefer direct switch statements over complex abstractions
-- **Interface segregation**: Keep interfaces focused on specific domain responsibilities
-- **Multi-Instance Architecture**: State should be stored in database, not memory, to support horizontal scaling
 
 ### Build System
 
 - **Gradle Kotlin DSL**: Uses `build.gradle.kts` with Kotlin syntax
 - **Versioning**: Git tag-based versioning (reads from `git describe --tags --abbrev=0`)
-- **Java Toolchain**: Configured for Java 17 (line 22-25 in build.gradle.kts)
+- **Java Toolchain**: Configured for Java 17
 - **Spring Boot Plugin**: Version 3.4.3 with dependency management
 - **JAR Configuration**: Standard jar disabled, bootJar enabled for executable deployment
 
@@ -243,45 +275,32 @@ architecture with Flex Message interactive menus.
   ```java
   import static com.acenexus.tata.nexusbot.template.UIConstants.*;
   // Use Colors.PRIMARY (#00A8CC), Colors.GRAY_500, Sizes.SPACING_MD (16px)
-  // Professional gray scale: GRAY_50, GRAY_100, GRAY_500, GRAY_900
-  // 8px grid system: SPACING_SM (8px), SPACING_MD (16px), SPACING_LG (24px)
   ```
 - **Professional Color Palette**: Modern blue-green primary with comprehensive gray scale system
 - **8px Grid System**: Consistent spacing using 8px baseline grid for professional alignment
-- **Design Consistency**: White backgrounds with subtle professional accents
 
 ### SOLID Principles
 
 **S - Single Responsibility Principle (SRP)**
-
 - Each class should have only one reason to change
 - Examples: `MessageService` only handles LINE API communication, `AIServiceImpl` only handles AI integration
-- Event handlers focus solely on routing, business logic stays in services
 
 **O - Open/Closed Principle (OCP)**
-
 - Classes should be open for extension, closed for modification
-- Use interfaces for external integrations (e.g., `AIService` can have different implementations beyond Groq)
-- Template method pattern in `MessageTemplateProviderImpl` allows extending message types without modification
+- Use interfaces for external integrations (e.g., `AIService` can have different implementations)
 
 **L - Liskov Substitution Principle (LSP)**
-
 - Derived classes must be substitutable for their base classes
 - All service implementations should honor their interface contracts
-- Mock services in tests should behave identically to production services
 
 **I - Interface Segregation Principle (ISP)**
-
 - Clients should not depend on interfaces they don't use
 - Keep service interfaces focused and specific to their domain
-- Avoid monolithic service interfaces with unrelated methods
 
 **D - Dependency Inversion Principle (DIP)**
-
 - High-level modules should not depend on low-level modules - both should depend on abstractions
 - Use Spring's dependency injection with `@RequiredArgsConstructor`
-- Depend on interfaces, not concrete implementations where possible
-- Example: Services depend on Repository interfaces, not JPA implementations
+- Depend on interfaces, not concrete implementations
 
 ### Configuration
 
@@ -297,7 +316,7 @@ architecture with Flex Message interactive menus.
 - **Import Paths**: Use `com.linecorp.bot.model.*` instead of `com.linecorp.bot.messaging.*`
 - **Message Construction**: Uses `ReplyMessage` class for sending responses
 - **ReplyToken Limitation**: Each `replyToken` can only be used once - combine messages or use single response to avoid API errors
-- **Message Template Overloading**: Support for parameterized templates (e.g., `reminderInputMenu(String step, String reminderTime)`) for enhanced user experience
+- **Message Template Overloading**: Support for parameterized templates for enhanced user experience
 
 ### Testing
 
@@ -312,90 +331,54 @@ architecture with Flex Message interactive menus.
 - JAR versioning based on Git tags
 - Uses `./gradlew bootJar` for executable JAR creation
 
-### Database Design
+## Database Design
 
-**Entity Structure**:
+### Entity Structure
 
-- `ChatRoom` (V1 migration) - Per-room AI settings with lazy record creation
-    - Tracks AI enabled/disabled state for each LINE user/group
-    - Supports both individual and group conversations
-    - V5: Added `is_admin` field for room-based admin authentication
-    - V6: Added `auth_pending` field for two-step authentication flow
-- `ChatMessage` (V2 migration) - Multi-turn conversation tracking and AI analytics
-    - Records all user and AI messages with timestamps
-    - Includes AI cost tracking (tokens_used, processing_time_ms, ai_model)
-    - Contains room_type redundancy for query performance optimization
-    - V4: Added soft delete support for conversation management
+- **ChatRoom** - Per-room AI settings with lazy record creation
+  - Tracks AI enabled/disabled state, admin status, authentication pending state
+  - Supports both individual and group conversations
+- **ChatMessage** - Multi-turn conversation tracking and AI analytics
+  - Records all user and AI messages with timestamps
+  - Includes AI cost tracking (tokens_used, processing_time_ms, ai_model)
+  - Supports soft delete for conversation management
+- **Reminder** - Reminder configuration with scheduling information
+  - Contains repeat type, notification channel, status
+  - Tracks creation time and creator
+- **ReminderLog** - Delivery tracking and confirmation status
+  - Records delivery method (LINE/Email), confirmation token, confirmed time
+  - Tracks user response status for LINE notifications
+- **ReminderState** - Multi-step creation flow state (for multi-instance support)
+  - Tracks current step, repeat type, notification channel, time, expiration
+- **Email** - User email bindings per room
+  - Supports multiple emails per room, active/inactive status
+- **EmailInputState** - Temporary state for email input flow
 
-**Data Access**:
+### Data Access
 
 - JPA/Hibernate with `@Entity` annotations
-- Repository pattern with `ChatRoomRepository` and `ChatMessageRepository`
+- Repository pattern with Spring Data JPA
 - Database migration managed by Flyway
 - Schema validation via `ddl-auto: validate` (no auto-generation in any environment)
 
-**Migration Scripts**:
+### Migration Scripts
 
 - Located in `src/main/resources/db/migration`
 - File naming: `V{version}__{description}.sql` (e.g., `V2__Create_chat_messages_table.sql`)
 - Cross-database compatibility (H2 local, MySQL dev/prod)
 - **No Foreign Key Constraints**: Uses application-layer consistency control for better performance
 - **Design Rationale**: Detailed comments in migration files explain architectural decisions
-- **Current Migrations**: V1 (chat rooms), V2 (chat messages), V3 (AI model tracking), V4 (soft delete support), V5 (admin authentication), V6 (auth pending state), V7 (reminder system), V8 (reminder states for multi-instance support)
+- **Current Migrations**: V1-V14 covering chat rooms, messages, reminders, emails, and notification channels
 
 ### UI Design System Architecture
 
 **Professional Design System**:
-
 - **UIConstants**: Centralized professional design constants with modern color palette and 8px grid system
 - **Actions**: Postback action constants for button interactions
 - **Template Pattern**: `MessageTemplateProvider` creates consistent professional Flex Message layouts
 - **Modernized Approach**: Clean white/light gray backgrounds with professional blue-green accents
 
-**Professional Color System**:
-
-```java
-// Primary Colors - Modern Blue-Green Palette
-Colors.PRIMARY = "#00A8CC"         // Professional blue-green
-Colors.PRIMARY_LIGHT = "#E3F8FF"   // Light blue-green background
-Colors.PRIMARY_DARK = "#006B7D"    // Deep blue-green
-
-// Functional Colors
-Colors.SUCCESS = "#10B981"         // Modern green
-Colors.ERROR = "#EF4444"           // Error red
-Colors.WARNING = "#F59E0B"         // Warning orange
-Colors.INFO = "#0EA5E9"            // Information blue
-
-// Professional Gray Scale System
-Colors.GRAY_50 = "#F9FAFB"         // Lightest gray
-Colors.GRAY_100 = "#F3F4F6"        // Light background
-Colors.GRAY_500 = "#6B7280"        // Secondary text
-Colors.GRAY_900 = "#111827"        // Primary text
-
-// Background System
-Colors.BACKGROUND = "#FFFFFF"       // Pure white
-Colors.CARD_BACKGROUND = "#FFFFFF"  // Card background
-Colors.SECTION_BACKGROUND = "#F9FAFB" // Section background
-```
-
-**8px Grid System**:
-
-```java
-// Spacing System (8px baseline grid)
-Sizes.SPACING_XS = "4px"    // 4px
-Sizes.SPACING_SM = "8px"    // 8px
-Sizes.SPACING_MD = "16px"   // 16px (2x grid)
-Sizes.SPACING_LG = "24px"   // 24px (3x grid)
-Sizes.SPACING_XL = "32px"   // 32px (4x grid)
-
-// Border Radius
-Sizes.RADIUS_SM = "4px"     // Small radius
-Sizes.RADIUS_MD = "8px"     // Standard radius
-Sizes.RADIUS_LG = "12px"    // Large radius
-```
-
 **Professional Template System**:
-
 ```java
 // Core template methods in MessageTemplateProviderImpl
 createCard(title, description, buttons)           // Unified card template
@@ -411,7 +394,6 @@ createSuccessButton(label, action)    // Success action (green)
 ```
 
 **Design Principles**:
-
 - **Consistency**: All templates use unified `createCard()` method
 - **Professional**: Modern SaaS product design language
 - **Clean**: White backgrounds with subtle blue-green accents
@@ -457,7 +439,7 @@ createSuccessButton(label, action)    // Success action (green)
 
 ### Performance Considerations
 
-- **Database Queries**: `ChatMessageRepository` includes optimized queries for analytics
+- **Database Queries**: Repositories include optimized queries for analytics
 - **Memory Usage**: H2 in-memory database for local development
 - **Async Processing**: AI requests don't block LINE webhook responses
 - **Constant Optimization**: Use static final constants for frequently used formatters and patterns

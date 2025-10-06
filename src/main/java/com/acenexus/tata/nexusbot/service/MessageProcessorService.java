@@ -39,7 +39,7 @@ public class MessageProcessorService {
     private final ReminderService reminderService;
     private final ReminderStateManager reminderStateManager;
     private final LocationService locationService;
-    private final com.acenexus.tata.nexusbot.handler.PostbackEventHandler postbackEventHandler;
+    private final com.acenexus.tata.nexusbot.handler.postback.EmailPostbackHandler emailPostbackHandler;
     private final com.acenexus.tata.nexusbot.email.EmailManager emailManager;
 
     public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
@@ -291,7 +291,7 @@ public class MessageProcessorService {
      */
     private boolean handleEmailInput(String roomId, ChatRoom.RoomType roomType, String messageText, String replyToken) {
         // 檢查是否正在等待 Email 輸入
-        if (!postbackEventHandler.isWaitingForEmailInput(roomId)) {
+        if (!emailPostbackHandler.isWaitingForEmailInput(roomId)) {
             return false;
         }
 
@@ -310,7 +310,7 @@ public class MessageProcessorService {
 
             if (addedEmail != null) {
                 // 清除等待狀態
-                postbackEventHandler.clearEmailInputState(roomId);
+                emailPostbackHandler.clearEmailInputState(roomId);
 
                 // 發送成功訊息
                 messageService.sendMessage(replyToken, messageTemplateProvider.emailAddSuccess(email));
@@ -324,7 +324,7 @@ public class MessageProcessorService {
 
         } catch (Exception e) {
             logger.error("Error processing email input for room {}: {}", roomId, e.getMessage());
-            postbackEventHandler.clearEmailInputState(roomId);
+            emailPostbackHandler.clearEmailInputState(roomId);
             messageService.sendMessage(replyToken, messageTemplateProvider.error("處理 Email 輸入時發生錯誤。"));
             return true;
         }
