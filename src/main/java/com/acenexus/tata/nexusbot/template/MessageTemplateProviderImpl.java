@@ -40,7 +40,6 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_LINE;
 import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
-import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.EMAIL_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
@@ -54,7 +53,6 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
-import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_COMPLETED;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_DAILY;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
@@ -62,7 +60,9 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TODAY_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
-import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_EMAIL_STATUS;
+import static com.acenexus.tata.nexusbot.constants.Actions.deleteEmail;
+import static com.acenexus.tata.nexusbot.constants.Actions.reminderCompleted;
+import static com.acenexus.tata.nexusbot.constants.Actions.toggleEmailStatus;
 import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 import static com.acenexus.tata.nexusbot.template.UIConstants.BorderRadius;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
@@ -477,7 +477,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         );
 
         return createCard("提醒時間到了", description, Arrays.asList(
-                createSuccessButton("確認已執行", REMINDER_COMPLETED + "&id=" + reminderId)
+                createSuccessButton("確認已執行", reminderCompleted(reminderId))
         ));
     }
 
@@ -1048,10 +1048,10 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
                 .layout(FlexLayout.HORIZONTAL)
                 .contents(Arrays.asList(
                         createButtonWithFlex(toggleLabel,
-                                TOGGLE_EMAIL_STATUS + "&id=" + email.getId(),
+                                toggleEmailStatus(email.getId()),
                                 ButtonType.NEUTRAL, 1),
                         createButtonWithFlex("刪除",
-                                DELETE_EMAIL + "&id=" + email.getId(),
+                                deleteEmail(email.getId()),
                                 ButtonType.DANGER, 1)
                 ))
                 .spacing(FlexMarginSize.SM)

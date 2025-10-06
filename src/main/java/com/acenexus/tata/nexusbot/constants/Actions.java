@@ -57,7 +57,37 @@ public final class Actions {
     // ============= Email 通知動作 =============
     public static final String EMAIL_MENU = "action=email_menu";
     public static final String ADD_EMAIL = "action=add_email";
-    public static final String DELETE_EMAIL = "action=delete_email";  // 帶參數: action=delete_email&id=123
-    public static final String TOGGLE_EMAIL_STATUS = "action=toggle_email_status";  // 帶參數: action=toggle_email_status&id=123
+    public static final String DELETE_EMAIL = "action=delete_email";
+    public static final String TOGGLE_EMAIL_STATUS = "action=toggle_email_status";
     public static final String CANCEL_EMAIL_INPUT = "action=cancel_email_input";
+
+    // ============= 動態參數工具方法 =============
+
+    /**
+     * 構建刪除提醒的 action 字串
+     */
+    public static String deleteReminder(Long id) {
+        return DELETE_REMINDER + "&id=" + id;
+    }
+
+    /**
+     * 構建提醒已完成的 action 字串
+     */
+    public static String reminderCompleted(Long id) {
+        return REMINDER_COMPLETED + "&id=" + id;
+    }
+
+    /**
+     * 構建刪除 Email 的 action 字串
+     */
+    public static String deleteEmail(Long id) {
+        return DELETE_EMAIL + "&id=" + id;
+    }
+
+    /**
+     * 構建切換 Email 狀態的 action 字串
+     */
+    public static String toggleEmailStatus(Long id) {
+        return TOGGLE_EMAIL_STATUS + "&id=" + id;
+    }
 }

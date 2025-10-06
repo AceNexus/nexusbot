@@ -4,31 +4,23 @@ import com.acenexus.tata.nexusbot.ai.AIService;
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
-import com.acenexus.tata.nexusbot.entity.ReminderState;
-import com.acenexus.tata.nexusbot.location.LocationService;
-import com.acenexus.tata.nexusbot.reminder.ReminderService;
-import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
+import com.acenexus.tata.nexusbot.facade.EmailFacade;
+import com.acenexus.tata.nexusbot.facade.LocationFacade;
+import com.acenexus.tata.nexusbot.facade.ReminderFacade;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
-import com.acenexus.tata.nexusbot.util.AnalyzerUtil;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.CompletableFuture;
-
-import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 
 @Service
 @RequiredArgsConstructor
 public class MessageProcessorService {
     private static final Logger logger = LoggerFactory.getLogger(MessageProcessorService.class);
-    private static final DateTimeFormatter TIME_FORMATTER = STANDARD_TIME;
-    private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
 
     private final MessageService messageService;
     private final AIService aiService;
@@ -36,11 +28,9 @@ public class MessageProcessorService {
     private final ChatRoomManager chatRoomManager;
     private final ChatMessageRepository chatMessageRepository;
     private final AdminService adminService;
-    private final ReminderService reminderService;
-    private final ReminderStateManager reminderStateManager;
-    private final LocationService locationService;
-    private final com.acenexus.tata.nexusbot.handler.postback.EmailPostbackHandler emailPostbackHandler;
-    private final com.acenexus.tata.nexusbot.email.EmailManager emailManager;
+    private final ReminderFacade reminderFacade;
+    private final EmailFacade emailFacade;
+    private final LocationFacade locationFacade;
 
     public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
@@ -166,40 +156,9 @@ public class MessageProcessorService {
     }
 
     public void processLocationMessage(String roomId, String title, String address, double latitude, double longitude, String replyToken) {
-        logger.info("Location message processed from room {}: title={}, address={}, lat={}, lon={}", roomId, title, address, latitude, longitude);
-
-        // 檢查是否正在等待位置以搜尋廁所
-        boolean isWaitingForToiletSearch = chatRoomManager.isWaitingForToiletSearch(roomId);
-
-        if (isWaitingForToiletSearch) {
-            // 清除廁所搜尋等待狀態（記錄肯定存在，因為上面返回了 true）
-            chatRoomManager.updateWaitingForToiletSearch(roomId, false);
-            logger.info("Processing toilet search for room {} with location: lat={}, lon={}", roomId, latitude, longitude);
-
-            CompletableFuture.runAsync(() -> {
-                try {
-                    locationService.findNearbyToilets(latitude, longitude, 1000)
-                            .thenAccept(toilets -> {
-                                Message response = messageTemplateProvider.nearbyToiletsResponse(toilets, latitude, longitude);
-                                messageService.sendMessage(replyToken, response);
-                            })
-                            .exceptionally(throwable -> {
-                                logger.error("Error finding nearby toilets", throwable);
-                                String fallbackResponse = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
-                                messageService.sendReply(replyToken, fallbackResponse);
-                                return null;
-                            });
-                } catch (Exception e) {
-                    logger.error("Error processing location for toilet search", e);
-                    String fallbackResponse = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
-                    messageService.sendReply(replyToken, fallbackResponse);
-                }
-            });
-        } else {
-            // 一般位置訊息處理，僅回覆位置資訊
-            String response = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
-            messageService.sendReply(replyToken, response);
-            logger.info("General location message processed for room {}", roomId);
+        Message response = locationFacade.handleLocationMessage(roomId, title, address, latitude, longitude, replyToken);
+        if (response != null) {
+            messageService.sendMessage(replyToken, response);
         }
     }
 
@@ -210,123 +169,21 @@ public class MessageProcessorService {
     }
 
     private boolean handleReminderInteraction(String roomId, String messageText, String replyToken) {
-        ReminderState.Step currentStep = reminderStateManager.getCurrentStep(roomId);
-        if (currentStep == null) {
-            return false; // 用戶不在提醒流程中
-        }
-
-        try {
-            switch (currentStep) {
-                case WAITING_FOR_TIME -> {
-                    String input = messageText.trim();
-                    LocalDateTime reminderTime;
-
-                    // 先嘗試標準格式，失敗則使用 AI 解析
-                    if (input.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")) {
-                        try {
-                            reminderTime = LocalDateTime.parse(input, TIME_FORMATTER)
-                                    .withSecond(0).withNano(0); // 確保為整分
-                        } catch (Exception e) {
-                            reminderTime = AnalyzerUtil.parseTime(input);
-                        }
-                    } else {
-                        reminderTime = AnalyzerUtil.parseTime(input);
-                    }
-
-                    if (reminderTime == null) {
-                        messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError(input, "無法解析時間格式"));
-                        return true;
-                    }
-
-                    if (reminderTime.isBefore(LocalDateTime.now())) {
-                        messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError(input, "時間必須是未來\n" + reminderTime.format(TIME_FORMATTER)));
-                        return true;
-                    }
-
-                    // 儲存時間並進入下一步
-                    reminderStateManager.setTime(roomId, reminderTime);
-                    Message nextStepMessage = messageTemplateProvider.reminderInputMenu("content", reminderTime.format(TIME_FORMATTER));
-                    messageService.sendMessage(replyToken, nextStepMessage);
-                    return true;
-                }
-                case WAITING_FOR_CONTENT -> {
-                    // 獲取之前輸入的時間、重複類型、通知管道
-                    LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
-                    String repeatType = reminderStateManager.getRepeatType(roomId);
-                    String notificationChannel = reminderStateManager.getNotificationChannel(roomId);
-                    String content = messageText.trim();
-
-                    // 創建提醒 (以聊天室為主，createdBy 使用 roomId)
-                    reminderService.createReminder(roomId, content, reminderTime, repeatType, roomId, notificationChannel);
-
-                    // 清除狀態
-                    reminderStateManager.clearState(roomId);
-
-                    String repeatTypeText = switch (repeatType) {
-                        case "DAILY" -> "每日重複";
-                        case "WEEKLY" -> "每週重複";
-                        default -> "僅一次";
-                    };
-
-                    Message successMessage = messageTemplateProvider.reminderCreatedSuccess(reminderTime.format(TIME_FORMATTER), repeatTypeText, content);
-
-                    messageService.sendMessage(replyToken, successMessage);
-
-                    logger.info("Reminder created for room {}: {} at {}", roomId, content, reminderTime);
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Error processing reminder interaction: {}", e.getMessage());
-            reminderStateManager.clearState(roomId);
-            messageService.sendMessage(replyToken, messageTemplateProvider.reminderInputError("系統錯誤", "處理提醒時發生錯誤"));
+        Message response = reminderFacade.handleInteraction(roomId, messageText, replyToken);
+        if (response != null) {
+            messageService.sendMessage(replyToken, response);
             return true;
         }
-
         return false;
     }
 
-    /**
-     * 處理 Email 輸入
-     */
     private boolean handleEmailInput(String roomId, ChatRoom.RoomType roomType, String messageText, String replyToken) {
-        // 檢查是否正在等待 Email 輸入
-        if (!emailPostbackHandler.isWaitingForEmailInput(roomId)) {
+        if (!emailFacade.isWaitingForEmailInput(roomId)) {
             return false;
         }
 
-        try {
-            String email = messageText.trim();
-
-            // 驗證 Email 格式
-            if (!email.matches(EMAIL_REGEX)) {
-                logger.warn("Invalid email format from room {}: {}", roomId, email);
-                messageService.sendMessage(replyToken, messageTemplateProvider.emailInvalidFormat());
-                return true;
-            }
-
-            // 新增 Email
-            com.acenexus.tata.nexusbot.entity.Email addedEmail = emailManager.addEmail(roomId, email);
-
-            if (addedEmail != null) {
-                // 清除等待狀態
-                emailPostbackHandler.clearEmailInputState(roomId);
-
-                // 發送成功訊息
-                messageService.sendMessage(replyToken, messageTemplateProvider.emailAddSuccess(email));
-                logger.info("Email added successfully for room {}: {}", roomId, email);
-            } else {
-                messageService.sendMessage(replyToken, messageTemplateProvider.error("新增 Email 時發生錯誤，請稍後再試。"));
-                logger.error("Failed to add email for room {}", roomId);
-            }
-
-            return true;
-
-        } catch (Exception e) {
-            logger.error("Error processing email input for room {}: {}", roomId, e.getMessage());
-            emailPostbackHandler.clearEmailInputState(roomId);
-            messageService.sendMessage(replyToken, messageTemplateProvider.error("處理 Email 輸入時發生錯誤。"));
-            return true;
-        }
+        Message response = emailFacade.handleEmailInput(roomId, messageText);
+        messageService.sendMessage(replyToken, response);
+        return true;
     }
 }

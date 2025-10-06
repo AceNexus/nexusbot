@@ -38,7 +38,11 @@
       "Bash(grep:*)",
       "Bash(rg:*)",
       "Bash(curl:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(tree:*)",
+      "Bash(for dir in ai chatroom email reminder earthquake location)",
+      "Bash(do echo \"=== $dir ===\")",
+      "Bash(done)"
     ],
     "deny": []
   }
