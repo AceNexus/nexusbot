@@ -1,4 +1,4 @@
-package com.acenexus.tata.nexusbot.reminder;
+package com.acenexus.tata.nexusbot.notification;
 
 import com.acenexus.tata.nexusbot.config.properties.EmailProperties;
 import com.acenexus.tata.nexusbot.entity.Reminder;
@@ -83,8 +83,7 @@ public class EmailNotificationService {
             return true;
 
         } catch (MessagingException e) {
-            logger.error("Failed to send reminder email to {} for reminder {}: {}",
-                    recipientEmail, reminder.getId(), e.getMessage());
+            logger.error("Failed to send reminder email to {} for reminder {}: {}", recipientEmail, reminder.getId(), e.getMessage());
 
             // 記錄失敗日誌
             ReminderLog log = new ReminderLog();

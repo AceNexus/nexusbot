@@ -70,34 +70,104 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 
 ### Event Processing Flow
 
-1. `LineBotController` receives LINE webhook requests
+1. `LineBotController` receives LINE webhook requests (port 5001)
 2. `EventHandlerService` routes events to specific handlers
 3. Event-specific handlers process different event types:
-   - `MessageEventHandler` - handles all message types
-   - `PostbackEventHandler` - handles button interactions
+   - `MessageEventHandler` - handles all message types (text, image, sticker, video, audio, file, location)
+   - `PostbackEventHandler` - **委派給 `PostbackEventDispatcher`** (35 行簡潔設計)
    - `FollowEventHandler` - handles follow/unfollow events
    - `GroupEventHandler` - handles group join/leave events
+
+### Postback Event Processing (Strategy + Chain of Responsibility Pattern)
+
+**Architecture**: PostbackEventHandler (35 行) → PostbackEventDispatcher → Specific Handlers
+
+**PostbackEventDispatcher** routes postback events to specific handlers by priority:
+
+1. **@Order(1) ReminderPostbackHandler** - Reminder management (highest priority, 168 lines)
+   - Actions: REMINDER_MENU, ADD_REMINDER, LIST_REMINDERS, TODAY_REMINDERS, DELETE_REMINDER, REMINDER_COMPLETED, CANCEL_REMINDER_INPUT
+   - Repeat types: REPEAT_ONCE, REPEAT_DAILY, REPEAT_WEEKLY
+   - Notification channels: CHANNEL_LINE, CHANNEL_EMAIL, CHANNEL_BOTH
+   - Dependencies: `ReminderFacade`, `ReminderStateManager`, `MessageTemplateProvider`
+
+2. **@Order(2) AIPostbackHandler** - AI chat management (138 lines)
+   - Actions: TOGGLE_AI, ENABLE_AI, DISABLE_AI, SELECT_MODEL, CLEAR_HISTORY, CONFIRM_CLEAR_HISTORY
+   - Models: MODEL_LLAMA_3_1_8B, MODEL_LLAMA_3_3_70B, MODEL_LLAMA3_70B, MODEL_GEMMA2_9B, MODEL_DEEPSEEK_R1, MODEL_QWEN3_32B
+   - Dependencies: `ChatRoomManager`, `MessageTemplateProvider`
+
+3. **@Order(3) EmailPostbackHandler** - Email notification management (105 lines)
+   - Actions: EMAIL_MENU, ADD_EMAIL, DELETE_EMAIL, TOGGLE_EMAIL_STATUS, CANCEL_EMAIL_INPUT
+   - Dependencies: `EmailFacade`
+
+4. **@Order(4) LocationPostbackHandler** - Location services (59 lines)
+   - Actions: FIND_TOILETS
+   - Dependencies: `ChatRoomManager`, `MessageTemplateProvider`
+
+5. **@Order(10) NavigationPostbackHandler** - Navigation menu (58 lines, lowest priority)
+   - Actions: MAIN_MENU, HELP_MENU, ABOUT
+   - Dependencies: `MessageTemplateProvider`
+
+**Design Benefits**:
+- Each handler < 170 lines (SRP compliance)
+- Dependencies reduced from 9+ to 1-3 per handler
+- Easy to add new handlers without modifying existing code (OCP)
+- Priority-based routing ensures correct handler selection
+
+### Facade Layer (Business Logic Coordination)
+
+**Introduced in Week 2** to encapsulate complex multi-service coordination:
+
+1. **ReminderFacade** (`facade/ReminderFacade.java`, `ReminderFacadeImpl.java` - 228 lines)
+   - Coordinates: ReminderService, ReminderStateManager, ReminderLogService, ReminderLogRepository, MessageTemplateProvider
+   - Methods: showMenu(), startCreation(), listActive(), showTodayLogs(), deleteReminder(), confirmReminder(), sendNotification(), handleInteraction()
+   - Benefits: Reduced ReminderPostbackHandler from 242 → 168 lines (-30%)
+
+2. **EmailFacade** (`facade/EmailFacade.java`, `EmailFacadeImpl.java` - 161 lines)
+   - Coordinates: EmailManager, EmailInputStateRepository, MessageTemplateProvider
+   - Methods: showMenu(), startAddingEmail(), cancelAddingEmail(), deleteEmail(), toggleEmailStatus(), handleEmailInput(), isWaitingForEmailInput(), clearEmailInputState()
+   - Benefits: Reduced EmailPostbackHandler from 170 → 105 lines (-38%), dependencies from 3 → 1
+
+3. **LocationFacade** (`facade/LocationFacade.java`, `LocationFacadeImpl.java` - 97 lines)
+   - Coordinates: ChatRoomManager, LocationService, MessageService, MessageTemplateProvider
+   - Methods: handleLocationMessage() - async toilet search with fallback handling
+   - Benefits: Encapsulated 36 lines of async location processing logic
+
+**Facade Pattern Benefits**:
+- Business logic reuse across multiple callers
+- Simplified testing (mock 1 facade instead of 5 services)
+- Clear separation between presentation layer (Handler) and business logic (Facade)
 
 ### Message Processing Pipeline
 
 1. `MessageEventHandler` receives message events and extracts `userId` from LINE payload
-2. Routes to `MessageProcessorService` based on message type
+2. Routes to `MessageProcessorService` based on message type (189 lines, refactored from 332 lines)
 3. For text messages:
    - Stores user message to `chat_messages` table immediately
    - First processes admin authentication commands via `AdminService`
    - Then checks for predefined commands (menu, 選單)
+   - Processes reminder interaction via `ReminderFacade.handleInteraction()` (replaces 76 lines of logic)
+   - Processes email input via `EmailFacade.handleEmailInput()` (replaces 40 lines of logic)
    - Falls back to AI processing via `AIService`
    - Async processing with fallback responses
    - Stores AI responses with analytics (processing time, model used)
+4. For location messages:
+   - Delegates to `LocationFacade.handleLocationMessage()` for toilet search handling
 
 ### Domain-Driven Package Structure
 
+- `handler/postback/` - **Postback event handlers** (NEW - Week 1)
+  - `PostbackHandler` (interface) - Strategy pattern for unified handler behavior
+  - `PostbackEventDispatcher` - Chain of Responsibility implementation
+  - 5 specific handlers (Navigation, AI, Reminder, Email, Location)
+- `facade/` - **Business logic coordination layer** (NEW - Week 2)
+  - `ReminderFacade`, `EmailFacade`, `LocationFacade`
+  - Encapsulates complex multi-service workflows
 - `ai/` - AI service interface (`AIService`) and Groq implementation (`AIServiceImpl`)
 - `chatroom/` - Chat room management (`ChatRoomManager` interface, `ChatRoomManagerImpl`)
 - `template/` - Message template generation (`MessageTemplateProvider` interface, `MessageTemplateProviderImpl`)
 - `reminder/` - Reminder domain services (`ReminderService`, `ReminderStateManager`, `ReminderLogService`, `EmailNotificationService`)
-- `email/` - Email management (`EmailService`, `EmailManager`)
-- `location/` - Location services (toilet search)
+- `email/` - Email management (`EmailManager`, `EmailInputStateRepository`)
+- `location/` - Location services (toilet search via `LocationService`)
 - `service/` - Core application services (`MessageService`, `MessageProcessorService`, `EventHandlerService`, `AdminService`)
 - `util/` - Utility classes (`AnalyzerUtil` for AI time parsing, `SignatureValidator` for LINE webhook validation)
 - `config/properties/` - Configuration properties classes
@@ -116,6 +186,22 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 - `MessageProcessorService` orchestrates message processing (admin auth → predefined commands → AI fallback)
 - `AdminService` handles two-step authentication flow with state tracking
 - Dependency injection uses interfaces for loose coupling and testability
+
+### Notification Module Architecture (Week 3 - 2025-10-07)
+
+**Design Goal**: Unified notification system with extensible channel support
+
+**Module Structure**:
+- `notification/ReminderNotificationService` (interface) - Unified notification coordination
+- `notification/ReminderNotificationServiceImpl` (118 lines) - Route notifications to appropriate channels
+- `notification/LineNotificationService` (89 lines) - LINE push message delivery with logging
+- `notification/EmailNotificationService` (116 lines) - Email delivery with multi-recipient support
+
+**Refactoring Benefits**:
+- `ReminderScheduler` dependencies reduced from 9 → 4 (-56%)
+- `ReminderScheduler` code reduced from 300 → 197 lines (-34%)
+- Notification logic centralized for easy extension (SMS, Push, etc.)
+- Clear separation: Scheduler handles "when", NotificationService handles "how"
 
 ## Configuration Management
 
@@ -323,6 +409,15 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 - Tests located in `src/test/java`
 - Use `application-test.yml` for test configuration
 - JUnit 5 with Spring Boot Test support
+- **Test Coverage**: 34 tests (100% success rate)
+  - Handler Tests: 33 tests covering all PostbackHandlers and Dispatcher
+  - Application Context Test: 1 test
+
+**Test Structure**:
+- `handler/postback/NavigationPostbackHandlerTest` - 9 tests
+- `handler/postback/AIPostbackHandlerTest` - 13 tests
+- `handler/postback/LocationPostbackHandlerTest` - 5 tests
+- `handler/postback/PostbackEventDispatcherTest` - 6 tests
 
 ### Deployment
 
