@@ -62,6 +62,9 @@ dependencies {
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")
 
+    // OpenAPI / Swagger
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }

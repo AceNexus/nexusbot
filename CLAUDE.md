@@ -38,6 +38,8 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 
 - Uses H2 in-memory database by default (local profile)
 - H2 Console available at: `http://localhost:5001/h2-console`
+- **Swagger UI** available at: `http://localhost:5001/swagger-ui.html` (API documentation)
+- **OpenAPI JSON** available at: `http://localhost:5001/v3/api-docs`
 - Application runs on port 5001 (configurable via `SERVER_PORT`)
 - **Java Environment**: Requires Java 17+ (configured for Java 17)
 - **Critical**: Gradle must use Java 17+. Common issue is Gradle using Java 8, causing build failures
@@ -349,6 +351,7 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 - **Java Toolchain**: Configured for Java 17
 - **Spring Boot Plugin**: Version 3.4.3 with dependency management
 - **JAR Configuration**: Standard jar disabled, bootJar enabled for executable deployment
+- **API Documentation**: springdoc-openapi-starter-webmvc-ui 2.7.0 for Swagger UI integration
 
 ### Constants and UI Management
 
