@@ -2,9 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Quick Reference
+
+**Common Commands**:
+- Build: `./gradlew build`
+- Run: `./gradlew bootRun`
+- Test: `./gradlew test`
+- Single test: `./gradlew test --tests ClassName`
+
+**Key URLs (Local)**:
+- App: http://localhost:5001
+- Swagger: http://localhost:5001/swagger-ui.html
+- H2 Console: http://localhost:5001/h2-console
+
+**Tech Stack**: Spring Boot 3.4.3 | Java 17 | LINE Bot SDK 6.0.0 | Groq AI | Flyway | JPA/Hibernate
+
+**Package Base**: `com.acenexus.tata.nexusbot`
+
 ## Project Overview
 
 NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It integrates with LINE Messaging API (SDK 6.0.0) and provides AI-powered chat responses through Groq API. The architecture follows Domain-Driven Design principles with interface-implementation pattern throughout.
+
+**Microservices Context**: This service is part of a larger Spring Cloud microservices architecture (see parent repository's CLAUDE.md). In production, it registers with Eureka (service discovery) and loads configuration from Config Server. For local development, these dependencies are disabled via the `local` profile.
 
 ### Core Features (Main Menu)
 
@@ -22,10 +41,11 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 
 ### Build & Run
 
-- **Build**: `./gradlew build`
+- **Build**: `./gradlew build` (Windows: `gradlew.bat build` or `.\gradlew build`)
 - **Run tests**: `./gradlew test`
 - **Build and test**: `./gradlew build test`
 - **Run locally**: `./gradlew bootRun`
+- **Run with specific profile**: `./gradlew bootRun --args='--spring.profiles.active=dev'`
 - **Create executable JAR**: `./gradlew bootJar` (outputs to `build/libs/`)
 - **Clean build**: `./gradlew clean build`
 
@@ -38,19 +58,30 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 
 - Uses H2 in-memory database by default (local profile)
 - H2 Console available at: `http://localhost:5001/h2-console`
+  - JDBC URL: `jdbc:h2:mem:nexusbot`
+  - Username: `sa`
+  - Password: (empty)
 - **Swagger UI** available at: `http://localhost:5001/swagger-ui.html` (API documentation)
 - **OpenAPI JSON** available at: `http://localhost:5001/v3/api-docs`
-- Application runs on port 5001 (configurable via `SERVER_PORT`)
+- Application runs on port 5001 (configurable via `SERVER_PORT` environment variable)
 - **Java Environment**: Requires Java 17+ (configured for Java 17)
 - **Critical**: Gradle must use Java 17+. Common issue is Gradle using Java 8, causing build failures
 - **Windows Development**: Set correct Java environment for Gradle:
   ```bash
   # For Windows Command Prompt
-  set JAVA_HOME="C:\Program Files\Java\jdk-17"
+  set JAVA_HOME=C:\Program Files\Java\jdk-17
+  set PATH=%JAVA_HOME%\bin;%PATH%
+
+  # For Windows PowerShell
+  $env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
+  $env:PATH = "$env:JAVA_HOME\bin;$env:PATH"
 
   # For Git Bash/WSL
   export JAVA_HOME="/c/Program Files/Java/jdk-17"
   export PATH="/c/Program Files/Java/jdk-17/bin:$PATH"
+
+  # Verify Java version
+  java -version  # Should show Java 17+
 
   # Then run Gradle commands
   ./gradlew build
@@ -189,6 +220,120 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 - `AdminService` handles two-step authentication flow with state tracking
 - Dependency injection uses interfaces for loose coupling and testability
 
+### Exception Handling Architecture
+
+**Design Philosophy**: Layered fault tolerance with graceful degradation
+
+**Architecture Overview**:
+```
+LINE Webhook → GlobalExceptionHandler (HTTP 200 fallback)
+              ↓
+           Controller (delegates to global handler)
+              ↓
+        Facade/Service (try-catch + user-friendly messages)
+              ↓
+      Notification/Scheduler (async exception handling + logging)
+```
+
+**Key Components**:
+
+1. **GlobalExceptionHandler** (`exception/GlobalExceptionHandler.java` - 18 lines)
+   - Catches all uncaught exceptions with `@ControllerAdvice` + `@ExceptionHandler(Exception.class)`
+   - **Critical Design**: Always returns HTTP 200 to LINE webhook (prevents retry loops)
+   - Logs full exception stack trace for debugging
+   - Acts as final safety net for entire application
+
+2. **Configuration Validation** (`ConfigValidator.java`)
+   - Uses `@PostConstruct` to validate configuration at startup
+   - Throws `IllegalStateException` for missing critical config (LINE tokens, Groq API key)
+   - **Fast Fail Principle**: Application won't start with invalid configuration
+
+3. **Service Layer Exception Patterns**:
+
+   **Result Object Pattern** (AIServiceImpl):
+   ```java
+   public record ChatResponse(String content, String model, int tokensUsed,
+                               Long processingTime, boolean success) {}
+   ```
+   - Returns result object instead of throwing exceptions
+   - Caller checks `success` flag instead of try-catch
+   - Includes failure metadata (processing time, error details)
+
+   **Fallback Pattern** (MessageProcessorService):
+   ```java
+   CompletableFuture.runAsync(() -> {
+       try {
+           AIService.ChatResponse response = aiService.chatWithContext(...);
+           String message = response.success()
+               ? response.content()
+               : messageTemplateProvider.defaultTextResponse(messageText);
+           messageService.sendReply(replyToken, message);
+       } catch (Exception e) {
+           logger.error("AI error: {}", e.getMessage());
+           messageService.sendReply(replyToken, fallbackResponse);
+       }
+   });
+   ```
+   - Non-blocking async processing with `CompletableFuture`
+   - Three-layer protection: Result Object → success check → catch block
+   - Always responds to user, even on failure
+
+4. **Facade Layer Exception Handling**:
+   - Catches exceptions and returns user-friendly `Message` objects
+   - Clears state on errors to prevent users getting stuck in flows
+   - Example: `ReminderFacadeImpl.handleInteraction()` clears `ReminderState` on exception
+
+5. **Scheduler Exception Isolation** (ReminderScheduler):
+   ```java
+   @Scheduled(cron = "0 * * * * *")
+   public void processReminders() {
+       try {
+           for (Reminder reminder : dueReminders) {
+               processReminder(reminder); // Each reminder isolated
+           }
+       } catch (Exception e) {
+           logger.error("Scheduler error: {}", e.getMessage(), e);
+       }
+   }
+   ```
+   - Top-level try-catch prevents scheduler from dying
+   - Individual reminder failures don't affect others
+   - `finally` block ensures distributed lock release
+
+6. **Notification Exception Logging**:
+   - Dual logging: Application logs (SLF4J) + Database logs (`reminder_logs` table)
+   - Failed notifications recorded with error messages for analysis
+   - Example: `LineNotificationService.pushReminder()` saves status + error to DB
+
+**Exception Types Used**:
+- `IllegalStateException` - Configuration validation failures
+- `Exception` - Generic catch-all (no custom business exceptions)
+- Standard Java exceptions only (no custom exception classes)
+
+**Exception Handling Strategy by Layer**:
+
+| Layer | Strategy | Return Value | Logging | State Cleanup |
+|-------|----------|-------------|---------|---------------|
+| Global | Catch all | HTTP 200 | ERROR + stack trace | N/A |
+| Config | Fast fail | Throws exception | N/A | Stops startup |
+| Controller | Delegate | Global handler | N/A | N/A |
+| Facade | try-catch | User-friendly Message | ERROR | Clears state |
+| Service | Result Object | ChatResponse/boolean | ERROR | N/A |
+| Notification | try-catch + log | boolean/void | ERROR + DB log | N/A |
+| Scheduler | try-catch + isolate | void | ERROR | Release locks |
+
+**Best Practices Applied**:
+- ✅ **Graceful Degradation**: Services continue operating with fallback responses
+- ✅ **Resource Cleanup**: `finally` blocks ensure lock release and state cleanup
+- ✅ **Async Safety**: CompletableFuture exceptions caught within async context
+- ✅ **User Experience**: Never expose technical errors to users
+- ✅ **Observability**: Comprehensive logging with context (room ID, reminder ID, etc.)
+
+**Future Improvements** (if needed):
+- Consider custom business exceptions (e.g., `ReminderNotFoundException`)
+- Add circuit breaker for external APIs (Groq, LINE) using Resilience4j
+- Enhance GlobalExceptionHandler to handle different exception types separately
+
 ### Notification Module Architecture (Week 3 - 2025-10-07)
 
 **Design Goal**: Unified notification system with extensible channel support
@@ -209,10 +354,22 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 
 ### Profile-based Configuration
 
-- `bootstrap.yml` - base configuration
-- `bootstrap-local.yml` - local development (H2, no Eureka)
-- `bootstrap-dev.yml` - development environment
-- `bootstrap-prod.yml` - production environment
+- `bootstrap.yml` - base configuration (server port: 5001, AI history limit: 15, OSM settings, admin password seed)
+- `bootstrap-local.yml` - local development (H2 in-memory database, Eureka disabled, local LINE/Groq credentials)
+- `bootstrap-dev.yml` - development environment (MySQL, Eureka enabled, Config Server integration)
+- `bootstrap-prod.yml` - production environment (MySQL, full security, Config Server integration)
+
+**Profile Selection**:
+```bash
+# Set via environment variable (recommended)
+export SPRING_PROFILES_ACTIVE=local  # or dev, prod
+
+# Or via command line
+./gradlew bootRun --args='--spring.profiles.active=local'
+
+# Or in IDE run configuration
+-Dspring.profiles.active=local
+```
 
 ### Key Configuration Classes
 
@@ -343,6 +500,13 @@ NexusBot is a LINE Bot application built with Spring Boot 3.4.3 and Java 17. It 
 - Use Lombok for boilerplate reduction (`@RequiredArgsConstructor`, etc.)
 - Event handlers should be lightweight and delegate to services
 - All external API calls should have timeout and error handling
+- **Exception Handling Guidelines**:
+  - Service layer: Return Result Objects or use try-catch with user-friendly error messages
+  - Never throw exceptions from async `CompletableFuture` contexts - catch and log within the async block
+  - Always use `finally` blocks to release resources (locks, connections)
+  - Log exceptions with context (room ID, reminder ID, etc.) for debugging
+  - LINE webhook handlers must return HTTP 200 even on errors (handled by GlobalExceptionHandler)
+  - Clear user state on exceptions to prevent users from getting stuck in multi-step flows
 
 ### Build System
 
