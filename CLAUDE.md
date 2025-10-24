@@ -330,9 +330,120 @@ LINE Webhook → GlobalExceptionHandler (HTTP 200 fallback)
 - ✅ **Observability**: Comprehensive logging with context (room ID, reminder ID, etc.)
 
 **Future Improvements** (if needed):
-- Consider custom business exceptions (e.g., `ReminderNotFoundException`)
+- ~~Consider custom business exceptions~~ ✅ **Implemented** (Week 4 - 2025-10-24)
 - Add circuit breaker for external APIs (Groq, LINE) using Resilience4j
-- Enhance GlobalExceptionHandler to handle different exception types separately
+- ~~Enhance GlobalExceptionHandler to handle different exception types separately~~ ✅ **Implemented** (Week 4 - 2025-10-24)
+
+### Unified Error Handling System (Week 4 - 2025-10-24)
+
+**Design Goal**: Enterprise-grade error handling with traceability, consistency, and observability
+
+**Architecture Updates**:
+
+1. **ErrorResponse DTO** (`exception/ErrorResponse.java` - 115 lines)
+   - Standardized error response format for internal services
+   - Contains errorCode, message, detail, traceId, metadata, httpStatus, path
+   - Builder pattern for flexible construction
+   - Static factory methods for common use cases
+   ```java
+   ErrorResponse.of(ErrorCode.REMINDER_NOT_FOUND, traceId);
+   ErrorResponse.of(ErrorCode.AI_SERVICE_TIMEOUT, traceId, metadata);
+   ```
+
+2. **ErrorCode Enum** (`exception/ErrorCode.java` - 250+ lines, 45+ error codes)
+   - Centralized error code management with categories:
+     - `SYS_xxx`: System errors (500 class) - 4 codes
+     - `REM_xxx`: Reminder errors (400 class) - 8 codes
+     - `AI_xxx`: AI service errors (502/504 class) - 4 codes
+     - `LINE_xxx`: LINE API errors (502 class) - 3 codes
+     - `EMAIL_xxx`: Email errors (502/400 class) - 5 codes
+     - `VAL_xxx`: Validation errors (400 class) - 3 codes
+     - `AUTH_xxx`: Authentication errors (401/403 class) - 3 codes
+     - `LOC_xxx`: Location service errors (502 class) - 2 codes
+     - `LOCK_xxx`: Distributed lock errors (409 class) - 2 codes
+     - `ROOM_xxx`: Chat room errors (404 class) - 2 codes
+   - Helper methods: `isSystemError()`, `isBusinessError()`, `getHttpStatus()`
+
+3. **Custom Exception Hierarchy**:
+   - **BaseException** (`exception/BaseException.java` - abstract base class)
+     - Includes errorCode, traceId, metadata
+     - Fluent API for chaining: `.withTraceId()`, `.withMetadata()`
+     - Automatic conversion to ErrorResponse via `toErrorResponse()`
+
+   - **BusinessException** (`exception/BusinessException.java` - 400 class)
+     - User operation errors, validation failures
+     - Static factory methods: `reminderNotFound()`, `invalidTimeFormat()`, etc.
+     - Example: `throw BusinessException.reminderNotFound(reminderId, roomId)`
+
+   - **SystemException** (`exception/SystemException.java` - 500 class)
+     - Internal system errors, configuration errors
+     - Static factory methods: `databaseError()`, `configurationError()`, etc.
+     - Example: `throw SystemException.databaseError("saveMessage", cause)`
+
+   - **ExternalServiceException** (`exception/ExternalServiceException.java` - 502/504 class)
+     - Third-party API failures, timeouts
+     - Static factory methods: `aiServiceTimeout()`, `lineApiError()`, `emailSendFailed()`
+     - Example: `throw ExternalServiceException.aiServiceTimeout(model, timeoutMs)`
+
+4. **Enhanced GlobalExceptionHandler** (`exception/GlobalExceptionHandler.java` - 130+ lines)
+   - Separate handlers for BusinessException, SystemException, ExternalServiceException
+   - Automatic traceId injection and management
+   - Different logging levels: WARN for business, ERROR for system/external
+   - Always returns HTTP 200 for LINE webhooks (prevents retry loops)
+   - Structured logging with errorCode, traceId, path
+
+5. **TraceId Tracking System**:
+   - **TraceIdFilter** (`config/TraceIdFilter.java` - 115 lines)
+     - `@Order(Ordered.HIGHEST_PRECEDENCE)` for early execution
+     - Generates unique traceId (UUID without hyphens, 32 chars)
+     - Reads `X-Trace-Id` header for distributed tracing
+     - Stores traceId in MDC for automatic logging
+     - Adds traceId to response headers
+     - Finally block ensures MDC cleanup (prevents memory leaks)
+
+   - **Logback Configuration** (`resources/logback-spring.xml`)
+     - Pattern includes traceId: `[%X{traceId:-NO_TRACE_ID}]`
+     - Colored console output for local development
+     - Rolling file appenders with 30-day retention
+     - Separate error log file
+     - Async appenders for performance
+     - Profile-specific configurations (local/dev/prod)
+
+**Benefits Achieved**:
+
+| Feature | Before | After | Impact |
+|---------|--------|-------|--------|
+| **Error Traceability** | ❌ No traceId | ✅ Automatic traceId injection | Full request lifecycle tracking |
+| **Error Classification** | ❌ Generic Exception | ✅ 3 custom exception types | Clear error categorization |
+| **Error Codes** | ❌ Hard-coded messages | ✅ 45+ centralized error codes | Easy monitoring & statistics |
+| **Logging Consistency** | ⚠️ Inconsistent format | ✅ Structured [traceId] prefix | Simplified debugging |
+| **Metadata Support** | ❌ None | ✅ Flexible key-value metadata | Rich context information |
+| **Microservices Ready** | ⚠️ Partial | ✅ Full support (X-Trace-Id header) | Distributed tracing enabled |
+
+**Usage Examples**:
+
+```java
+// Business Exception with metadata
+throw BusinessException.reminderNotFound(reminderId, roomId)
+    .withMetadata("userId", userId)
+    .withMetadata("timestamp", LocalDateTime.now());
+
+// System Exception with cause
+throw SystemException.databaseError("saveMessage", cause)
+    .withMetadata("messageId", message.getId());
+
+// External Service Exception
+throw ExternalServiceException.aiServiceTimeout(model, 15000)
+    .withMetadata("roomId", roomId);
+
+// Logs automatically include traceId:
+// 2025-10-24 14:30:15.123 [550e8400e29b41d4a716] [thread] ERROR  Service - Error message
+```
+
+**Documentation**:
+- Analysis report: `docs/architecture/error-handling-analysis.md`
+- Usage examples: `docs/architecture/error-handling-usage-examples.md`
+- Before/After refactoring examples included
 
 ### Notification Module Architecture (Week 3 - 2025-10-07)
 

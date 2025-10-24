@@ -98,14 +98,9 @@ public class OpenApiConfig {
                         - **Confirmation Endpoints**: Email 確認連結處理
                         - **Health Check**: 健康檢查與監控
 
-                        ## GitHub Repository
-                        [https://github.com/yourusername/nexusbot](https://github.com/yourusername/nexusbot)
+                        ## [GitHub Repository](https://github.com/orgs/AceNexus/repositories)
                         """)
                 .version("1.0.0")
-                .contact(new Contact()
-                        .name("NexusBot Team")
-                        .email("support@nexusbot.example.com")
-                        .url("https://github.com/yourusername/nexusbot"))
                 .license(new License()
                         .name("MIT License")
                         .url("https://opensource.org/licenses/MIT"));
