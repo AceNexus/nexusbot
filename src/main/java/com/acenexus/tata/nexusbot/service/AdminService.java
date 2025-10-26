@@ -104,4 +104,28 @@ public class AdminService {
             return "認證失敗：密碼錯誤";
         }
     }
+
+    /**
+     * 檢查聊天室是否正在等待密碼輸入
+     * (供 CommandHandler 使用)
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @return true 如果正在等待密碼輸入
+     */
+    public boolean isAuthPending(String roomId, ChatRoom.RoomType roomType) {
+        return chatRoomManager.isAuthPending(roomId, roomType);
+    }
+
+    /**
+     * 檢查是否為管理員聊天室
+     * (供 CommandHandler 使用)
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @return true 如果是管理員聊天室
+     */
+    public boolean isAdminRoom(String roomId, ChatRoom.RoomType roomType) {
+        return chatRoomManager.isAdminRoom(roomId, roomType);
+    }
 }

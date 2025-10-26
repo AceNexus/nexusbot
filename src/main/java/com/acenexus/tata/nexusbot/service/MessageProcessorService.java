@@ -2,11 +2,12 @@ package com.acenexus.tata.nexusbot.service;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
+import com.acenexus.tata.nexusbot.command.CommandContext;
+import com.acenexus.tata.nexusbot.command.CommandDispatcher;
+import com.acenexus.tata.nexusbot.command.CommandResult;
 import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
-import com.acenexus.tata.nexusbot.facade.EmailFacade;
 import com.acenexus.tata.nexusbot.facade.LocationFacade;
-import com.acenexus.tata.nexusbot.facade.ReminderFacade;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
@@ -17,6 +18,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * 消息處理服務
+ * 職責：
+ * 1. 消息類型分發
+ * 2. AI 對話處理
+ * 3. 協調命令處理和業務邏輯
+ */
 @Service
 @RequiredArgsConstructor
 public class MessageProcessorService {
@@ -27,17 +35,34 @@ public class MessageProcessorService {
     private final MessageTemplateProvider messageTemplateProvider;
     private final ChatRoomManager chatRoomManager;
     private final ChatMessageRepository chatMessageRepository;
-    private final AdminService adminService;
-    private final ReminderFacade reminderFacade;
-    private final EmailFacade emailFacade;
     private final LocationFacade locationFacade;
+
+    // 命令分發器
+    private final CommandDispatcher commandDispatcher;
 
     public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
         String normalizedText = messageText.toLowerCase().trim();
         ChatRoom.RoomType roomType = chatRoomManager.determineRoomType(sourceType);
 
-        // 處理所有命令
-        if (handleAllCommands(roomId, roomType, messageText, normalizedText, replyToken)) {
+        // 構建命令上下文
+        CommandContext context = CommandContext.builder()
+                .roomId(roomId)
+                .roomType(roomType)
+                .userId(userId)
+                .messageText(messageText)
+                .normalizedText(normalizedText)
+                .replyToken(replyToken)
+                .build();
+
+        // 使用命令分發器處理所有命令
+        CommandResult result = commandDispatcher.dispatch(context);
+
+        if (result.isHandled()) {
+            if (result.getMessage() != null) {
+                messageService.sendMessage(replyToken, result.getMessage());
+            } else if (result.getTextResponse() != null) {
+                messageService.sendReply(replyToken, result.getTextResponse());
+            }
             return;
         }
 
@@ -53,49 +78,6 @@ public class MessageProcessorService {
 
         // 非同步處理 AI 對話
         handleAIMessage(roomId, roomType, messageText, replyToken);
-    }
-
-    /**
-     * 處理所有命令類型
-     */
-    private boolean handleAllCommands(String roomId, ChatRoom.RoomType roomType, String messageText, String normalizedText, String replyToken) {
-        // 1. 管理員認證命令
-        String authResponse = adminService.processAuthCommand(roomId, roomType, messageText);
-        if (authResponse != null) {
-            messageService.sendReply(replyToken, authResponse);
-            return true;
-        }
-
-        // 2. 管理員指令
-        Message adminMessage = adminService.processAdminCommand(roomId, roomType, messageText);
-        if (adminMessage != null) {
-            messageService.sendMessage(replyToken, adminMessage);
-            return true;
-        }
-
-        // 3. 提醒互動流程處理
-        if (handleReminderInteraction(roomId, messageText, replyToken)) {
-            return true;
-        }
-
-        // 4. Email 輸入處理
-        if (handleEmailInput(roomId, roomType, messageText, replyToken)) {
-            return true;
-        }
-
-        // 5. 預定義指令
-        try {
-            return switch (normalizedText) {
-                case "menu", "選單" -> {
-                    messageService.sendMessage(replyToken, messageTemplateProvider.mainMenu());
-                    yield true;
-                }
-                default -> false;
-            };
-        } catch (Exception e) {
-            logger.error("Error processing command for room {}: {}", roomId, e.getMessage());
-            return false; // 讓它繼續走 AI 處理
-        }
     }
 
     private void handleAIMessage(String roomId, ChatRoom.RoomType roomType, String messageText, String replyToken) {
@@ -166,24 +148,5 @@ public class MessageProcessorService {
         String response = messageTemplateProvider.unknownMessage();
         logger.warn("Default message handler used for room {}", roomId);
         messageService.sendReply(replyToken, response);
-    }
-
-    private boolean handleReminderInteraction(String roomId, String messageText, String replyToken) {
-        Message response = reminderFacade.handleInteraction(roomId, messageText, replyToken);
-        if (response != null) {
-            messageService.sendMessage(replyToken, response);
-            return true;
-        }
-        return false;
-    }
-
-    private boolean handleEmailInput(String roomId, ChatRoom.RoomType roomType, String messageText, String replyToken) {
-        if (!emailFacade.isWaitingForEmailInput(roomId)) {
-            return false;
-        }
-
-        Message response = emailFacade.handleEmailInput(roomId, messageText);
-        messageService.sendMessage(replyToken, response);
-        return true;
     }
 }
