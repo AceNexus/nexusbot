@@ -100,7 +100,7 @@ public class AdminService {
         } else {
             // 密碼錯誤，清除等待狀態
             chatRoomManager.setAuthPending(roomId, roomType, false);
-            log.warn("Failed admin authentication attempt for room: {} (expected: {}, got: {})", roomId, currentPassword, inputPassword);
+            log.warn("Failed admin authentication attempt for room: {}", roomId);
             return "認證失敗：密碼錯誤";
         }
     }
