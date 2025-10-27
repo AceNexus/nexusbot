@@ -1,5 +1,6 @@
-package com.acenexus.tata.nexusbot.handler.postback;
+package com.acenexus.tata.nexusbot.postback;
 
+import com.acenexus.tata.nexusbot.postback.handlers.PostbackEventDispatcher;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 

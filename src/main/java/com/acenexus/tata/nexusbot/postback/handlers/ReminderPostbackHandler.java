@@ -1,6 +1,7 @@
-package com.acenexus.tata.nexusbot.handler.postback;
+package com.acenexus.tata.nexusbot.postback.handlers;
 
 import com.acenexus.tata.nexusbot.facade.ReminderFacade;
+import com.acenexus.tata.nexusbot.postback.PostbackHandler;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;

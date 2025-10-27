@@ -1,7 +1,8 @@
-package com.acenexus.tata.nexusbot.handler.postback;
+package com.acenexus.tata.nexusbot.postback.handlers;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.postback.PostbackHandler;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;

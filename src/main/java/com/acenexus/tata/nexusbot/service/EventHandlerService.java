@@ -3,7 +3,7 @@ package com.acenexus.tata.nexusbot.service;
 import com.acenexus.tata.nexusbot.handler.FollowEventHandler;
 import com.acenexus.tata.nexusbot.handler.GroupEventHandler;
 import com.acenexus.tata.nexusbot.handler.MessageEventHandler;
-import com.acenexus.tata.nexusbot.handler.PostbackEventHandler;
+import com.acenexus.tata.nexusbot.postback.PostbackDispatcher;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 public class EventHandlerService {
     private static final Logger logger = LoggerFactory.getLogger(EventHandlerService.class);
     private final MessageEventHandler messageEventHandler;
-    private final PostbackEventHandler postbackEventHandler;
+    private final PostbackDispatcher postbackDispatcher;
     private final FollowEventHandler followEventHandler;
     private final GroupEventHandler groupEventHandler;
 
@@ -32,7 +32,7 @@ public class EventHandlerService {
 
             switch (eventType) {
                 case "message" -> messageEventHandler.handle(event);
-                case "postback" -> postbackEventHandler.handle(event);
+                case "postback" -> postbackDispatcher.handle(event);
                 case "follow" -> followEventHandler.handleFollow(event);
                 case "unfollow" -> followEventHandler.handleUnfollow(event);
                 case "join" -> groupEventHandler.handleJoin(event);

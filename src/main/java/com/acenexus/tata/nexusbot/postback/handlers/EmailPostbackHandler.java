@@ -1,6 +1,7 @@
-package com.acenexus.tata.nexusbot.handler.postback;
+package com.acenexus.tata.nexusbot.postback.handlers;
 
 import com.acenexus.tata.nexusbot.facade.EmailFacade;
+import com.acenexus.tata.nexusbot.postback.PostbackHandler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;

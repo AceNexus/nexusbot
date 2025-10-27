@@ -1,6 +1,7 @@
-package com.acenexus.tata.nexusbot.handler.postback;
+package com.acenexus.tata.nexusbot.postback.handlers;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
+import com.acenexus.tata.nexusbot.postback.PostbackHandler;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
@@ -10,7 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-import static com.acenexus.tata.nexusbot.constants.Actions.*;
+import static com.acenexus.tata.nexusbot.constants.Actions.ABOUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
 
 /**
  * 導航功能 Handler - 處理主選單、說明、關於頁面

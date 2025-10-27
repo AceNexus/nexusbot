@@ -1,7 +1,8 @@
-package com.acenexus.tata.nexusbot.handler.postback;
+package com.acenexus.tata.nexusbot.postback.handlers;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.postback.PostbackHandler;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
@@ -89,15 +90,18 @@ public class AIPostbackHandler implements PostbackHandler {
                 yield messageTemplateProvider.aiModelSelectionMenu(currentModel);
             }
 
-            case MODEL_LLAMA_3_1_8B -> handleModelSelection(roomId, type, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)");
+            case MODEL_LLAMA_3_1_8B ->
+                    handleModelSelection(roomId, type, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)");
 
-            case MODEL_LLAMA_3_3_70B -> handleModelSelection(roomId, type, "llama-3.3-70b-versatile", "Llama 3.3 70B (精準強力)");
+            case MODEL_LLAMA_3_3_70B ->
+                    handleModelSelection(roomId, type, "llama-3.3-70b-versatile", "Llama 3.3 70B (精準強力)");
 
             case MODEL_LLAMA3_70B -> handleModelSelection(roomId, type, "llama3-70b-8192", "Llama 3 70B (詳細平衡)");
 
             case MODEL_GEMMA2_9B -> handleModelSelection(roomId, type, "gemma2-9b-it", "Gemma2 9B (高度創意)");
 
-            case MODEL_DEEPSEEK_R1 -> handleModelSelection(roomId, type, "deepseek-r1-distill-llama-70b", "DeepSeek R1 (邏輯推理)");
+            case MODEL_DEEPSEEK_R1 ->
+                    handleModelSelection(roomId, type, "deepseek-r1-distill-llama-70b", "DeepSeek R1 (邏輯推理)");
 
             case MODEL_QWEN3_32B -> handleModelSelection(roomId, type, "qwen/qwen3-32b", "Qwen3 32B (多語平衡)");
 
