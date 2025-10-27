@@ -23,4 +23,6 @@ public interface ReminderFacade {
     void sendNotification(Reminder reminder, String enhancedContent);
 
     Message handleInteraction(String roomId, String messageText, String replyToken);
+
+    boolean isInReminderFlow(String roomId);
 }

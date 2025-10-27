@@ -21,7 +21,7 @@ public class AuthCommandHandler implements CommandHandler {
     @Override
     public boolean canHandle(CommandContext context) {
         // 處理 /auth 命令或正在等待密碼輸入的聊天室
-        return context.getMessageText().trim().equals("/auth") || adminService.isAuthPending(context.getRoomId(), context.getRoomType());
+        return context.getNormalizedText().equals("/auth") || adminService.isAuthPending(context.getRoomId(), context.getRoomType());
     }
 
     @Override

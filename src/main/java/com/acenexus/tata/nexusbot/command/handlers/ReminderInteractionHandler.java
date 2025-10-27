@@ -21,9 +21,7 @@ public class ReminderInteractionHandler implements CommandHandler {
 
     @Override
     public boolean canHandle(CommandContext context) {
-        // 檢查是否有正在進行的提醒互動
-        Message response = reminderFacade.handleInteraction(context.getRoomId(), context.getMessageText(), context.getReplyToken());
-        return response != null;
+        return reminderFacade.isInReminderFlow(context.getRoomId());
     }
 
     @Override

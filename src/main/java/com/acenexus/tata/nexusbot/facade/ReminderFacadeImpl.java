@@ -230,4 +230,10 @@ public class ReminderFacadeImpl implements ReminderFacade {
 
         return statusMap;
     }
+
+    @Override
+    public boolean isInReminderFlow(String roomId) {
+        ReminderState.Step currentStep = reminderStateManager.getCurrentStep(roomId);
+        return currentStep != null;
+    }
 }
