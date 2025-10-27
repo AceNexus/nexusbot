@@ -14,7 +14,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class MessageService {
+public class MessageService implements IMessageService {
     private static final Logger logger = LoggerFactory.getLogger(MessageService.class);
     private final LineMessagingClient lineMessagingClient;
 

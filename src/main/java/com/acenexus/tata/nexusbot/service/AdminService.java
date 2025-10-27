@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AdminService {
+public class AdminService implements IAdminService {
 
     private final ChatRoomManager chatRoomManager;
     private final DynamicPasswordService dynamicPasswordService;
