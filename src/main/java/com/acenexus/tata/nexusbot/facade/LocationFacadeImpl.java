@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.facade;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
+import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.location.LocationService;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
@@ -26,6 +27,13 @@ public class LocationFacadeImpl implements LocationFacade {
     private final LocationService locationService;
     private final MessageService messageService;
     private final MessageTemplateProvider messageTemplateProvider;
+
+    @Override
+    public Message startToiletSearch(String roomId, ChatRoom.RoomType roomType) {
+        chatRoomManager.setWaitingForToiletSearch(roomId, roomType, true);
+        logger.info("Set waiting for toilet search for room: {}", roomId);
+        return messageTemplateProvider.findToiletsInstruction();
+    }
 
     @Override
     public Message handleLocationMessage(String roomId, String title, String address, double latitude, double longitude, String replyToken) {

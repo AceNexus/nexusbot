@@ -85,9 +85,10 @@ public class ReminderFacadeImpl implements ReminderFacade {
     }
 
     @Override
-    public void confirmReminder(Long reminderId, String roomId) {
+    public Message confirmReminder(Long reminderId, String roomId) {
         logger.info("Reminder [{}] marked as completed by user in room [{}]", reminderId, roomId);
         updateReminderLogWithUserResponse(reminderId);
+        return messageTemplateProvider.success("已記錄您已執行此提醒。");
     }
 
     @Override
@@ -235,5 +236,60 @@ public class ReminderFacadeImpl implements ReminderFacade {
     public boolean isInReminderFlow(String roomId) {
         ReminderState.Step currentStep = reminderStateManager.getCurrentStep(roomId);
         return currentStep != null;
+    }
+
+    // ==================== 重複類型選擇 ====================
+
+    @Override
+    public Message setRepeatTypeOnce(String roomId) {
+        reminderStateManager.setRepeatType(roomId, "ONCE");
+        logger.debug("Set repeat type to ONCE for room: {}", roomId);
+        return messageTemplateProvider.reminderNotificationChannelMenu();
+    }
+
+    @Override
+    public Message setRepeatTypeDaily(String roomId) {
+        reminderStateManager.setRepeatType(roomId, "DAILY");
+        logger.debug("Set repeat type to DAILY for room: {}", roomId);
+        return messageTemplateProvider.reminderNotificationChannelMenu();
+    }
+
+    @Override
+    public Message setRepeatTypeWeekly(String roomId) {
+        reminderStateManager.setRepeatType(roomId, "WEEKLY");
+        logger.debug("Set repeat type to WEEKLY for room: {}", roomId);
+        return messageTemplateProvider.reminderNotificationChannelMenu();
+    }
+
+    // ==================== 通知管道選擇 ====================
+
+    @Override
+    public Message setNotificationChannelLine(String roomId) {
+        reminderStateManager.setNotificationChannel(roomId, "LINE");
+        logger.debug("Set notification channel to LINE for room: {}", roomId);
+        return messageTemplateProvider.reminderInputMenu("time");
+    }
+
+    @Override
+    public Message setNotificationChannelEmail(String roomId) {
+        reminderStateManager.setNotificationChannel(roomId, "EMAIL");
+        logger.debug("Set notification channel to EMAIL for room: {}", roomId);
+        return messageTemplateProvider.reminderInputMenu("time");
+    }
+
+    @Override
+    public Message setNotificationChannelBoth(String roomId) {
+        reminderStateManager.setNotificationChannel(roomId, "BOTH");
+        logger.debug("Set notification channel to BOTH for room: {}", roomId);
+        return messageTemplateProvider.reminderInputMenu("time");
+    }
+
+    // ==================== 取消操作 ====================
+
+    @Override
+    public Message cancelCreation(String roomId) {
+        reminderStateManager.clearState(roomId);
+        logger.info("Cancelled reminder creation for room: {}", roomId);
+        return messageTemplateProvider.success("已取消新增提醒");
     }
 }

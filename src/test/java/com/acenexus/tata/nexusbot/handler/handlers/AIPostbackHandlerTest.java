@@ -1,9 +1,8 @@
 package com.acenexus.tata.nexusbot.handler.handlers;
 
-import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.facade.AIFacade;
 import com.acenexus.tata.nexusbot.postback.handlers.AIPostbackHandler;
-import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TextMessage;
@@ -34,14 +33,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("AIPostbackHandler 測試")
+@DisplayName("AIPostbackHandler 測試（重構版）")
 class AIPostbackHandlerTest {
 
     @Mock
-    private ChatRoomManager chatRoomManager;
-
-    @Mock
-    private MessageTemplateProvider messageTemplateProvider;
+    private AIFacade aiFacade;
 
     @Mock
     private JsonNode event;
@@ -85,16 +81,14 @@ class AIPostbackHandlerTest {
     void handle_shouldShowAiSettingsMenu_whenToggleAI() {
         // given
         Message expectedMessage = new TextMessage("AI 設定選單");
-        when(chatRoomManager.isAiEnabled(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(true);
-        when(messageTemplateProvider.aiSettingsMenu(true)).thenReturn(expectedMessage);
+        when(aiFacade.showSettingsMenu(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(expectedMessage);
 
         // when
         Message result = handler.handle(TOGGLE_AI, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(expectedMessage);
-        verify(chatRoomManager, times(1)).isAiEnabled(ROOM_ID, ChatRoom.RoomType.USER);
-        verify(messageTemplateProvider, times(1)).aiSettingsMenu(true);
+        verify(aiFacade, times(1)).showSettingsMenu(ROOM_ID, ChatRoom.RoomType.USER);
     }
 
     @Test
@@ -102,16 +96,14 @@ class AIPostbackHandlerTest {
     void handle_shouldReturnSuccess_whenEnableAISucceeds() {
         // given
         Message successMessage = new TextMessage("AI 回應功能已啟用！");
-        when(chatRoomManager.enableAi(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(true);
-        when(messageTemplateProvider.success("AI 回應功能已啟用！您可以直接與我對話。")).thenReturn(successMessage);
+        when(aiFacade.enableAI(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(successMessage);
 
         // when
         Message result = handler.handle(ENABLE_AI, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(successMessage);
-        verify(chatRoomManager, times(1)).enableAi(ROOM_ID, ChatRoom.RoomType.USER);
-        verify(messageTemplateProvider, times(1)).success("AI 回應功能已啟用！您可以直接與我對話。");
+        verify(aiFacade, times(1)).enableAI(ROOM_ID, ChatRoom.RoomType.USER);
     }
 
     @Test
@@ -119,16 +111,14 @@ class AIPostbackHandlerTest {
     void handle_shouldReturnError_whenEnableAIFails() {
         // given
         Message errorMessage = new TextMessage("啟用 AI 功能時發生錯誤");
-        when(chatRoomManager.enableAi(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(false);
-        when(messageTemplateProvider.error("啟用 AI 功能時發生錯誤，請稍後再試。")).thenReturn(errorMessage);
+        when(aiFacade.enableAI(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(errorMessage);
 
         // when
         Message result = handler.handle(ENABLE_AI, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(errorMessage);
-        verify(chatRoomManager, times(1)).enableAi(ROOM_ID, ChatRoom.RoomType.USER);
-        verify(messageTemplateProvider, times(1)).error("啟用 AI 功能時發生錯誤，請稍後再試。");
+        verify(aiFacade, times(1)).enableAI(ROOM_ID, ChatRoom.RoomType.USER);
     }
 
     @Test
@@ -136,16 +126,14 @@ class AIPostbackHandlerTest {
     void handle_shouldReturnSuccess_whenDisableAISucceeds() {
         // given
         Message successMessage = new TextMessage("AI 回應功能已關閉。");
-        when(chatRoomManager.disableAi(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(true);
-        when(messageTemplateProvider.success("AI 回應功能已關閉。")).thenReturn(successMessage);
+        when(aiFacade.disableAI(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(successMessage);
 
         // when
         Message result = handler.handle(DISABLE_AI, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(successMessage);
-        verify(chatRoomManager, times(1)).disableAi(ROOM_ID, ChatRoom.RoomType.USER);
-        verify(messageTemplateProvider, times(1)).success("AI 回應功能已關閉。");
+        verify(aiFacade, times(1)).disableAI(ROOM_ID, ChatRoom.RoomType.USER);
     }
 
     @Test
@@ -153,34 +141,29 @@ class AIPostbackHandlerTest {
     void handle_shouldReturnError_whenDisableAIFails() {
         // given
         Message errorMessage = new TextMessage("關閉 AI 功能時發生錯誤");
-        when(chatRoomManager.disableAi(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(false);
-        when(messageTemplateProvider.error("關閉 AI 功能時發生錯誤，請稍後再試。")).thenReturn(errorMessage);
+        when(aiFacade.disableAI(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(errorMessage);
 
         // when
         Message result = handler.handle(DISABLE_AI, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(errorMessage);
-        verify(chatRoomManager, times(1)).disableAi(ROOM_ID, ChatRoom.RoomType.USER);
-        verify(messageTemplateProvider, times(1)).error("關閉 AI 功能時發生錯誤，請稍後再試。");
+        verify(aiFacade, times(1)).disableAI(ROOM_ID, ChatRoom.RoomType.USER);
     }
 
     @Test
     @DisplayName("handle - SELECT_MODEL 應該顯示模型選擇選單")
     void handle_shouldShowModelSelectionMenu_whenSelectModel() {
         // given
-        String currentModel = "llama-3.1-8b-instant";
         Message expectedMessage = new TextMessage("模型選擇選單");
-        when(chatRoomManager.getAiModel(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(currentModel);
-        when(messageTemplateProvider.aiModelSelectionMenu(currentModel)).thenReturn(expectedMessage);
+        when(aiFacade.showModelSelectionMenu(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(expectedMessage);
 
         // when
         Message result = handler.handle(SELECT_MODEL, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(expectedMessage);
-        verify(chatRoomManager, times(1)).getAiModel(ROOM_ID, ChatRoom.RoomType.USER);
-        verify(messageTemplateProvider, times(1)).aiModelSelectionMenu(currentModel);
+        verify(aiFacade, times(1)).showModelSelectionMenu(ROOM_ID, ChatRoom.RoomType.USER);
     }
 
     @Test
@@ -188,16 +171,15 @@ class AIPostbackHandlerTest {
     void handle_shouldChangeModel_whenModelLlama31_8BSucceeds() {
         // given
         Message successMessage = new TextMessage("AI 模型已切換");
-        when(chatRoomManager.setAiModel(ROOM_ID, ChatRoom.RoomType.USER, "llama-3.1-8b-instant")).thenReturn(true);
-        when(messageTemplateProvider.success("AI 模型已切換至：Llama 3.1 8B (快速創意)")).thenReturn(successMessage);
+        when(aiFacade.selectModel(ROOM_ID, ChatRoom.RoomType.USER, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)"))
+                .thenReturn(successMessage);
 
         // when
         Message result = handler.handle(MODEL_LLAMA_3_1_8B, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(successMessage);
-        verify(chatRoomManager, times(1)).setAiModel(ROOM_ID, ChatRoom.RoomType.USER, "llama-3.1-8b-instant");
-        verify(messageTemplateProvider, times(1)).success("AI 模型已切換至：Llama 3.1 8B (快速創意)");
+        verify(aiFacade, times(1)).selectModel(ROOM_ID, ChatRoom.RoomType.USER, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)");
     }
 
     @Test
@@ -205,16 +187,15 @@ class AIPostbackHandlerTest {
     void handle_shouldReturnError_whenModelChangeFails() {
         // given
         Message errorMessage = new TextMessage("切換 AI 模型時發生錯誤");
-        when(chatRoomManager.setAiModel(ROOM_ID, ChatRoom.RoomType.USER, "llama-3.1-8b-instant")).thenReturn(false);
-        when(messageTemplateProvider.error("切換 AI 模型時發生錯誤，請稍後再試。")).thenReturn(errorMessage);
+        when(aiFacade.selectModel(ROOM_ID, ChatRoom.RoomType.USER, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)"))
+                .thenReturn(errorMessage);
 
         // when
         Message result = handler.handle(MODEL_LLAMA_3_1_8B, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(errorMessage);
-        verify(chatRoomManager, times(1)).setAiModel(ROOM_ID, ChatRoom.RoomType.USER, "llama-3.1-8b-instant");
-        verify(messageTemplateProvider, times(1)).error("切換 AI 模型時發生錯誤，請稍後再試。");
+        verify(aiFacade, times(1)).selectModel(ROOM_ID, ChatRoom.RoomType.USER, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)");
     }
 
     @Test
@@ -222,15 +203,14 @@ class AIPostbackHandlerTest {
     void handle_shouldShowConfirmation_whenClearHistory() {
         // given
         Message expectedMessage = new TextMessage("確定要清除歷史記錄嗎？");
-        when(messageTemplateProvider.clearHistoryConfirmation()).thenReturn(expectedMessage);
+        when(aiFacade.showClearHistoryConfirmation()).thenReturn(expectedMessage);
 
         // when
         Message result = handler.handle(CLEAR_HISTORY, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(expectedMessage);
-        verify(messageTemplateProvider, times(1)).clearHistoryConfirmation();
-        verifyNoInteractions(chatRoomManager);
+        verify(aiFacade, times(1)).showClearHistoryConfirmation();
     }
 
     @Test
@@ -238,15 +218,14 @@ class AIPostbackHandlerTest {
     void handle_shouldClearHistory_whenConfirmClearHistory() {
         // given
         Message successMessage = new TextMessage("歷史對話記錄已清除。");
-        when(messageTemplateProvider.success("歷史對話記錄已清除。")).thenReturn(successMessage);
+        when(aiFacade.clearHistory(ROOM_ID)).thenReturn(successMessage);
 
         // when
         Message result = handler.handle(CONFIRM_CLEAR_HISTORY, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(successMessage);
-        verify(chatRoomManager, times(1)).clearChatHistory(ROOM_ID);
-        verify(messageTemplateProvider, times(1)).success("歷史對話記錄已清除。");
+        verify(aiFacade, times(1)).clearHistory(ROOM_ID);
     }
 
     @Test
@@ -257,8 +236,7 @@ class AIPostbackHandlerTest {
 
         // then
         assertThat(result).isNull();
-        verifyNoInteractions(chatRoomManager);
-        verifyNoInteractions(messageTemplateProvider);
+        verifyNoInteractions(aiFacade);
     }
 
     @Test

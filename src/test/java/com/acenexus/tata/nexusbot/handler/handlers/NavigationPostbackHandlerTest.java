@@ -1,8 +1,7 @@
 package com.acenexus.tata.nexusbot.handler.handlers;
 
-import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
+import com.acenexus.tata.nexusbot.facade.NavigationFacade;
 import com.acenexus.tata.nexusbot.postback.handlers.NavigationPostbackHandler;
-import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TextMessage;
@@ -24,14 +23,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("NavigationPostbackHandler 測試")
+@DisplayName("NavigationPostbackHandler 測試（重構版）")
 class NavigationPostbackHandlerTest {
 
     @Mock
-    private MessageTemplateProvider messageTemplateProvider;
-
-    @Mock
-    private ChatRoomManager chatRoomManager;
+    private NavigationFacade navigationFacade;
 
     @Mock
     private JsonNode event;
@@ -94,45 +90,42 @@ class NavigationPostbackHandlerTest {
     @DisplayName("handle - 應該返回主選單訊息")
     void handle_shouldReturnMainMenu_whenMainMenuAction() {
         // given
-        when(messageTemplateProvider.mainMenu()).thenReturn(mainMenuMessage);
+        when(navigationFacade.showMainMenu()).thenReturn(mainMenuMessage);
 
         // when
         Message result = handler.handle(MAIN_MENU, "room123", "user", "replyToken123", event);
 
         // then
         assertThat(result).isEqualTo(mainMenuMessage);
-        verify(messageTemplateProvider, times(1)).mainMenu();
-        verifyNoInteractions(chatRoomManager);
+        verify(navigationFacade, times(1)).showMainMenu();
     }
 
     @Test
     @DisplayName("handle - 應該返回說明選單訊息")
     void handle_shouldReturnHelpMenu_whenHelpMenuAction() {
         // given
-        when(messageTemplateProvider.helpMenu()).thenReturn(helpMenuMessage);
+        when(navigationFacade.showHelpMenu()).thenReturn(helpMenuMessage);
 
         // when
         Message result = handler.handle(HELP_MENU, "room123", "user", "replyToken123", event);
 
         // then
         assertThat(result).isEqualTo(helpMenuMessage);
-        verify(messageTemplateProvider, times(1)).helpMenu();
-        verifyNoInteractions(chatRoomManager);
+        verify(navigationFacade, times(1)).showHelpMenu();
     }
 
     @Test
     @DisplayName("handle - 應該返回關於訊息")
     void handle_shouldReturnAbout_whenAboutAction() {
         // given
-        when(messageTemplateProvider.about()).thenReturn(aboutMessage);
+        when(navigationFacade.showAbout()).thenReturn(aboutMessage);
 
         // when
         Message result = handler.handle(ABOUT, "room123", "user", "replyToken123", event);
 
         // then
         assertThat(result).isEqualTo(aboutMessage);
-        verify(messageTemplateProvider, times(1)).about();
-        verifyNoInteractions(chatRoomManager);
+        verify(navigationFacade, times(1)).showAbout();
     }
 
     @Test
@@ -143,8 +136,7 @@ class NavigationPostbackHandlerTest {
 
         // then
         assertThat(result).isNull();
-        verifyNoInteractions(messageTemplateProvider);
-        verifyNoInteractions(chatRoomManager);
+        verifyNoInteractions(navigationFacade);
     }
 
     @Test

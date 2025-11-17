@@ -1,8 +1,7 @@
 package com.acenexus.tata.nexusbot.postback.handlers;
 
-import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
+import com.acenexus.tata.nexusbot.facade.NavigationFacade;
 import com.acenexus.tata.nexusbot.postback.PostbackHandler;
-import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +15,8 @@ import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
 
 /**
- * 導航功能 Handler - 處理主選單、說明、關於頁面
+ * 導航功能 Handler
+ * 職責：純路由，將請求委派給 NavigationFacade
  */
 @Component
 @Order(10)
@@ -25,8 +25,7 @@ public class NavigationPostbackHandler implements PostbackHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(NavigationPostbackHandler.class);
 
-    private final MessageTemplateProvider messageTemplateProvider;
-    private final ChatRoomManager chatRoomManager;
+    private final NavigationFacade navigationFacade;
 
     @Override
     public boolean canHandle(String action) {
@@ -41,22 +40,10 @@ public class NavigationPostbackHandler implements PostbackHandler {
         logger.info("NavigationPostbackHandler handling action: {} for room: {}", action, roomId);
 
         return switch (action) {
-            case MAIN_MENU -> {
-                logger.debug("Showing main menu for room: {}", roomId);
-                yield messageTemplateProvider.mainMenu();
-            }
-            case HELP_MENU -> {
-                logger.debug("Showing help menu for room: {}", roomId);
-                yield messageTemplateProvider.helpMenu();
-            }
-            case ABOUT -> {
-                logger.debug("Showing about page for room: {}", roomId);
-                yield messageTemplateProvider.about();
-            }
-            default -> {
-                logger.warn("Unexpected action in NavigationPostbackHandler: {}", action);
-                yield null;
-            }
+            case MAIN_MENU -> navigationFacade.showMainMenu();
+            case HELP_MENU -> navigationFacade.showHelpMenu();
+            case ABOUT -> navigationFacade.showAbout();
+            default -> null;
         };
     }
 

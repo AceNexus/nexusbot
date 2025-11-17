@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.facade;
 
+import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.linecorp.bot.model.message.Message;
 
 /**
@@ -8,4 +9,9 @@ import com.linecorp.bot.model.message.Message;
 public interface LocationFacade {
 
     Message handleLocationMessage(String roomId, String title, String address, double latitude, double longitude, String replyToken);
+
+    /**
+     * 開始廁所搜尋流程
+     */
+    Message startToiletSearch(String roomId, ChatRoom.RoomType roomType);
 }

@@ -1,9 +1,8 @@
 package com.acenexus.tata.nexusbot.postback.handlers;
 
-import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.facade.LocationFacade;
 import com.acenexus.tata.nexusbot.postback.PostbackHandler;
-import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
@@ -15,7 +14,8 @@ import org.springframework.stereotype.Component;
 import static com.acenexus.tata.nexusbot.constants.Actions.FIND_TOILETS;
 
 /**
- * 位置功能 Handler - 處理廁所搜尋
+ * 位置功能 Handler
+ * 職責：純路由，將請求委派給 LocationFacade
  */
 @Component
 @Order(4)
@@ -24,8 +24,7 @@ public class LocationPostbackHandler implements PostbackHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(LocationPostbackHandler.class);
 
-    private final ChatRoomManager chatRoomManager;
-    private final MessageTemplateProvider messageTemplateProvider;
+    private final LocationFacade locationFacade;
 
     @Override
     public boolean canHandle(String action) {
@@ -39,16 +38,8 @@ public class LocationPostbackHandler implements PostbackHandler {
         ChatRoom.RoomType type = ChatRoom.RoomType.valueOf(roomType);
 
         return switch (action) {
-            case FIND_TOILETS -> {
-                chatRoomManager.setWaitingForToiletSearch(roomId, type, true);
-                logger.info("Set waiting for toilet search for room: {}", roomId);
-                yield messageTemplateProvider.findToiletsInstruction();
-            }
-
-            default -> {
-                logger.warn("Unexpected action in LocationPostbackHandler: {}", action);
-                yield null;
-            }
+            case FIND_TOILETS -> locationFacade.startToiletSearch(roomId, type);
+            default -> null;
         };
     }
 

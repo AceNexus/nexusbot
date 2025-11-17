@@ -1,9 +1,8 @@
 package com.acenexus.tata.nexusbot.handler.handlers;
 
-import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
+import com.acenexus.tata.nexusbot.facade.LocationFacade;
 import com.acenexus.tata.nexusbot.postback.handlers.LocationPostbackHandler;
-import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TextMessage;
@@ -22,14 +21,11 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("LocationPostbackHandler 測試")
+@DisplayName("LocationPostbackHandler 測試（重構版）")
 class LocationPostbackHandlerTest {
 
     @Mock
-    private ChatRoomManager chatRoomManager;
-
-    @Mock
-    private MessageTemplateProvider messageTemplateProvider;
+    private LocationFacade locationFacade;
 
     @Mock
     private JsonNode event;
@@ -66,15 +62,14 @@ class LocationPostbackHandlerTest {
     void handle_shouldSetWaitingStateAndReturnInstruction_whenFindToilets() {
         // given
         Message expectedMessage = new TextMessage("請分享您的位置");
-        when(messageTemplateProvider.findToiletsInstruction()).thenReturn(expectedMessage);
+        when(locationFacade.startToiletSearch(ROOM_ID, ChatRoom.RoomType.USER)).thenReturn(expectedMessage);
 
         // when
         Message result = handler.handle(FIND_TOILETS, ROOM_ID, ROOM_TYPE, REPLY_TOKEN, event);
 
         // then
         assertThat(result).isEqualTo(expectedMessage);
-        verify(chatRoomManager, times(1)).setWaitingForToiletSearch(ROOM_ID, ChatRoom.RoomType.USER, true);
-        verify(messageTemplateProvider, times(1)).findToiletsInstruction();
+        verify(locationFacade, times(1)).startToiletSearch(ROOM_ID, ChatRoom.RoomType.USER);
     }
 
     @Test
@@ -85,8 +80,7 @@ class LocationPostbackHandlerTest {
 
         // then
         assertThat(result).isNull();
-        verifyNoInteractions(chatRoomManager);
-        verifyNoInteractions(messageTemplateProvider);
+        verifyNoInteractions(locationFacade);
     }
 
     @Test

@@ -2,8 +2,6 @@ package com.acenexus.tata.nexusbot.postback.handlers;
 
 import com.acenexus.tata.nexusbot.facade.ReminderFacade;
 import com.acenexus.tata.nexusbot.postback.PostbackHandler;
-import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
-import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
@@ -27,18 +25,17 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.TODAY_REMINDERS;
 
 /**
- * 提醒功能 Handler - 處理提醒管理、重複類型、通知管道設定
+ * 提醒功能 Handler
+ * 職責：純路由，將請求委派給 ReminderFacade
  */
 @Component
-@Order(1) // 提醒功能優先順序最高
+@Order(1)
 @RequiredArgsConstructor
 public class ReminderPostbackHandler implements PostbackHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ReminderPostbackHandler.class);
 
     private final ReminderFacade reminderFacade;
-    private final ReminderStateManager reminderStateManager;
-    private final MessageTemplateProvider messageTemplateProvider;
 
     @Override
     public boolean canHandle(String action) {
@@ -69,96 +66,31 @@ public class ReminderPostbackHandler implements PostbackHandler {
 
         // 處理靜態動作
         return switch (action) {
-            case REMINDER_MENU -> {
-                logger.debug("Showing reminder menu for room: {}", roomId);
-                yield reminderFacade.showMenu();
-            }
-
-            case ADD_REMINDER -> {
-                logger.info("Starting reminder creation for room: {}", roomId);
-                yield reminderFacade.startCreation(roomId);
-            }
-
-            case LIST_REMINDERS -> {
-                logger.debug("Listing reminders for room: {}", roomId);
-                yield reminderFacade.listActive(roomId);
-            }
-
-            case TODAY_REMINDERS -> {
-                logger.debug("Showing today's logs for room: {}", roomId);
-                yield reminderFacade.showTodayLogs(roomId);
-            }
-
-            case REPEAT_ONCE -> {
-                reminderStateManager.setRepeatType(roomId, "ONCE");
-                logger.debug("Set repeat type to ONCE for room: {}", roomId);
-                yield messageTemplateProvider.reminderNotificationChannelMenu();
-            }
-
-            case REPEAT_DAILY -> {
-                reminderStateManager.setRepeatType(roomId, "DAILY");
-                logger.debug("Set repeat type to DAILY for room: {}", roomId);
-                yield messageTemplateProvider.reminderNotificationChannelMenu();
-            }
-
-            case REPEAT_WEEKLY -> {
-                reminderStateManager.setRepeatType(roomId, "WEEKLY");
-                logger.debug("Set repeat type to WEEKLY for room: {}", roomId);
-                yield messageTemplateProvider.reminderNotificationChannelMenu();
-            }
-
-            case CHANNEL_LINE -> {
-                reminderStateManager.setNotificationChannel(roomId, "LINE");
-                logger.debug("Set notification channel to LINE for room: {}", roomId);
-                yield messageTemplateProvider.reminderInputMenu("time");
-            }
-
-            case CHANNEL_EMAIL -> {
-                reminderStateManager.setNotificationChannel(roomId, "EMAIL");
-                logger.debug("Set notification channel to EMAIL for room: {}", roomId);
-                yield messageTemplateProvider.reminderInputMenu("time");
-            }
-
-            case CHANNEL_BOTH -> {
-                reminderStateManager.setNotificationChannel(roomId, "BOTH");
-                logger.debug("Set notification channel to BOTH for room: {}", roomId);
-                yield messageTemplateProvider.reminderInputMenu("time");
-            }
-
-            case CANCEL_REMINDER_INPUT -> {
-                reminderStateManager.clearState(roomId);
-                logger.info("Cancelled reminder creation for room: {}", roomId);
-                yield messageTemplateProvider.success("已取消新增提醒");
-            }
-
-            default -> {
-                logger.warn("Unexpected action in ReminderPostbackHandler: {}", action);
-                yield null;
-            }
+            case REMINDER_MENU -> reminderFacade.showMenu();
+            case ADD_REMINDER -> reminderFacade.startCreation(roomId);
+            case LIST_REMINDERS -> reminderFacade.listActive(roomId);
+            case TODAY_REMINDERS -> reminderFacade.showTodayLogs(roomId);
+            case REPEAT_ONCE -> reminderFacade.setRepeatTypeOnce(roomId);
+            case REPEAT_DAILY -> reminderFacade.setRepeatTypeDaily(roomId);
+            case REPEAT_WEEKLY -> reminderFacade.setRepeatTypeWeekly(roomId);
+            case CHANNEL_LINE -> reminderFacade.setNotificationChannelLine(roomId);
+            case CHANNEL_EMAIL -> reminderFacade.setNotificationChannelEmail(roomId);
+            case CHANNEL_BOTH -> reminderFacade.setNotificationChannelBoth(roomId);
+            case CANCEL_REMINDER_INPUT -> reminderFacade.cancelCreation(roomId);
+            default -> null;
         };
     }
 
     private Message handleDeleteReminder(String data, String roomId) {
-        try {
-            String idStr = data.substring(data.indexOf("&id=") + 4);
-            Long reminderId = Long.parseLong(idStr);
-            return reminderFacade.deleteReminder(reminderId, roomId);
-        } catch (Exception e) {
-            logger.error("Delete reminder error: {}", e.getMessage(), e);
-            return messageTemplateProvider.error("刪除提醒時發生錯誤");
-        }
+        String idStr = data.substring(data.indexOf("&id=") + 4);
+        Long reminderId = Long.parseLong(idStr);
+        return reminderFacade.deleteReminder(reminderId, roomId);
     }
 
     private Message handleReminderCompleted(String data, String roomId) {
-        try {
-            String idStr = data.substring(data.indexOf("&id=") + 4);
-            Long reminderId = Long.parseLong(idStr);
-            reminderFacade.confirmReminder(reminderId, roomId);
-            return messageTemplateProvider.success("已記錄您已執行此提醒。");
-        } catch (Exception e) {
-            logger.error("Handle reminder completed error: {}", e.getMessage(), e);
-            return messageTemplateProvider.error("處理確認時發生錯誤");
-        }
+        String idStr = data.substring(data.indexOf("&id=") + 4);
+        Long reminderId = Long.parseLong(idStr);
+        return reminderFacade.confirmReminder(reminderId, roomId);
     }
 
     @Override
