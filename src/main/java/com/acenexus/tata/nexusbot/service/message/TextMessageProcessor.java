@@ -5,8 +5,8 @@ import com.acenexus.tata.nexusbot.command.CommandContext;
 import com.acenexus.tata.nexusbot.command.CommandDispatcher;
 import com.acenexus.tata.nexusbot.command.CommandResult;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
-import com.acenexus.tata.nexusbot.service.IMessageService;
-import com.acenexus.tata.nexusbot.service.ai.IAIMessageHandler;
+import com.acenexus.tata.nexusbot.service.MessageService;
+import com.acenexus.tata.nexusbot.service.ai.AIMessageHandler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,10 +19,10 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class TextMessageProcessor {
 
-    private final IMessageService messageService;
+    private final MessageService messageService;
     private final ChatRoomManager chatRoomManager;
     private final CommandDispatcher commandDispatcher;
-    private final IAIMessageHandler aiMessageHandler;
+    private final AIMessageHandler aiMessageHandler;
 
     /**
      * 處理文字消息

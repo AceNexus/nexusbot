@@ -1,6 +1,6 @@
 package com.acenexus.tata.nexusbot.service.message;
 
-import com.acenexus.tata.nexusbot.service.IMessageService;
+import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class MediaMessageProcessor {
 
-    private final IMessageService messageService;
+    private final MessageService messageService;
     private final MessageTemplateProvider messageTemplateProvider;
 
     /**

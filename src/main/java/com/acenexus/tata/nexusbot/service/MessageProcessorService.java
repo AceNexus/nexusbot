@@ -21,7 +21,7 @@ public class MessageProcessorService {
     private final TextMessageProcessor textMessageProcessor;
     private final MediaMessageProcessor mediaMessageProcessor;
     private final LocationFacade locationFacade;
-    private final IMessageService messageService;
+    private final MessageService messageService;
     private final MessageTemplateProvider messageTemplateProvider;
 
     public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
