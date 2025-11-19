@@ -1,8 +1,9 @@
-package com.acenexus.tata.nexusbot.facade;
+package com.acenexus.tata.nexusbot.facade.impl;
 
 import com.acenexus.tata.nexusbot.email.EmailInputStateService;
 import com.acenexus.tata.nexusbot.email.EmailManager;
 import com.acenexus.tata.nexusbot.entity.Email;
+import com.acenexus.tata.nexusbot.facade.EmailFacade;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;

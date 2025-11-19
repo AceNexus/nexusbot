@@ -1,8 +1,9 @@
-package com.acenexus.tata.nexusbot.facade;
+package com.acenexus.tata.nexusbot.facade.impl;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.entity.ReminderState;
+import com.acenexus.tata.nexusbot.facade.ReminderFacade;
 import com.acenexus.tata.nexusbot.reminder.ReminderLogService;
 import com.acenexus.tata.nexusbot.reminder.ReminderService;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;

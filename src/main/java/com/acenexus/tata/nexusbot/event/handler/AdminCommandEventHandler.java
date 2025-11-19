@@ -1,9 +1,9 @@
 package com.acenexus.tata.nexusbot.event.handler;
 
+import com.acenexus.tata.nexusbot.admin.AdminService;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.event.EventType;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
-import com.acenexus.tata.nexusbot.service.AdminService;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;

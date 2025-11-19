@@ -1,6 +1,7 @@
-package com.acenexus.tata.nexusbot.reminder;
+package com.acenexus.tata.nexusbot.reminder.impl;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
+import com.acenexus.tata.nexusbot.reminder.ReminderService;
 import com.acenexus.tata.nexusbot.repository.ReminderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -1,4 +1,4 @@
-package com.acenexus.tata.nexusbot.service;
+package com.acenexus.tata.nexusbot.admin;
 
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.repository.ChatRoomRepository;

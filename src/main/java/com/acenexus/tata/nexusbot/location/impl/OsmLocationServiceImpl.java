@@ -1,6 +1,10 @@
-package com.acenexus.tata.nexusbot.location;
+package com.acenexus.tata.nexusbot.location.impl;
 
 import com.acenexus.tata.nexusbot.config.properties.OsmProperties;
+import com.acenexus.tata.nexusbot.location.LocationService;
+import com.acenexus.tata.nexusbot.location.OsmElement;
+import com.acenexus.tata.nexusbot.location.OverpassResponse;
+import com.acenexus.tata.nexusbot.location.ToiletLocation;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;

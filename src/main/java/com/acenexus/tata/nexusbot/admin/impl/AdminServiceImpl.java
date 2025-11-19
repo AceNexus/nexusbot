@@ -1,5 +1,8 @@
-package com.acenexus.tata.nexusbot.service;
+package com.acenexus.tata.nexusbot.admin.impl;
 
+import com.acenexus.tata.nexusbot.admin.AdminService;
+import com.acenexus.tata.nexusbot.admin.DynamicPasswordService;
+import com.acenexus.tata.nexusbot.admin.SystemStatsService;
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.linecorp.bot.model.message.Message;

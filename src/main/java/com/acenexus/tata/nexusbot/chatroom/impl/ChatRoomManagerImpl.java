@@ -1,5 +1,10 @@
-package com.acenexus.tata.nexusbot.chatroom;
+package com.acenexus.tata.nexusbot.chatroom.impl;
 
+import com.acenexus.tata.nexusbot.chatroom.AISettingsManager;
+import com.acenexus.tata.nexusbot.chatroom.ChatMessageManager;
+import com.acenexus.tata.nexusbot.chatroom.ChatRoomAccessor;
+import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
+import com.acenexus.tata.nexusbot.chatroom.ChatRoomMetadataManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

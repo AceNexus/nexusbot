@@ -1,5 +1,6 @@
-package com.acenexus.tata.nexusbot.ai;
+package com.acenexus.tata.nexusbot.ai.impl;
 
+import com.acenexus.tata.nexusbot.ai.AIService;
 import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import jakarta.annotation.PostConstruct;

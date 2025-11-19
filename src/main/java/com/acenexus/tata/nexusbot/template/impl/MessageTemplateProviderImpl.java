@@ -1,7 +1,13 @@
-package com.acenexus.tata.nexusbot.template;
+package com.acenexus.tata.nexusbot.template.impl;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.location.ToiletLocation;
+import com.acenexus.tata.nexusbot.template.AISettingsTemplateBuilder;
+import com.acenexus.tata.nexusbot.template.EmailTemplateBuilder;
+import com.acenexus.tata.nexusbot.template.LocationTemplateBuilder;
+import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.acenexus.tata.nexusbot.template.NavigationTemplateBuilder;
+import com.acenexus.tata.nexusbot.template.ReminderTemplateBuilder;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

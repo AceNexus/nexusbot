@@ -1,4 +1,4 @@
-package com.acenexus.tata.nexusbot.service.ai;
+package com.acenexus.tata.nexusbot.ai;
 
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 

@@ -1,5 +1,6 @@
-package com.acenexus.tata.nexusbot.facade;
+package com.acenexus.tata.nexusbot.facade.impl;
 
+import com.acenexus.tata.nexusbot.facade.NavigationFacade;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;

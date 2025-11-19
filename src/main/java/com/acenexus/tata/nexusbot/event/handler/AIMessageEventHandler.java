@@ -1,10 +1,10 @@
 package com.acenexus.tata.nexusbot.event.handler;
 
+import com.acenexus.tata.nexusbot.ai.AIMessageHandler;
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.event.EventType;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
-import com.acenexus.tata.nexusbot.service.ai.AIMessageHandler;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,5 +1,6 @@
-package com.acenexus.tata.nexusbot.service;
+package com.acenexus.tata.nexusbot.service.impl;
 
+import com.acenexus.tata.nexusbot.service.MessageService;
 import com.linecorp.bot.client.LineMessagingClient;
 import com.linecorp.bot.model.ReplyMessage;
 import com.linecorp.bot.model.message.Message;

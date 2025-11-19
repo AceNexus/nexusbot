@@ -1,5 +1,6 @@
-package com.acenexus.tata.nexusbot.email;
+package com.acenexus.tata.nexusbot.email.impl;
 
+import com.acenexus.tata.nexusbot.email.EmailManager;
 import com.acenexus.tata.nexusbot.entity.Email;
 import com.acenexus.tata.nexusbot.repository.EmailRepository;
 import lombok.RequiredArgsConstructor;

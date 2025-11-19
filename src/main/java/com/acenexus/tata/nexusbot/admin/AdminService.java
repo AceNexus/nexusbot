@@ -1,4 +1,4 @@
-package com.acenexus.tata.nexusbot.service;
+package com.acenexus.tata.nexusbot.admin;
 
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.linecorp.bot.model.message.Message;
