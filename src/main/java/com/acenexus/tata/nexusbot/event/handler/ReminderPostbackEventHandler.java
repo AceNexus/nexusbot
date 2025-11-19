@@ -1,13 +1,12 @@
-package com.acenexus.tata.nexusbot.postback.handlers;
+package com.acenexus.tata.nexusbot.event.handler;
 
+import com.acenexus.tata.nexusbot.event.EventType;
+import com.acenexus.tata.nexusbot.event.LineBotEvent;
 import com.acenexus.tata.nexusbot.facade.ReminderFacade;
-import com.acenexus.tata.nexusbot.postback.PostbackHandler;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
@@ -25,20 +24,26 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.TODAY_REMINDERS;
 
 /**
- * 提醒功能 Handler
- * 職責：純路由，將請求委派給 ReminderFacade
+ * 處理提醒相關的 Postback 事件
  */
 @Component
-@Order(1)
 @RequiredArgsConstructor
-public class ReminderPostbackHandler implements PostbackHandler {
-
-    private static final Logger logger = LoggerFactory.getLogger(ReminderPostbackHandler.class);
+public class ReminderPostbackEventHandler implements LineBotEventHandler {
+    private static final Logger logger = LoggerFactory.getLogger(ReminderPostbackEventHandler.class);
 
     private final ReminderFacade reminderFacade;
 
     @Override
-    public boolean canHandle(String action) {
+    public boolean canHandle(LineBotEvent event) {
+        if (event.getEventType() != EventType.POSTBACK) {
+            return false;
+        }
+
+        String action = event.getPayloadString("action");
+        if (action == null) {
+            return false;
+        }
+
         // 靜態動作
         if (REMINDER_MENU.equals(action) || ADD_REMINDER.equals(action) ||
                 LIST_REMINDERS.equals(action) || TODAY_REMINDERS.equals(action) ||
@@ -53,8 +58,11 @@ public class ReminderPostbackHandler implements PostbackHandler {
     }
 
     @Override
-    public Message handle(String action, String roomId, String roomType, String replyToken, JsonNode event) {
-        logger.info("ReminderPostbackHandler handling action: {} for room: {}", action, roomId);
+    public Message handle(LineBotEvent event) {
+        String action = event.getPayloadString("action");
+        String roomId = event.getRoomId();
+
+        logger.info("ReminderPostbackEventHandler handling action: {} for room: {}", action, roomId);
 
         // 處理動態動作
         if (action.startsWith(DELETE_REMINDER)) {
@@ -95,6 +103,6 @@ public class ReminderPostbackHandler implements PostbackHandler {
 
     @Override
     public int getPriority() {
-        return 1;
+        return 4;
     }
 }

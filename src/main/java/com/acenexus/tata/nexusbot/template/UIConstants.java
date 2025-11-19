@@ -7,7 +7,6 @@ public final class UIConstants {
 
     public static final class Colors {
         public static final String PRIMARY = "#00A8CC";
-        public static final String PRIMARY_LIGHT = "#E3F8FF";
         public static final String SUCCESS = "#10B981";
         public static final String WARNING = "#F59E0B";
         public static final String ERROR = "#EF4444";
@@ -20,8 +19,6 @@ public final class UIConstants {
 
     public static final class Spacing {
         public static final String SM = "8px";
-        public static final String MD = "16px";
-        public static final String LG = "24px";
     }
 
     public static final class BorderRadius {

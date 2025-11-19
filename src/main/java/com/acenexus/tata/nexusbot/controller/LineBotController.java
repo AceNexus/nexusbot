@@ -1,6 +1,6 @@
 package com.acenexus.tata.nexusbot.controller;
 
-import com.acenexus.tata.nexusbot.service.EventHandlerService;
+import com.acenexus.tata.nexusbot.event.LineBotEventCoordinator;
 import com.acenexus.tata.nexusbot.util.SignatureValidator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class LineBotController {
     private static final Logger logger = LoggerFactory.getLogger(LineBotController.class);
     private final ObjectMapper objectMapper;
-    private final EventHandlerService eventHandlerService;
+    private final LineBotEventCoordinator eventCoordinator;
     private final SignatureValidator signatureValidator;
 
     @Operation(
@@ -122,7 +122,7 @@ public class LineBotController {
                                                     }
                                                     """
                                     )
-                                            }
+                            }
                     )
             )
             @RequestBody String payload,
@@ -144,7 +144,7 @@ public class LineBotController {
 
         if (events != null && events.isArray() && !events.isEmpty()) {
             logger.info("Processing {} events", events.size());
-            eventHandlerService.processEvents(events);
+            eventCoordinator.processWebhookEvents(events);
         } else {
             logger.info("Received empty events array");
         }

@@ -1,13 +1,12 @@
-package com.acenexus.tata.nexusbot.postback.handlers;
+package com.acenexus.tata.nexusbot.event.handler;
 
+import com.acenexus.tata.nexusbot.event.EventType;
+import com.acenexus.tata.nexusbot.event.LineBotEvent;
 import com.acenexus.tata.nexusbot.facade.EmailFacade;
-import com.acenexus.tata.nexusbot.postback.PostbackHandler;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_EMAIL;
@@ -17,19 +16,26 @@ import static com.acenexus.tata.nexusbot.constants.Actions.EMAIL_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_EMAIL_STATUS;
 
 /**
- * Email 功能 Handler - 處理 Email 管理、新增、刪除、啟用/停用
+ * 處理 Email 相關的 Postback 事件
  */
 @Component
-@Order(3)
 @RequiredArgsConstructor
-public class EmailPostbackHandler implements PostbackHandler {
-
-    private static final Logger logger = LoggerFactory.getLogger(EmailPostbackHandler.class);
+public class EmailPostbackEventHandler implements LineBotEventHandler {
+    private static final Logger logger = LoggerFactory.getLogger(EmailPostbackEventHandler.class);
 
     private final EmailFacade emailFacade;
 
     @Override
-    public boolean canHandle(String action) {
+    public boolean canHandle(LineBotEvent event) {
+        if (event.getEventType() != EventType.POSTBACK) {
+            return false;
+        }
+
+        String action = event.getPayloadString("action");
+        if (action == null) {
+            return false;
+        }
+
         // 靜態動作
         if (EMAIL_MENU.equals(action) || ADD_EMAIL.equals(action) || CANCEL_EMAIL_INPUT.equals(action)) {
             return true;
@@ -40,8 +46,11 @@ public class EmailPostbackHandler implements PostbackHandler {
     }
 
     @Override
-    public Message handle(String action, String roomId, String roomType, String replyToken, JsonNode event) {
-        logger.info("EmailPostbackHandler handling action: {} for room: {}", action, roomId);
+    public Message handle(LineBotEvent event) {
+        String action = event.getPayloadString("action");
+        String roomId = event.getRoomId();
+
+        logger.info("EmailPostbackEventHandler handling action: {} for room: {}", action, roomId);
 
         // 處理動態動作
         if (action.startsWith(DELETE_EMAIL)) {
@@ -54,25 +63,10 @@ public class EmailPostbackHandler implements PostbackHandler {
 
         // 處理靜態動作
         return switch (action) {
-            case EMAIL_MENU -> {
-                logger.debug("Showing email menu for room: {}", roomId);
-                yield emailFacade.showMenu(roomId);
-            }
-
-            case ADD_EMAIL -> {
-                logger.info("Starting email input for room: {}", roomId);
-                yield emailFacade.startAddingEmail(roomId);
-            }
-
-            case CANCEL_EMAIL_INPUT -> {
-                logger.info("Cancelling email input for room: {}", roomId);
-                yield emailFacade.cancelAddingEmail(roomId);
-            }
-
-            default -> {
-                logger.warn("Unexpected action in EmailPostbackHandler: {}", action);
-                yield null;
-            }
+            case EMAIL_MENU -> emailFacade.showMenu(roomId);
+            case ADD_EMAIL -> emailFacade.startAddingEmail(roomId);
+            case CANCEL_EMAIL_INPUT -> emailFacade.cancelAddingEmail(roomId);
+            default -> null;
         };
     }
 

@@ -42,8 +42,9 @@ admin:
 logging:
   level:
     root: INFO
-    com.acenexus.tata.nexusbot: INFO
     com.linecorp.bot.client.wire: WARN
     okhttp3: WARN
+    org.apache.http: WARN
+    org.springframework.web: INFO
   pattern:
     console: "[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%level] [%thread] [%logger{36}] - %msg%n"
