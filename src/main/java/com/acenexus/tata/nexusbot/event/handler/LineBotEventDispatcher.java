@@ -83,15 +83,4 @@ public class LineBotEventDispatcher {
             logger.error("Fatal error dispatching event: {}", e.getMessage(), e);
         }
     }
-
-    /**
-     * 判斷是否應該發送預設訊息
-     * 只有文字訊息和 Postback 需要預設回覆
-     */
-    private boolean shouldSendDefaultMessage(LineBotEvent event) {
-        return switch (event.getEventType()) {
-            case TEXT_MESSAGE, POSTBACK -> true;
-            default -> false;
-        };
-    }
 }

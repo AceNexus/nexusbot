@@ -6,7 +6,6 @@ import com.acenexus.tata.nexusbot.entity.ReminderState;
 import com.acenexus.tata.nexusbot.reminder.ReminderLogService;
 import com.acenexus.tata.nexusbot.reminder.ReminderService;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
-import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.acenexus.tata.nexusbot.util.AnalyzerUtil;
 import com.linecorp.bot.model.message.Message;
@@ -37,7 +36,6 @@ public class ReminderFacadeImpl implements ReminderFacade {
     private final ReminderService reminderService;
     private final ReminderStateManager reminderStateManager;
     private final ReminderLogService reminderLogService;
-    private final ReminderLogRepository reminderLogRepository;
     private final MessageTemplateProvider messageTemplateProvider;
 
     @Override
@@ -87,8 +85,15 @@ public class ReminderFacadeImpl implements ReminderFacade {
     @Override
     public Message confirmReminder(Long reminderId, String roomId) {
         logger.info("Reminder [{}] marked as completed by user in room [{}]", reminderId, roomId);
-        updateReminderLogWithUserResponse(reminderId);
-        return messageTemplateProvider.success("已記錄您已執行此提醒。");
+        boolean success = reminderLogService.updateWithUserResponse(reminderId);
+
+        if (success) {
+            logger.info("Updated reminder log with user response for reminder: {}", reminderId);
+            return messageTemplateProvider.success("已記錄您已執行此提醒。");
+        } else {
+            logger.warn("No sent log found for reminder [{}], cannot record user response", reminderId);
+            return messageTemplateProvider.success("已記錄您已執行此提醒。");
+        }
     }
 
     @Override
@@ -178,26 +183,6 @@ public class ReminderFacadeImpl implements ReminderFacade {
         );
     }
 
-    private void updateReminderLogWithUserResponse(Long reminderId) {
-        try {
-            Optional<ReminderLog> logOptional = reminderLogRepository.findLatestSentLogByReminderId(reminderId);
-
-            if (logOptional.isPresent()) {
-                ReminderLog log = logOptional.get();
-                log.setUserResponseTime(LocalDateTime.now());
-                log.setUserResponseStatus("COMPLETED");
-                reminderLogRepository.save(log);
-
-                logger.info("Updated reminder log [{}] with user response: COMPLETED", log.getId());
-            } else {
-                logger.warn("No sent log found for reminder [{}], cannot record user response", reminderId);
-            }
-        } catch (Exception e) {
-            logger.error("Failed to update reminder log with user response for reminder [{}]: {}",
-                    reminderId, e.getMessage());
-        }
-    }
-
     private Map<Long, String> getConfirmationStatuses(List<Reminder> reminders) {
         Map<Long, String> statusMap = new HashMap<>();
 
@@ -207,7 +192,7 @@ public class ReminderFacadeImpl implements ReminderFacade {
 
         try {
             for (Reminder reminder : reminders) {
-                Optional<ReminderLog> latestLog = reminderLogRepository.findLatestByReminderId(reminder.getId());
+                Optional<ReminderLog> latestLog = reminderLogService.findLatestByReminderId(reminder.getId());
 
                 if (latestLog.isPresent()) {
                     ReminderLog log = latestLog.get();

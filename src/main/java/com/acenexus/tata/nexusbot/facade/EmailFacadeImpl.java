@@ -1,9 +1,8 @@
 package com.acenexus.tata.nexusbot.facade;
 
+import com.acenexus.tata.nexusbot.email.EmailInputStateService;
 import com.acenexus.tata.nexusbot.email.EmailManager;
 import com.acenexus.tata.nexusbot.entity.Email;
-import com.acenexus.tata.nexusbot.entity.EmailInputState;
-import com.acenexus.tata.nexusbot.repository.EmailInputStateRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -25,7 +23,7 @@ public class EmailFacadeImpl implements EmailFacade {
     private static final String EMAIL_REGEX = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$";
 
     private final EmailManager emailManager;
-    private final EmailInputStateRepository emailInputStateRepository;
+    private final EmailInputStateService emailInputStateService;
     private final MessageTemplateProvider messageTemplateProvider;
 
     @Override
@@ -37,14 +35,14 @@ public class EmailFacadeImpl implements EmailFacade {
 
     @Override
     public Message startAddingEmail(String roomId) {
-        setWaitingForEmailInput(roomId);
+        emailInputStateService.setWaitingForEmailInput(roomId);
         logger.info("Room {} is now waiting for email input", roomId);
         return messageTemplateProvider.emailInputPrompt();
     }
 
     @Override
     public Message cancelAddingEmail(String roomId) {
-        clearWaitingForEmailInput(roomId);
+        emailInputStateService.clearWaitingForEmailInput(roomId);
         logger.info("Cancelled email input for room {}", roomId);
         return messageTemplateProvider.success("已取消新增 Email");
     }
@@ -115,7 +113,7 @@ public class EmailFacadeImpl implements EmailFacade {
 
             if (addedEmail != null) {
                 // 清除等待狀態
-                clearEmailInputState(roomId);
+                emailInputStateService.clearWaitingForEmailInput(roomId);
 
                 logger.info("Email added successfully for room {}: {}", roomId, email);
                 return messageTemplateProvider.emailAddSuccess(email);
@@ -125,37 +123,18 @@ public class EmailFacadeImpl implements EmailFacade {
             }
         } catch (Exception e) {
             logger.error("Error processing email input for room {}: {}", roomId, e.getMessage());
-            clearEmailInputState(roomId);
+            emailInputStateService.clearWaitingForEmailInput(roomId);
             return messageTemplateProvider.error("處理 Email 輸入時發生錯誤。");
         }
     }
 
     @Override
     public boolean isWaitingForEmailInput(String roomId) {
-        return emailInputStateRepository.existsByRoomIdAndNotExpired(roomId, LocalDateTime.now());
+        return emailInputStateService.isWaitingForEmailInput(roomId);
     }
 
     @Override
     public void clearEmailInputState(String roomId) {
-        clearWaitingForEmailInput(roomId);
-    }
-
-    private void setWaitingForEmailInput(String roomId) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime expiresAt = now.plusMinutes(30);
-
-        EmailInputState state = EmailInputState.builder()
-                .roomId(roomId)
-                .createdAt(now)
-                .expiresAt(expiresAt)
-                .build();
-
-        emailInputStateRepository.save(state);
-        logger.info("Set email input state for room {}, expires at {}", roomId, expiresAt);
-    }
-
-    private void clearWaitingForEmailInput(String roomId) {
-        emailInputStateRepository.deleteById(roomId);
-        logger.info("Cleared email input state for room {}", roomId);
+        emailInputStateService.clearWaitingForEmailInput(roomId);
     }
 }

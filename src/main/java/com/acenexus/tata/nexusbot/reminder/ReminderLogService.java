@@ -95,4 +95,39 @@ public class ReminderLogService {
 
         return result;
     }
+
+    /**
+     * 查找提醒的最新日誌（不限狀態）
+     *
+     * @param reminderId 提醒 ID
+     * @return 最新日誌（如果存在）
+     */
+    public Optional<ReminderLog> findLatestByReminderId(Long reminderId) {
+        return reminderLogRepository.findLatestByReminderId(reminderId);
+    }
+
+    /**
+     * 更新提醒日誌的用戶回應
+     *
+     * @param reminderId 提醒 ID
+     * @return 是否更新成功
+     */
+    public boolean updateWithUserResponse(Long reminderId) {
+        try {
+            Optional<ReminderLog> logOptional = reminderLogRepository.findLatestSentLogByReminderId(reminderId);
+
+            if (logOptional.isPresent()) {
+                ReminderLog log = logOptional.get();
+                log.setUserResponseTime(LocalDateTime.now());
+                log.setUserResponseStatus("COMPLETED");
+                reminderLogRepository.save(log);
+
+                return true;
+            } else {
+                return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }
