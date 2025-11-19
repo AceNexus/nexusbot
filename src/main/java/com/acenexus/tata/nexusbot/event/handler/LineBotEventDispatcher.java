@@ -3,7 +3,6 @@ package com.acenexus.tata.nexusbot.event.handler;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.linecorp.bot.model.message.Message;
-import com.linecorp.bot.model.message.TextMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -79,12 +78,6 @@ public class LineBotEventDispatcher {
 
             // 沒有任何 Handler 可以處理
             logger.warn("No handler found for event: type={}, roomId={}, roomType={}, userId={}", event.getEventType(), event.getRoomId(), event.getRoomType(), event.getUserId());
-
-            // 發送預設訊息（僅針對需要回覆的事件類型）
-            if (shouldSendDefaultMessage(event)) {
-                Message defaultMessage = new TextMessage("抱歉，我無法處理這個請求。請使用「選單」查看可用功能。");
-                messageService.sendMessage(event.getReplyToken(), defaultMessage);
-            }
 
         } catch (Exception e) {
             logger.error("Fatal error dispatching event: {}", e.getMessage(), e);

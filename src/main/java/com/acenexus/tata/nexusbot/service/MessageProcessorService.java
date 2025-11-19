@@ -2,7 +2,6 @@ package com.acenexus.tata.nexusbot.service;
 
 import com.acenexus.tata.nexusbot.facade.LocationFacade;
 import com.acenexus.tata.nexusbot.service.message.MediaMessageProcessor;
-import com.acenexus.tata.nexusbot.service.message.TextMessageProcessor;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
@@ -11,22 +10,18 @@ import org.springframework.stereotype.Service;
 
 /**
  * 消息處理協調服務
- * 職責：將消息分發給對應的處理器
+ * 職責：將非文字消息分發給對應的處理器
+ * 注意：文字消息已由各個 LineBotEventHandler 直接處理
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class MessageProcessorService {
 
-    private final TextMessageProcessor textMessageProcessor;
     private final MediaMessageProcessor mediaMessageProcessor;
     private final LocationFacade locationFacade;
     private final MessageService messageService;
     private final MessageTemplateProvider messageTemplateProvider;
-
-    public void processTextMessage(String roomId, String sourceType, String userId, String messageText, String replyToken) {
-        textMessageProcessor.process(roomId, sourceType, userId, messageText, replyToken);
-    }
 
     public void processImageMessage(String roomId, String messageId, String replyToken) {
         mediaMessageProcessor.processImage(roomId, messageId, replyToken);
