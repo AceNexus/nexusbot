@@ -121,4 +121,96 @@ public class LineBotEvent {
         }
         return null;
     }
+
+    /**
+     * 從 payload 中解析 query string 格式的參數
+     * 用於解析如 "action=DELETE_EMAIL&id=123" 格式的資料，提取特定參數值。
+     *
+     * @param key   payload 的 key（通常是 "action"）
+     * @param param 要提取的參數名稱（如 "id"）
+     * @return 參數值，若不存在或解析失敗則返回 null
+     */
+    public String getPayloadParameter(String key, String param) {
+        String data = getPayloadString(key);
+        if (data == null) {
+            return null;
+        }
+
+        String searchKey = param + "=";
+        int startIndex = data.indexOf(searchKey);
+        if (startIndex == -1) {
+            return null;
+        }
+
+        startIndex += searchKey.length();
+        int endIndex = data.indexOf('&', startIndex);
+
+        return endIndex == -1 ? data.substring(startIndex) : data.substring(startIndex, endIndex);
+    }
+
+    /**
+     * 從 payload 中解析 query string 格式的 Long 參數
+     * 用於解析如 "action=DELETE_EMAIL&id=123" 格式的資料，提取並轉換為 Long 型別。
+     * 內建錯誤處理，解析失敗時返回 null。
+     *
+     * @param key   payload 的 key（通常是 "action"）
+     * @param param 要提取的參數名稱（如 "id"）
+     * @return Long 值，若不存在或解析失敗則返回 null
+     */
+    public Long getPayloadParameterAsLong(String key, String param) {
+        String value = getPayloadParameter(key, param);
+        if (value == null) {
+            return null;
+        }
+
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * 取得標準化的文字訊息（小寫 + trim）
+     * 適用於命令比對等場景，統一文字格式。
+     *
+     * @return 標準化的文字（toLowerCase + trim），若不是文字訊息則返回 null
+     */
+    public String getNormalizedText() {
+        String text = getPayloadString("text");
+        return text != null ? text.toLowerCase().trim() : null;
+    }
+
+    /**
+     * 檢查 postback action 是否為指定值之一
+     * 簡化 Postback handler 的 action 檢查邏輯，自動處理 null 檢查。
+     *
+     * @param actions 要檢查的 action 值（一個或多個）
+     * @return {@code true} 表示 action 匹配任一指定值，{@code false} 表示不匹配或 action 為 null
+     */
+    public boolean hasAction(String... actions) {
+        String action = getPayloadString("action");
+        if (action == null) {
+            return false;
+        }
+
+        for (String targetAction : actions) {
+            if (targetAction.equals(action)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * 檢查 postback action 是否以指定前綴開頭
+     * 用於動態 action 的比對，如 "DELETE_EMAIL&id=123" 以 "DELETE_EMAIL" 開頭。
+     *
+     * @param prefix action 前綴
+     * @return {@code true} 表示 action 以指定前綴開頭，{@code false} 表示不匹配或 action 為 null
+     */
+    public boolean actionStartsWith(String prefix) {
+        String action = getPayloadString("action");
+        return action != null && action.startsWith(prefix);
+    }
 }

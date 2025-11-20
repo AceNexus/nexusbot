@@ -39,22 +39,13 @@ public class ReminderPostbackEventHandler implements LineBotEventHandler {
             return false;
         }
 
-        String action = event.getPayloadString("action");
-        if (action == null) {
-            return false;
-        }
-
         // 靜態動作
-        if (REMINDER_MENU.equals(action) || ADD_REMINDER.equals(action) ||
-                LIST_REMINDERS.equals(action) || TODAY_REMINDERS.equals(action) ||
-                REPEAT_ONCE.equals(action) || REPEAT_DAILY.equals(action) || REPEAT_WEEKLY.equals(action) ||
-                CHANNEL_LINE.equals(action) || CHANNEL_EMAIL.equals(action) || CHANNEL_BOTH.equals(action) ||
-                CANCEL_REMINDER_INPUT.equals(action)) {
+        if (event.hasAction(REMINDER_MENU, ADD_REMINDER, LIST_REMINDERS, TODAY_REMINDERS, REPEAT_ONCE, REPEAT_DAILY, REPEAT_WEEKLY, CHANNEL_LINE, CHANNEL_EMAIL, CHANNEL_BOTH, CANCEL_REMINDER_INPUT)) {
             return true;
         }
 
         // 動態動作（包含參數）
-        return action.startsWith(DELETE_REMINDER) || action.startsWith(REMINDER_COMPLETED);
+        return event.actionStartsWith(DELETE_REMINDER) || event.actionStartsWith(REMINDER_COMPLETED);
     }
 
     @Override
@@ -65,11 +56,11 @@ public class ReminderPostbackEventHandler implements LineBotEventHandler {
         logger.info("ReminderPostbackEventHandler handling action: {} for room: {}", action, roomId);
 
         // 處理動態動作
-        if (action.startsWith(DELETE_REMINDER)) {
-            return handleDeleteReminder(action, roomId);
+        if (event.actionStartsWith(DELETE_REMINDER)) {
+            return handleDeleteReminder(event, roomId);
         }
-        if (action.startsWith(REMINDER_COMPLETED)) {
-            return handleReminderCompleted(action, roomId);
+        if (event.actionStartsWith(REMINDER_COMPLETED)) {
+            return handleReminderCompleted(event, roomId);
         }
 
         // 處理靜態動作
@@ -89,15 +80,13 @@ public class ReminderPostbackEventHandler implements LineBotEventHandler {
         };
     }
 
-    private Message handleDeleteReminder(String data, String roomId) {
-        String idStr = data.substring(data.indexOf("&id=") + 4);
-        Long reminderId = Long.parseLong(idStr);
+    private Message handleDeleteReminder(LineBotEvent event, String roomId) {
+        Long reminderId = event.getPayloadParameterAsLong("action", "id");
         return reminderFacade.deleteReminder(reminderId, roomId);
     }
 
-    private Message handleReminderCompleted(String data, String roomId) {
-        String idStr = data.substring(data.indexOf("&id=") + 4);
-        Long reminderId = Long.parseLong(idStr);
+    private Message handleReminderCompleted(LineBotEvent event, String roomId) {
+        Long reminderId = event.getPayloadParameterAsLong("action", "id");
         return reminderFacade.confirmReminder(reminderId, roomId);
     }
 

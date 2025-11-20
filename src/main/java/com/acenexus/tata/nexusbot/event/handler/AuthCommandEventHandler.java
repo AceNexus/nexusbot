@@ -25,12 +25,11 @@ public class AuthCommandEventHandler implements LineBotEventHandler {
             return false;
         }
 
-        String text = event.getPayloadString("text");
-        if (text == null) {
+        String normalizedText = event.getNormalizedText();
+        if (normalizedText == null) {
             return false;
         }
 
-        String normalizedText = text.toLowerCase().trim();
         ChatRoom.RoomType roomType = ChatRoom.RoomType.valueOf(event.getRoomType().name());
 
         // 處理 /auth 命令或正在等待密碼輸入的聊天室

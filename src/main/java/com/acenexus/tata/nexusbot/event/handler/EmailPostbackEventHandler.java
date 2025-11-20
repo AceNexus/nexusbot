@@ -31,18 +31,13 @@ public class EmailPostbackEventHandler implements LineBotEventHandler {
             return false;
         }
 
-        String action = event.getPayloadString("action");
-        if (action == null) {
-            return false;
-        }
-
         // 靜態動作
-        if (EMAIL_MENU.equals(action) || ADD_EMAIL.equals(action) || CANCEL_EMAIL_INPUT.equals(action)) {
+        if (event.hasAction(EMAIL_MENU, ADD_EMAIL, CANCEL_EMAIL_INPUT)) {
             return true;
         }
 
         // 動態動作（包含參數）
-        return action.startsWith(DELETE_EMAIL) || action.startsWith(TOGGLE_EMAIL_STATUS);
+        return event.actionStartsWith(DELETE_EMAIL) || event.actionStartsWith(TOGGLE_EMAIL_STATUS);
     }
 
     @Override
@@ -53,12 +48,12 @@ public class EmailPostbackEventHandler implements LineBotEventHandler {
         logger.info("EmailPostbackEventHandler handling action: {} for room: {}", action, roomId);
 
         // 處理動態動作
-        if (action.startsWith(DELETE_EMAIL)) {
-            return handleDeleteEmail(action, roomId);
+        if (event.actionStartsWith(DELETE_EMAIL)) {
+            return handleDeleteEmail(event, roomId);
         }
 
-        if (action.startsWith(TOGGLE_EMAIL_STATUS)) {
-            return handleToggleEmailStatus(action, roomId);
+        if (event.actionStartsWith(TOGGLE_EMAIL_STATUS)) {
+            return handleToggleEmailStatus(event, roomId);
         }
 
         // 處理靜態動作
@@ -70,26 +65,14 @@ public class EmailPostbackEventHandler implements LineBotEventHandler {
         };
     }
 
-    private Message handleDeleteEmail(String data, String roomId) {
-        try {
-            String idStr = data.substring(data.indexOf("&id=") + 4);
-            Long emailId = Long.parseLong(idStr);
-            return emailFacade.deleteEmail(emailId, roomId);
-        } catch (Exception e) {
-            logger.error("Delete email error: {}", e.getMessage(), e);
-            return emailFacade.deleteEmail(null, roomId);
-        }
+    private Message handleDeleteEmail(LineBotEvent event, String roomId) {
+        Long emailId = event.getPayloadParameterAsLong("action", "id");
+        return emailFacade.deleteEmail(emailId, roomId);
     }
 
-    private Message handleToggleEmailStatus(String data, String roomId) {
-        try {
-            String idStr = data.substring(data.indexOf("&id=") + 4);
-            Long emailId = Long.parseLong(idStr);
-            return emailFacade.toggleEmailStatus(emailId, roomId);
-        } catch (Exception e) {
-            logger.error("Toggle email status error: {}", e.getMessage(), e);
-            return emailFacade.toggleEmailStatus(null, roomId);
-        }
+    private Message handleToggleEmailStatus(LineBotEvent event, String roomId) {
+        Long emailId = event.getPayloadParameterAsLong("action", "id");
+        return emailFacade.toggleEmailStatus(emailId, roomId);
     }
 
     @Override

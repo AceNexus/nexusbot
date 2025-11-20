@@ -25,19 +25,7 @@ public class NavigationPostbackEventHandler implements LineBotEventHandler {
 
     @Override
     public boolean canHandle(LineBotEvent event) {
-        if (event.getEventType() != EventType.POSTBACK) {
-            return false;
-        }
-
-        String action = event.getPayloadString("action");
-        if (action == null) {
-            return false;
-        }
-
-        return switch (action) {
-            case MAIN_MENU, HELP_MENU, ABOUT -> true;
-            default -> false;
-        };
+        return event.getEventType() == EventType.POSTBACK && event.hasAction(MAIN_MENU, HELP_MENU, ABOUT);
     }
 
     @Override

@@ -26,13 +26,8 @@ public class MenuCommandEventHandler implements LineBotEventHandler {
             return false;
         }
 
-        String text = event.getPayloadString("text");
-        if (text == null) {
-            return false;
-        }
-
-        String normalizedText = text.toLowerCase().trim();
-        return MENU_COMMANDS.contains(normalizedText);
+        String normalizedText = event.getNormalizedText();
+        return normalizedText != null && MENU_COMMANDS.contains(normalizedText);
     }
 
     @Override

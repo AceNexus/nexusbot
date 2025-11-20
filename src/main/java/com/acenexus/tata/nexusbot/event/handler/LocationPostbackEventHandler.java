@@ -29,6 +29,10 @@ public class LocationPostbackEventHandler implements LineBotEventHandler {
         }
 
         String action = event.getPayloadString("action");
+        if (action == null) {
+            return false;
+        }
+
         return FIND_TOILETS.equals(action);
     }
 

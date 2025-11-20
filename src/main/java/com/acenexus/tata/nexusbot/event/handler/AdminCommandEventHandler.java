@@ -27,16 +27,15 @@ public class AdminCommandEventHandler implements LineBotEventHandler {
             return false;
         }
 
-        String text = event.getPayloadString("text");
-        if (text == null) {
+        String normalizedText = event.getNormalizedText();
+        if (normalizedText == null || !ADMIN_COMMANDS.contains(normalizedText)) {
             return false;
         }
 
-        String normalizedText = text.toLowerCase().trim();
         ChatRoom.RoomType roomType = ChatRoom.RoomType.valueOf(event.getRoomType().name());
 
         // 必須是管理員且命令在列表中
-        return adminService.isAdminRoom(event.getRoomId(), roomType) && ADMIN_COMMANDS.contains(normalizedText);
+        return adminService.isAdminRoom(event.getRoomId(), roomType);
     }
 
     @Override
