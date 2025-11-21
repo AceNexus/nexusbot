@@ -42,7 +42,6 @@ public class AdminCommandEventHandler implements LineBotEventHandler {
     public Message handle(LineBotEvent event) {
         String text = event.getPayloadString("text");
         ChatRoom.RoomType roomType = ChatRoom.RoomType.valueOf(event.getRoomType().name());
-
         return adminService.processAdminCommand(event.getRoomId(), roomType, text);
     }
 

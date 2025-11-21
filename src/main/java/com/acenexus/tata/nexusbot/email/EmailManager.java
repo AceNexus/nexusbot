@@ -61,12 +61,4 @@ public interface EmailManager {
      * @return 是否成功
      */
     boolean deleteEmail(Long emailId, String roomId);
-
-    /**
-     * 檢查聊天室是否有任何已啟用的 Email
-     *
-     * @param roomId 聊天室 ID
-     * @return 是否有已啟用的 Email
-     */
-    boolean hasEnabledEmails(String roomId);
 }

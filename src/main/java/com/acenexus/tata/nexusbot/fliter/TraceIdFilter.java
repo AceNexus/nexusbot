@@ -1,4 +1,4 @@
-package com.acenexus.tata.nexusbot.config;
+package com.acenexus.tata.nexusbot.fliter;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -19,17 +19,14 @@ import java.util.UUID;
 
 /**
  * TraceId 追蹤 Filter
- *
  * 功能:
  * - 為每個 HTTP 請求自動生成或傳遞 traceId
  * - 將 traceId 存入 MDC (Mapped Diagnostic Context)
  * - 支援分散式追蹤（從 Header 讀取 X-Trace-Id）
  * - 自動清理 MDC 避免記憶體洩漏
- *
  * 使用方式:
  * - 在日誌中使用 %X{traceId} 輸出 traceId
  * - 在程式碼中使用 MDC.get("traceId") 取得當前 traceId
- *
  * 設計原則:
  * - 最高優先順序執行（@Order(Ordered.HIGHEST_PRECEDENCE)）
  * - finally 區塊確保 MDC 清理
@@ -72,10 +69,7 @@ public class TraceIdFilter implements Filter {
 
             // 4. 記錄請求資訊（可選，用於除錯）
             if (logger.isDebugEnabled()) {
-                logger.debug("Request started - Path: {}, Method: {}, TraceId: {}",
-                        httpRequest.getRequestURI(),
-                        httpRequest.getMethod(),
-                        traceId);
+                logger.debug("Request started - Path: {}, Method: {}, TraceId: {}", httpRequest.getRequestURI(), httpRequest.getMethod(), traceId);
             }
 
             // 5. 繼續 Filter Chain
@@ -84,18 +78,14 @@ public class TraceIdFilter implements Filter {
         } finally {
             // 6. 清理 MDC（重要！避免記憶體洩漏）
             MDC.remove(TRACE_ID_MDC_KEY);
-
             if (logger.isDebugEnabled()) {
-                logger.debug("Request completed - Path: {}, Status: {}",
-                        httpRequest.getRequestURI(),
-                        httpResponse.getStatus());
+                logger.debug("Request completed - Path: {}, Status: {}", httpRequest.getRequestURI(), httpResponse.getStatus());
             }
         }
     }
 
     /**
      * 取得或生成 TraceId
-     *
      * 優先順序:
      * 1. 從 Request Header 讀取（微服務傳遞）
      * 2. 生成新的 UUID
@@ -114,7 +104,6 @@ public class TraceIdFilter implements Filter {
 
     /**
      * 生成 TraceId
-     *
      * 格式: UUID（32 字元，去除連字號）
      * 範例: 550e8400e29b41d4a716446655440000
      */

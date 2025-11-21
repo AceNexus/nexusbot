@@ -128,15 +128,4 @@ public class EmailManagerImpl implements EmailManager {
             return false;
         }
     }
-
-    @Override
-    public boolean hasEnabledEmails(String roomId) {
-        try {
-            List<String> enabledEmails = getEnabledEmailAddresses(roomId);
-            return !enabledEmails.isEmpty();
-        } catch (Exception e) {
-            logger.error("Failed to check enabled emails for room {}: {}", roomId, e.getMessage(), e);
-            return false;
-        }
-    }
 }

@@ -205,7 +205,7 @@ public class AIServiceImpl implements AIService {
             }
 
             // 解析 tokens
-            Integer tokensUsed = 0;
+            int tokensUsed = 0;
             var usage = (Map<?, ?>) response.get("usage");
             if (usage != null) {
                 var totalTokens = usage.get("total_tokens");

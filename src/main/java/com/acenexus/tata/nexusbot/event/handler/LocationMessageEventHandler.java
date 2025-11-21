@@ -31,16 +31,7 @@ public class LocationMessageEventHandler implements LineBotEventHandler {
         Double latitude = event.getPayloadDouble("latitude");
         Double longitude = event.getPayloadDouble("longitude");
         logger.info("Room {} sent location", event.getRoomId());
-
-        messageProcessorService.processLocationMessage(
-                event.getRoomId(),
-                title,
-                address,
-                latitude != null ? latitude : 0.0,
-                longitude != null ? longitude : 0.0,
-                event.getReplyToken()
-        );
-
+        messageProcessorService.processLocationMessage(event.getRoomId(), title, address, latitude != null ? latitude : 0.0, longitude != null ? longitude : 0.0, event.getReplyToken());
         return null;
     }
 

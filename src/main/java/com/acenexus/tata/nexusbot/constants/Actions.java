@@ -64,13 +64,6 @@ public final class Actions {
     // ============= 動態參數工具方法 =============
 
     /**
-     * 構建刪除提醒的 action 字串
-     */
-    public static String deleteReminder(Long id) {
-        return DELETE_REMINDER + "&id=" + id;
-    }
-
-    /**
      * 構建提醒已完成的 action 字串
      */
     public static String reminderCompleted(Long id) {
