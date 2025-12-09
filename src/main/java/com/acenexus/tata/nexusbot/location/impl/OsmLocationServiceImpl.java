@@ -6,6 +6,7 @@ import com.acenexus.tata.nexusbot.location.OverpassResponse;
 import com.acenexus.tata.nexusbot.location.ToiletLocation;
 import com.acenexus.tata.nexusbot.location.mapper.ToiletLocationMapper;
 import com.acenexus.tata.nexusbot.location.query.OverpassQueryBuilder;
+import com.acenexus.tata.nexusbot.util.MdcTaskDecorator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +54,8 @@ public class OsmLocationServiceImpl implements LocationService {
 
     @Override
     public CompletableFuture<List<ToiletLocation>> findNearbyToilets(double latitude, double longitude, int radius) {
-        return CompletableFuture.supplyAsync(() -> {
+        // 使用 MdcTaskDecorator 自動傳遞 traceId 到非同步執行緒
+        return CompletableFuture.supplyAsync(MdcTaskDecorator.wrapSupplier(() -> {
             try {
                 log.info("Searching for toilets near ({}, {}) within {}m using OSM", latitude, longitude, radius);
 
@@ -81,7 +83,7 @@ public class OsmLocationServiceImpl implements LocationService {
                 log.error("Error searching nearby toilets using OSM: {}", e.getMessage(), e);
                 return new ArrayList<>();
             }
-        });
+        }));
     }
 
     /**

@@ -6,6 +6,7 @@ import com.acenexus.tata.nexusbot.facade.LocationFacade;
 import com.acenexus.tata.nexusbot.location.LocationService;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.acenexus.tata.nexusbot.util.MdcTaskDecorator;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TextMessage;
 import lombok.RequiredArgsConstructor;
@@ -48,8 +49,10 @@ public class LocationFacadeImpl implements LocationFacade {
             chatRoomManager.updateWaitingForToiletSearch(roomId, false);
             logger.info("Processing toilet search for room {} with location: lat={}, lon={}", roomId, latitude, longitude);
 
-            // 非同步搜尋廁所
-            CompletableFuture.runAsync(() -> searchToilets(latitude, longitude, replyToken, title, address));
+            // 非同步搜尋廁所（使用 MdcTaskDecorator 自動傳遞 traceId）
+            CompletableFuture.runAsync(
+                    MdcTaskDecorator.wrap(() -> searchToilets(latitude, longitude, replyToken, title, address))
+            );
 
             return null; // 非同步處理,不需要立即回傳訊息
         } else {

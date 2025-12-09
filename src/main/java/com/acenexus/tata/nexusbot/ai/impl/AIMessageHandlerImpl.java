@@ -8,6 +8,7 @@ import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.acenexus.tata.nexusbot.util.MdcTaskDecorator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -31,8 +32,10 @@ public class AIMessageHandlerImpl implements AIMessageHandler {
         ChatMessage userMessage = ChatMessage.createUserMessage(roomId, roomType, userId, messageText);
         chatMessageRepository.save(userMessage);
 
-        // 非同步處理 AI 對話
-        CompletableFuture.runAsync(() -> processAIConversation(roomId, roomType, messageText, replyToken));
+        // 非同步處理 AI 對話（使用 MdcTaskDecorator 自動傳遞 traceId）
+        CompletableFuture.runAsync(
+                MdcTaskDecorator.wrap(() -> processAIConversation(roomId, roomType, messageText, replyToken))
+        );
     }
 
     /**

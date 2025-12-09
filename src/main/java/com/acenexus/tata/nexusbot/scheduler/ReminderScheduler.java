@@ -5,6 +5,7 @@ import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.lock.DistributedLock;
 import com.acenexus.tata.nexusbot.notification.ReminderNotificationService;
 import com.acenexus.tata.nexusbot.repository.ReminderRepository;
+import com.acenexus.tata.nexusbot.util.MdcTaskDecorator;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -109,7 +110,8 @@ public class ReminderScheduler {
     private void sendReminderMessage(Reminder reminder) {
         logger.info("Sending reminder [{}] for room [{}]: {}", reminder.getId(), reminder.getRoomId(), reminder.getContent());
 
-        CompletableFuture.runAsync(() -> {
+        // 使用 MdcTaskDecorator 自動傳遞 traceId 到非同步執行緒
+        CompletableFuture.runAsync(MdcTaskDecorator.wrap(() -> {
             try {
                 // AI 增強提醒內容
                 String enhancedContent = enhanceReminderWithAI(reminder.getContent());
@@ -122,7 +124,7 @@ public class ReminderScheduler {
             } catch (Exception e) {
                 logger.error("Failed to send notification for reminder [{}]: {}", reminder.getId(), e.getMessage());
             }
-        });
+        }));
     }
 
     /**
