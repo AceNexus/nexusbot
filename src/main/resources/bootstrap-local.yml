@@ -26,20 +26,20 @@ eureka:
 
 line:
   bot:
-    channel-token: dvqS3RJtN07Wqg6EXvWgnSdR3X+koAaL1GbDZWCnjHToBqw7IykTO2JNBjKi9UkOKuxI6Z90MdXCx/32j/NrcAbpx1RRIl+s2Yt6f0XuNP8WMuuXkfEcPyDXW4AV5ewQJtCG3jF+XRC08gP7zPDZvQdB04t89/1O/w1cDnyilFU=
-    channel-secret: 74f953573423fb9d4602b581a1af138d
+    channel-token: ${LINE_CHANNEL_TOKEN:default-token}
+    channel-secret: ${LINE_CHANNEL_SECRET:default-secret}
 
 groq:
-  api-key: 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
+  api-key: ${GROQ_API_KEY:default-groq-key}
 
 email:
   host: smtp.gmail.com
   port: 587
-  username: ace.sie.cwo@gmail.com
-  password: ${EMAIL_PASSWORD:drux vukj bbne cnuj}
-  from: ace.sie.cwo@gmail.com
-  from-name: NexusBot 提醒通知
+  username: ${EMAIL_USERNAME:default@gmail.com}
+  password: ${EMAIL_PASSWORD:default-password}
+  from: ${EMAIL_FROM:default@gmail.com}
+  from-name: ${EMAIL_FROM_NAME:NexusBot 提醒通知}
   auth: true
   starttls: true
   debug: false
-  confirmation-base-url: http://localhost:8080
+  confirmation-base-url: ${CONFIRMATION_BASE_URL:http://localhost:8080}
