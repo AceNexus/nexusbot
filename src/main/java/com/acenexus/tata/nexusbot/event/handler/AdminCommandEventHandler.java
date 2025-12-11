@@ -19,7 +19,7 @@ public class AdminCommandEventHandler implements LineBotEventHandler {
 
     private final AdminService adminService;
 
-    private static final Set<String> ADMIN_COMMANDS = Set.of("/stats", "/health", "/info");
+    private static final Set<String> ADMIN_COMMANDS = Set.of("/stats");
 
     @Override
     public boolean canHandle(LineBotEvent event) {

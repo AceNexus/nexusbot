@@ -42,10 +42,9 @@ public class ReminderScheduler {
 
     /**
      * 每分鐘整分執行一次，掃描並發送到期提醒
-     * cron: 每分鐘的第0秒執行（確保在整分時執行）
+     * cron: 每分鐘的第 0 秒執行（確保在整分時執行）
      */
     @Scheduled(cron = "0 * * * * *")
-    @Transactional
     public void processReminders() {
         try {
             List<Reminder> dueReminders = findDueReminders();
@@ -57,7 +56,12 @@ public class ReminderScheduler {
             logger.info("Found {} due reminders", dueReminders.size());
 
             for (Reminder reminder : dueReminders) {
-                processReminder(reminder);
+                try {
+                    processReminderWithTransaction(reminder);  // 每個提醒獨立交易
+                } catch (Exception e) {
+                    logger.error("Failed to process reminder {}: {}", reminder.getId(), e.getMessage(), e);
+                    // 繼續處理下一個提醒，不影響其他提醒
+                }
             }
 
         } catch (Exception e) {
@@ -65,16 +69,20 @@ public class ReminderScheduler {
         }
     }
 
-    /**
-     * 查詢到期的提醒（使用 Instant 進行精確比較）
-     */
     private List<Reminder> findDueReminders() {
-        Instant instant = Instant.now();
-        long currentMillis = instant.toEpochMilli();
-        long oneMinuteAgoMillis = instant.minusSeconds(60).toEpochMilli();
+        Instant now = Instant.now();
+        Instant currentMinuteStart = now.truncatedTo(ChronoUnit.MINUTES);
+        Instant nextMinuteStart = currentMinuteStart.plus(1, ChronoUnit.MINUTES);
 
-        // 查詢時間範圍：[1分鐘前, 現在]，這樣可以容許輕微的排程延遲
-        return reminderRepository.findDueRemindersByInstant(oneMinuteAgoMillis, currentMillis);
+        long startMillis = currentMinuteStart.toEpochMilli();
+        long endMillis = nextMinuteStart.toEpochMilli();
+
+        return reminderRepository.findDueRemindersByInstant(startMillis, endMillis);
+    }
+
+    @Transactional
+    private void processReminderWithTransaction(Reminder reminder) {
+        processReminder(reminder);  // 實際處理邏輯
     }
 
     /**
