@@ -86,6 +86,18 @@ public interface MessageTemplateProvider {
 
     Message timezoneInputError(String userInput);
 
+    Message timezoneSettingsMenu(String currentTimezone, String timezoneDisplay);
+
+    Message timezoneChangePrompt(String currentTimezone);
+
+    Message timezoneConfirmation(String resolvedTimezone, String timezoneDisplay, String originalInput);
+
+    Message timezoneParseError(String userInput);
+
+    Message timezoneUpdateSuccess(String newTimezone, String timezoneDisplay);
+
+    Message timezoneCancelMessage(String currentTimezone, String timezoneDisplay);
+
     Message emailSettingsMenu(java.util.List<com.acenexus.tata.nexusbot.entity.Email> emails);
 
     Message emailInputPrompt();

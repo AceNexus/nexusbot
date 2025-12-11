@@ -55,6 +55,8 @@ public final class Actions {
     public static final String CHANNEL_BOTH = "channel=BOTH";
 
     // ============= 時區設定動作 =============
+    public static final String TIMEZONE_SETTINGS = "action=timezone_settings";
+    public static final String KEEP_TIMEZONE = "action=keep_timezone";
     public static final String CHANGE_TIMEZONE = "action=change_timezone";
     public static final String CONFIRM_TIMEZONE = "action=confirm_timezone";
     public static final String CANCEL_TIMEZONE_CHANGE = "action=cancel_timezone_change";

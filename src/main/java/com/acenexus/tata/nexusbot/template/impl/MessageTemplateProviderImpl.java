@@ -8,6 +8,7 @@ import com.acenexus.tata.nexusbot.template.LocationTemplateBuilder;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.acenexus.tata.nexusbot.template.NavigationTemplateBuilder;
 import com.acenexus.tata.nexusbot.template.ReminderTemplateBuilder;
+import com.acenexus.tata.nexusbot.template.TimezoneTemplateBuilder;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,6 +29,7 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     private final ReminderTemplateBuilder reminderBuilder;
     private final EmailTemplateBuilder emailBuilder;
     private final LocationTemplateBuilder locationBuilder;
+    private final TimezoneTemplateBuilder timezoneBuilder;
 
     // ==================== 導航與通用範本 ====================
 
@@ -204,6 +206,38 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     @Override
     public Message timezoneInputError(String userInput) {
         return reminderBuilder.timezoneInputError(userInput);
+    }
+
+    // ==================== 時區設定範本 ====================
+
+    @Override
+    public Message timezoneSettingsMenu(String currentTimezone, String timezoneDisplay) {
+        return timezoneBuilder.timezoneSettingsMenu(currentTimezone, timezoneDisplay);
+    }
+
+    @Override
+    public Message timezoneChangePrompt(String currentTimezone) {
+        return timezoneBuilder.timezoneChangePrompt(currentTimezone);
+    }
+
+    @Override
+    public Message timezoneConfirmation(String resolvedTimezone, String timezoneDisplay, String originalInput) {
+        return timezoneBuilder.timezoneConfirmationMenu(resolvedTimezone, timezoneDisplay, originalInput);
+    }
+
+    @Override
+    public Message timezoneParseError(String userInput) {
+        return timezoneBuilder.timezoneInputError(userInput);
+    }
+
+    @Override
+    public Message timezoneUpdateSuccess(String newTimezone, String timezoneDisplay) {
+        return timezoneBuilder.timezoneUpdateSuccess(newTimezone, timezoneDisplay);
+    }
+
+    @Override
+    public Message timezoneCancelMessage(String currentTimezone, String timezoneDisplay) {
+        return timezoneBuilder.timezoneCancelMessage(currentTimezone, timezoneDisplay);
     }
 
     // ==================== Email 範本 ====================

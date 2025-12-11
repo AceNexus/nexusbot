@@ -12,6 +12,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.FIND_TOILETS;
 import static com.acenexus.tata.nexusbot.constants.Actions.HELP_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.TIMEZONE_SETTINGS;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
 
@@ -60,6 +61,7 @@ public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
                         createPrimaryButton("AI 智能對話", TOGGLE_AI),
                         createNeutralButton("提醒管理", REMINDER_MENU),
                         createNeutralButton("Email 通知", EMAIL_MENU),
+                        createNeutralButton("時區設定", TIMEZONE_SETTINGS),
                         createNeutralButton("找附近廁所", FIND_TOILETS),
                         createNeutralButton("說明與支援", HELP_MENU)
                 )
