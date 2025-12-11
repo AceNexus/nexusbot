@@ -11,6 +11,7 @@ import java.util.Map;
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_TIMEZONE_CHANGE;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANGE_TIME;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANGE_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_BOTH;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_EMAIL;
@@ -89,9 +90,10 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
                 "請輸入提醒時間。您可以使用標準格式（例如：2025-01-01 13:00）或自然語言（例如：明天下午三點、30分鐘後）。" :
                 "提醒時間已設定：" + reminderTime + "\n時區：" + timezoneDisplay + "\n\n請輸入提醒內容。簡潔描述您需要被提醒的事項。";
 
-        // 內容輸入步驟顯示「修改時區」按鈕
+        // 內容輸入步驟顯示「修改時間」和「修改時區」按鈕
         if (step.equals("content")) {
             return createCard(title, description, Arrays.asList(
+                    createNeutralButton("修改時間", CHANGE_TIME),
                     createNeutralButton("修改時區", CHANGE_TIMEZONE),
                     createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT),
                     createNavigateButton("返回提醒管理", REMINDER_MENU)
@@ -199,11 +201,15 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
 
             String status = log.isConfirmed() ? "已確認" : "待確認";
 
+            // 取得時區顯示名稱
+            String timezoneDisplay = com.acenexus.tata.nexusbot.util.TimezoneValidator.getDisplayName(log.timezone());
+
             contentBuilder.append(String.format(
-                    "%d. %s\n發送時間：%s\n狀態：%s\n\n",
+                    "%d. %s\n發送時間：%s\n時區：%s\n狀態：%s\n\n",
                     i + 1,
                     log.content(),
                     log.sentTime().format(STANDARD_TIME),
+                    timezoneDisplay,
                     status
             ));
         }

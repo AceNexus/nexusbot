@@ -2,6 +2,7 @@ package com.acenexus.tata.nexusbot.event.handler;
 
 import com.acenexus.tata.nexusbot.event.EventType;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
+import com.acenexus.tata.nexusbot.facade.ReminderFacade;
 import com.acenexus.tata.nexusbot.facade.TimezoneFacade;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class TimezonePostbackEventHandler implements LineBotEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(TimezonePostbackEventHandler.class);
 
     private final TimezoneFacade timezoneFacade;
+    private final ReminderFacade reminderFacade;
 
     @Override
     public boolean canHandle(LineBotEvent event) {
@@ -32,13 +34,21 @@ public class TimezonePostbackEventHandler implements LineBotEventHandler {
         }
 
         // 檢查是否為時區設定相關動作
-        return event.hasAction(
-                TIMEZONE_SETTINGS,
-                KEEP_TIMEZONE,
-                CHANGE_TIMEZONE,
-                CONFIRM_TIMEZONE,
-                CANCEL_TIMEZONE_CHANGE
-        );
+        if (!event.hasAction(TIMEZONE_SETTINGS, KEEP_TIMEZONE, CHANGE_TIMEZONE, CONFIRM_TIMEZONE, CANCEL_TIMEZONE_CHANGE)) {
+            return false;
+        }
+
+        // 如果用戶正在提醒建立流程中，這些動作應該由 ReminderPostbackEventHandler 處理
+        if (event.hasAction(CHANGE_TIMEZONE, CONFIRM_TIMEZONE, CANCEL_TIMEZONE_CHANGE)) {
+            String roomId = event.getRoomId();
+            boolean inReminderFlow = reminderFacade.isInReminderFlow(roomId);
+            if (inReminderFlow) {
+                logger.debug("User is in reminder flow, skipping timezone handler for action: {}", event.getPayloadString("action"));
+                return false;
+            }
+        }
+
+        return true;
     }
 
     @Override

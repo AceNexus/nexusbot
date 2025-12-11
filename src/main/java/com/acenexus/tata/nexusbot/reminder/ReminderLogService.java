@@ -33,6 +33,7 @@ public class ReminderLogService {
             Long reminderId,
             String content,
             LocalDateTime sentTime,
+            String timezone,     // 提醒時區
             boolean isConfirmed  // 任一方式確認即為 true
     ) {
     }
@@ -86,6 +87,7 @@ public class ReminderLogService {
                         reminder.getId(),
                         reminder.getContent(),
                         sentTime,
+                        reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei",
                         isConfirmed
                 ));
 

@@ -49,4 +49,7 @@ public interface ReminderFacade {
     Message cancelTimezoneChange(String roomId);
 
     Message confirmTimezoneChange(String roomId);
+
+    // 時間修改相關
+    Message startTimeChange(String roomId);
 }

@@ -241,4 +241,37 @@ public class ReminderStateManager {
             }
         }
     }
+
+    /**
+     * 確認時區變更並返回等待內容步驟
+     */
+    @Transactional
+    public void confirmTimezoneChangeAndReturnToContent(String roomId) {
+        Optional<ReminderState> optionalState = reminderStateRepository.findById(roomId);
+        if (optionalState.isPresent()) {
+            ReminderState state = optionalState.get();
+            if (ReminderState.Step.WAITING_FOR_TIMEZONE_CONFIRMATION.name().equals(state.getStep())) {
+                state.setStep(ReminderState.Step.WAITING_FOR_CONTENT.name());
+                reminderStateRepository.save(state);
+                logger.info("Confirmed timezone change and returned to content input for room: {}", roomId);
+            }
+        }
+    }
+
+    /**
+     * 開始修改時間流程（從等待內容步驟返回等待時間步驟）
+     */
+    @Transactional
+    public void startTimeChange(String roomId) {
+        Optional<ReminderState> optionalState = reminderStateRepository.findById(roomId);
+        if (optionalState.isPresent()) {
+            ReminderState state = optionalState.get();
+            // 從等待內容步驟返回等待時間步驟
+            if (ReminderState.Step.WAITING_FOR_CONTENT.name().equals(state.getStep())) {
+                state.setStep(ReminderState.Step.WAITING_FOR_TIME.name());
+                reminderStateRepository.save(state);
+                logger.info("Started time change flow for room: {}", roomId);
+            }
+        }
+    }
 }

@@ -61,6 +61,9 @@ public final class Actions {
     public static final String CONFIRM_TIMEZONE = "action=confirm_timezone";
     public static final String CANCEL_TIMEZONE_CHANGE = "action=cancel_timezone_change";
 
+    // 提醒時間修改動作
+    public static final String CHANGE_TIME = "action=change_time";
+
     // ============= Email 通知動作 =============
     public static final String EMAIL_MENU = "action=email_menu";
     public static final String ADD_EMAIL = "action=add_email";

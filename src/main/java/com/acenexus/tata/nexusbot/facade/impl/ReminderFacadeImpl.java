@@ -124,6 +124,15 @@ public class ReminderFacadeImpl implements ReminderFacade {
             return switch (currentStep) {
                 case WAITING_FOR_TIME -> handleTimeInput(roomId, messageText);
                 case WAITING_FOR_TIMEZONE_INPUT -> handleTimezoneInput(roomId, messageText);
+                case WAITING_FOR_TIMEZONE_CONFIRMATION -> {
+                    // 理論上用戶不應該在確認步驟輸入文字，應該點擊按鈕
+                    logger.warn("User entered text in WAITING_FOR_TIMEZONE_CONFIRMATION step for room: {}", roomId);
+                    LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
+                    String timezone = reminderStateManager.getTimezone(roomId);
+                    String timezoneDisplay = TimezoneValidator.getDisplayName(timezone);
+                    String originalInput = reminderStateManager.getTimezone(roomId);
+                    yield messageTemplateProvider.timezoneConfirmationMenu(timezone, timezoneDisplay, reminderTime.format(TIME_FORMATTER), originalInput);
+                }
                 case WAITING_FOR_CONTENT -> handleContentInput(roomId, messageText);
                 default -> null;
             };
@@ -137,9 +146,19 @@ public class ReminderFacadeImpl implements ReminderFacade {
     private Message handleTimeInput(String roomId, String input) {
         input = input.trim();
 
-        // 1. 取得聊天室預設時區
-        ChatRoom chatRoom = chatRoomAccessor.getOrCreateChatRoom(roomId, ChatRoom.RoomType.USER);
-        String defaultTimezone = chatRoom.getTimezone();
+        // 1. 取得時區（優先使用 ReminderState 中已設定的時區，否則使用 ChatRoom 預設時區）
+        String stateTimezone = reminderStateManager.getTimezone(roomId);
+        String defaultTimezone;
+        if (stateTimezone != null) {
+            // 如果 ReminderState 中已有時區設定（例如之前修改過時區），使用該時區
+            defaultTimezone = stateTimezone;
+            logger.debug("Using timezone from ReminderState for room {}: {}", roomId, stateTimezone);
+        } else {
+            // 否則使用 ChatRoom 的預設時區
+            ChatRoom chatRoom = chatRoomAccessor.getOrCreateChatRoom(roomId, ChatRoom.RoomType.USER);
+            defaultTimezone = chatRoom.getTimezone();
+            logger.debug("Using timezone from ChatRoom for room {}: {}", roomId, defaultTimezone);
+        }
 
         // 2. 使用 AI 解析時間與時區
         ParsedTimeResult parseResult = AnalyzerUtil.parseTimeWithTimezone(input, defaultTimezone);
@@ -329,8 +348,9 @@ public class ReminderFacadeImpl implements ReminderFacade {
 
     @Override
     public Message confirmTimezoneChange(String roomId) {
-        // 這個方法由 postback handler 調用，已經在 handleTimezoneInput 中處理了確認邏輯
-        // 這裡只需要返回內容輸入畫面
+        // 確認時區變更並將狀態改回等待內容步驟
+        reminderStateManager.confirmTimezoneChangeAndReturnToContent(roomId);
+
         LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
         String timezone = reminderStateManager.getTimezone(roomId);
         String timezoneDisplay = TimezoneValidator.getDisplayName(timezone);
@@ -372,5 +392,12 @@ public class ReminderFacadeImpl implements ReminderFacade {
         logger.info("Parsed timezone for room {}: {} -> {}", roomId, input, resolvedTimezone);
 
         return messageTemplateProvider.timezoneConfirmationMenu(resolvedTimezone, timezoneDisplay, newReminderTimeDisplay, input);
+    }
+
+    @Override
+    public Message startTimeChange(String roomId) {
+        reminderStateManager.startTimeChange(roomId);
+        logger.info("Started time change for room: {}", roomId);
+        return messageTemplateProvider.reminderInputMenu("time", "", "");
     }
 }
