@@ -9,6 +9,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Entity
@@ -42,6 +43,18 @@ public class ReminderState {
     private LocalDateTime reminderTime;
 
     /**
+     * 暫存的時區
+     */
+    @Column(name = "timezone", length = 50)
+    private String timezone;
+
+    /**
+     * 暫存的 Instant (UTC 時間戳)
+     */
+    @Column(name = "reminder_instant")
+    private Instant reminderInstant;
+
+    /**
      * 建立時間
      */
     @Column(name = "created_at")
@@ -67,6 +80,8 @@ public class ReminderState {
         WAITING_FOR_REPEAT_TYPE,
         WAITING_FOR_NOTIFICATION_CHANNEL,
         WAITING_FOR_TIME,
+        WAITING_FOR_TIMEZONE_INPUT,      // 等待使用者輸入時區
+        WAITING_FOR_TIMEZONE_CONFIRMATION, // 等待使用者確認時區
         WAITING_FOR_CONTENT
     }
 }

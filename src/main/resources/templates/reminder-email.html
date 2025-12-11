@@ -52,6 +52,11 @@
     <h2 style="margin: 0 0 16px 0; color: #111827;">提醒通知</h2>
 
     <div class="content" th:text="${reminderContent}">提醒內容</div>
+    <div style="margin-top: 8px; color: #374151; font-size: 14px;">
+        <div><strong>提醒時間：</strong><span th:text="${reminderTime}">2025-01-01 09:00</span></div>
+        <div><strong>時區：</strong><span th:text="${timezoneDisplay}">Asia/Taipei</span></div>
+        <div><strong>重複頻率：</strong><span th:text="${repeatType}">每日重複</span></div>
+    </div>
 
     <a th:href="${confirmationUrl}" class="button">確認已收到</a>
 

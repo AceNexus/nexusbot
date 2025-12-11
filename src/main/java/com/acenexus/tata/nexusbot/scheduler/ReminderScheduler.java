@@ -13,7 +13,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,8 +48,7 @@ public class ReminderScheduler {
     @Transactional
     public void processReminders() {
         try {
-            LocalDateTime now = LocalDateTime.now();
-            List<Reminder> dueReminders = findDueReminders(now);
+            List<Reminder> dueReminders = findDueReminders();
 
             if (dueReminders.isEmpty()) {
                 return;
@@ -63,12 +66,15 @@ public class ReminderScheduler {
     }
 
     /**
-     * 查詢到期的提醒
+     * 查詢到期的提醒（使用 Instant 進行精確比較）
      */
-    private List<Reminder> findDueReminders(LocalDateTime now) {
-        LocalDateTime start = now.withSecond(0).withNano(0);
-        LocalDateTime end = start.plusMinutes(1);
-        return reminderRepository.findDueReminders(start, end);
+    private List<Reminder> findDueReminders() {
+        Instant instant = Instant.now();
+        long currentMillis = instant.toEpochMilli();
+        long oneMinuteAgoMillis = instant.minusSeconds(60).toEpochMilli();
+
+        // 查詢時間範圍：[1分鐘前, 現在]，這樣可以容許輕微的排程延遲
+        return reminderRepository.findDueRemindersByInstant(oneMinuteAgoMillis, currentMillis);
     }
 
     /**
@@ -160,10 +166,10 @@ public class ReminderScheduler {
 
 
     /**
-     * 處理重複邏輯
+     * 處理重複邏輯（支援時區）
      * ONCE: 標記為已完成
-     * DAILY: 更新為明天同一時間
-     * WEEKLY: 更新為下週同一時間
+     * DAILY: 更新為明天同一時間（保持相同本地時間）
+     * WEEKLY: 更新為下週同一時間（保持相同本地時間）
      */
     @Transactional
     public void handleRepeatLogic(Reminder reminder) {
@@ -174,16 +180,14 @@ public class ReminderScheduler {
                 logger.debug("One-time reminder [{}] completed", reminder.getId());
             }
             case "DAILY" -> {
-                LocalDateTime nextTime = reminder.getReminderTime().plusDays(1);
-                reminder.setReminderTime(nextTime);
-                reminderRepository.save(reminder);
-                logger.debug("Daily reminder [{}] updated to: {}", reminder.getId(), nextTime.format(STANDARD_TIME));
+                // 使用時區計算下一次提醒時間
+                updateNextReminderTime(reminder, 1, ChronoUnit.DAYS);
+                logger.debug("Daily reminder [{}] updated to: {}", reminder.getId(), reminder.getLocalTime().format(STANDARD_TIME));
             }
             case "WEEKLY" -> {
-                LocalDateTime nextTime = reminder.getReminderTime().plusWeeks(1);
-                reminder.setReminderTime(nextTime);
-                reminderRepository.save(reminder);
-                logger.debug("Weekly reminder [{}] updated to: {}", reminder.getId(), nextTime.format(STANDARD_TIME));
+                // 使用時區計算下一次提醒時間
+                updateNextReminderTime(reminder, 1, ChronoUnit.WEEKS);
+                logger.debug("Weekly reminder [{}] updated to: {}", reminder.getId(), reminder.getLocalTime().format(STANDARD_TIME));
             }
             default -> {
                 logger.warn("Unknown repeat type '{}' for reminder [{}], marking as completed", reminder.getRepeatType(), reminder.getId());
@@ -191,5 +195,26 @@ public class ReminderScheduler {
                 reminderRepository.save(reminder);
             }
         }
+    }
+
+    /**
+     * 更新下一次提醒時間（保持本地時間，考慮時區）
+     */
+    private void updateNextReminderTime(Reminder reminder, long amount, ChronoUnit unit) {
+        // 1. 取得原始時區與本地時間
+        String timezone = reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei";
+        LocalDateTime currentLocalTime = reminder.getLocalTime();
+
+        // 2. 轉換為 ZonedDateTime 並加上時間間隔
+        ZonedDateTime currentZonedTime = currentLocalTime.atZone(ZoneId.of(timezone));
+        ZonedDateTime nextZonedTime = currentZonedTime.plus(amount, unit);
+
+        // 3. 更新 Instant（唯一的時間儲存欄位）
+        Instant nextInstant = nextZonedTime.toInstant();
+        reminder.setReminderTimeInstant(nextInstant.toEpochMilli());
+
+        reminderRepository.save(reminder);
+
+        logger.debug("Updated reminder [{}]: {} ({}) -> instant: {}", reminder.getId(), nextZonedTime.toLocalDateTime(), timezone, nextInstant);
     }
 }

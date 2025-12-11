@@ -10,9 +10,12 @@ import java.util.Map;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_TIMEZONE_CHANGE;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANGE_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_BOTH;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_LINE;
+import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.LIST_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
@@ -78,28 +81,22 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
     }
 
     /**
-     * 提醒輸入選單（時間或內容）
-     */
-    public Message reminderInputMenu(String step) {
-        String title = step.equals("time") ? "設定提醒時間" : "設定提醒內容";
-        String description = step.equals("time") ?
-                "請輸入提醒時間。您可以使用標準格式（例如：2025-01-01 13:00）或自然語言（例如：明天下午三點、30分鐘後）。" :
-                "請輸入提醒內容。簡潔描述您需要被提醒的事項，例如：服藥、會議、運動等。";
-
-        return createCard(title, description, Arrays.asList(
-                createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT),
-                createNavigateButton("返回提醒管理", REMINDER_MENU)
-        ));
-    }
-
-    /**
      * 提醒輸入選單（帶已設定時間）
      */
-    public Message reminderInputMenu(String step, String reminderTime) {
+    public Message reminderInputMenu(String step, String reminderTime, String timezoneDisplay) {
         String title = step.equals("time") ? "設定提醒時間" : "設定提醒內容";
         String description = step.equals("time") ?
                 "請輸入提醒時間。您可以使用標準格式（例如：2025-01-01 13:00）或自然語言（例如：明天下午三點、30分鐘後）。" :
-                "提醒時間已設定：" + reminderTime + "\n\n請輸入提醒內容。簡潔描述您需要被提醒的事項。";
+                "提醒時間已設定：" + reminderTime + "\n時區：" + timezoneDisplay + "\n\n請輸入提醒內容。簡潔描述您需要被提醒的事項。";
+
+        // 內容輸入步驟顯示「修改時區」按鈕
+        if (step.equals("content")) {
+            return createCard(title, description, Arrays.asList(
+                    createNeutralButton("修改時區", CHANGE_TIMEZONE),
+                    createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT),
+                    createNavigateButton("返回提醒管理", REMINDER_MENU)
+            ));
+        }
 
         return createCard(title, description, Arrays.asList(
                 createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT),
@@ -110,11 +107,8 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
     /**
      * 提醒建立成功訊息
      */
-    public Message reminderCreatedSuccess(String reminderTime, String repeatType, String content) {
-        String description = String.format(
-                "提醒已成功建立：\n\n時間：%s\n頻率：%s\n內容：%s\n\n系統將在指定時間發送提醒通知。",
-                reminderTime, repeatType, content);
-
+    public Message reminderCreatedSuccess(String reminderTime, String repeatType, String content, String timezoneDisplay) {
+        String description = String.format("提醒已成功建立：\n\n時間：%s\n時區：%s\n頻率：%s\n內容：%s\n\n系統將在指定時間發送提醒通知。", reminderTime, timezoneDisplay, repeatType, content);
         return createCard("提醒建立成功", description, Arrays.asList(
                 createSuccessButton("返回提醒管理", REMINDER_MENU),
                 createNavigateButton("返回主選單", MAIN_MENU)
@@ -163,11 +157,16 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
             String userStatus = userResponseStatuses.getOrDefault(reminder.getId(), "無回應");
             String statusDisplay = "COMPLETED".equals(userStatus) ? "已執行" : "無回應";
 
+            // 取得時區顯示名稱
+            String timezone = reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei";
+            String timezoneDisplay = com.acenexus.tata.nexusbot.util.TimezoneValidator.getDisplayName(timezone);
+
             contentBuilder.append(String.format(
-                    "%d. %s\n時間：%s\n頻率：%s\n狀態：%s\n\n",
+                    "%d. %s\n時間：%s\n時區：%s\n頻率：%s\n狀態：%s\n\n",
                     i + 1,
                     reminder.getContent(),
-                    reminder.getReminderTime().format(STANDARD_TIME),
+                    reminder.getLocalTime().format(STANDARD_TIME),
+                    timezoneDisplay,
                     repeatTypeText,
                     statusDisplay
             ));
@@ -218,7 +217,8 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
     /**
      * 建立提醒通知訊息
      */
-    public Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType, Long reminderId) {
+    public Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType,
+                                             Long reminderId, String timezoneDisplay, String reminderTimeDisplay) {
         String repeatDescription = switch (repeatType.toUpperCase()) {
             case "DAILY" -> "每日提醒";
             case "WEEKLY" -> "每週提醒";
@@ -226,15 +226,60 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
             default -> "提醒";
         };
 
-        String currentTime = java.time.LocalDateTime.now().format(STANDARD_TIME);
-
         String description = String.format(
-                "提醒時間\n%s\n\n提醒事項\n%s\n\n貼心小提醒\n%s\n\n類型：%s",
-                currentTime, originalContent, enhancedContent, repeatDescription
+                "提醒時間\n%s\n時區：%s\n\n提醒事項\n%s\n\n貼心小提醒\n%s\n\n類型：%s",
+                reminderTimeDisplay, timezoneDisplay, originalContent, enhancedContent, repeatDescription
         );
 
         return createCard("提醒時間到了", description, Arrays.asList(
                 createSuccessButton("確認已執行", reminderCompleted(reminderId))
+        ));
+    }
+
+    /**
+     * 時區輸入提示選單
+     */
+    public Message timezoneInputMenu(String currentTimezone) {
+        String description = String.format(
+                "目前時區：%s\n\n請輸入新的時區。您可以使用：\n• 中文名稱（例如：台北、東京、紐約）\n• IANA 時區 ID（例如：Asia/Tokyo）\n\n常用時區：\n• 台北 (Asia/Taipei)\n• 東京 (Asia/Tokyo)\n• 紐約 (America/New_York)\n• 洛杉磯 (America/Los_Angeles)",
+                currentTimezone
+        );
+
+        return createCard("修改提醒時區", description, Arrays.asList(
+                createSecondaryButton("取消修改", CANCEL_TIMEZONE_CHANGE),
+                createNavigateButton("返回提醒管理", REMINDER_MENU)
+        ));
+    }
+
+    /**
+     * 時區確認選單
+     */
+    public Message timezoneConfirmationMenu(String resolvedTimezone, String timezoneDisplay,
+                                            String newReminderTime, String originalInput) {
+        String description = String.format(
+                "您輸入：%s\n\n系統辨識時區：%s\n\n更新後的提醒時間：\n%s (%s)\n\n請確認是否使用此時區？",
+                originalInput, timezoneDisplay, newReminderTime, timezoneDisplay
+        );
+
+        return createCard("確認時區變更", description, Arrays.asList(
+                createPrimaryButton("確認使用", CONFIRM_TIMEZONE),
+                createSecondaryButton("重新輸入", CHANGE_TIMEZONE),
+                createSecondaryButton("取消修改", CANCEL_TIMEZONE_CHANGE)
+        ));
+    }
+
+    /**
+     * 時區無法辨識錯誤訊息
+     */
+    public Message timezoneInputError(String userInput) {
+        String description = String.format(
+                "無法辨識您輸入的時區：「%s」\n\n請使用以下格式：\n• 中文名稱：台北、東京、紐約\n• IANA ID：Asia/Taipei、Asia/Tokyo\n\n常用時區參考：\n• 亞洲：台北、東京、首爾、上海、香港、新加坡\n• 美洲：紐約、洛杉磯\n• 歐洲：倫敦",
+                userInput
+        );
+
+        return createCard("時區格式錯誤", description, Arrays.asList(
+                createPrimaryButton("重新輸入", CHANGE_TIMEZONE),
+                createSecondaryButton("取消修改", CANCEL_TIMEZONE_CHANGE)
         ));
     }
 }

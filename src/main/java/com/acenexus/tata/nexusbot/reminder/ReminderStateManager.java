@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -140,5 +141,104 @@ public class ReminderStateManager {
     @Transactional
     public void cleanupExpiredStates() {
         reminderStateRepository.deleteExpiredStates(LocalDateTime.now());
+    }
+
+    /**
+     * 設置時區
+     */
+    @Transactional
+    public void setTimezone(String roomId, String timezone) {
+        Optional<ReminderState> optionalState = reminderStateRepository.findById(roomId);
+        if (optionalState.isPresent()) {
+            ReminderState state = optionalState.get();
+            state.setTimezone(timezone);
+            reminderStateRepository.save(state);
+            logger.debug("Set timezone for room {}: {}", roomId, timezone);
+        }
+    }
+
+    /**
+     * 獲取時區
+     */
+    public String getTimezone(String roomId) {
+        return reminderStateRepository.findById(roomId)
+                .map(ReminderState::getTimezone)
+                .orElse(null);
+    }
+
+    /**
+     * 設置 Instant
+     */
+    @Transactional
+    public void setInstant(String roomId, Instant instant) {
+        Optional<ReminderState> optionalState = reminderStateRepository.findById(roomId);
+        if (optionalState.isPresent()) {
+            ReminderState state = optionalState.get();
+            state.setReminderInstant(instant);
+            reminderStateRepository.save(state);
+            logger.debug("Set instant for room {}: {}", roomId, instant);
+        }
+    }
+
+    /**
+     * 獲取 Instant
+     */
+    public Instant getInstant(String roomId) {
+        return reminderStateRepository.findById(roomId)
+                .map(ReminderState::getReminderInstant)
+                .orElse(null);
+    }
+
+    /**
+     * 進入時區修改流程（等待使用者輸入時區）
+     */
+    @Transactional
+    public void startTimezoneChange(String roomId) {
+        Optional<ReminderState> optionalState = reminderStateRepository.findById(roomId);
+        if (optionalState.isPresent()) {
+            ReminderState state = optionalState.get();
+            // 從等待內容步驟進入時區輸入步驟
+            if (ReminderState.Step.WAITING_FOR_CONTENT.name().equals(state.getStep())) {
+                state.setStep(ReminderState.Step.WAITING_FOR_TIMEZONE_INPUT.name());
+                reminderStateRepository.save(state);
+                logger.info("Started timezone change flow for room: {}", roomId);
+            }
+        }
+    }
+
+    /**
+     * 進入時區確認流程
+     */
+    @Transactional
+    public void moveToTimezoneConfirmation(String roomId) {
+        Optional<ReminderState> optionalState = reminderStateRepository.findById(roomId);
+        if (optionalState.isPresent()) {
+            ReminderState state = optionalState.get();
+            if (ReminderState.Step.WAITING_FOR_TIMEZONE_INPUT.name().equals(state.getStep())) {
+                state.setStep(ReminderState.Step.WAITING_FOR_TIMEZONE_CONFIRMATION.name());
+                reminderStateRepository.save(state);
+                logger.debug("Moved to timezone confirmation for room: {}", roomId);
+            }
+        }
+    }
+
+    /**
+     * 取消時區修改，返回等待內容步驟
+     */
+    @Transactional
+    public void cancelTimezoneChange(String roomId) {
+        Optional<ReminderState> optionalState = reminderStateRepository.findById(roomId);
+        if (optionalState.isPresent()) {
+            ReminderState state = optionalState.get();
+            String currentStep = state.getStep();
+
+            // 從時區輸入或確認步驟返回等待內容步驟
+            if (ReminderState.Step.WAITING_FOR_TIMEZONE_INPUT.name().equals(currentStep) ||
+                    ReminderState.Step.WAITING_FOR_TIMEZONE_CONFIRMATION.name().equals(currentStep)) {
+                state.setStep(ReminderState.Step.WAITING_FOR_CONTENT.name());
+                reminderStateRepository.save(state);
+                logger.info("Cancelled timezone change for room: {}", roomId);
+            }
+        }
     }
 }

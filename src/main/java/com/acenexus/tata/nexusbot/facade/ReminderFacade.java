@@ -26,14 +26,14 @@ public interface ReminderFacade {
 
     boolean isInReminderFlow(String roomId);
 
-    // 新增：處理重複類型選擇
+    // 處理重複類型選擇
     Message setRepeatTypeOnce(String roomId);
 
     Message setRepeatTypeDaily(String roomId);
 
     Message setRepeatTypeWeekly(String roomId);
 
-    // 新增：處理通知管道選擇
+    // 處理通知管道選擇
     Message setNotificationChannelLine(String roomId);
 
     Message setNotificationChannelEmail(String roomId);
@@ -42,4 +42,11 @@ public interface ReminderFacade {
 
     // 新增：取消建立提醒
     Message cancelCreation(String roomId);
+
+    // 時區修改相關
+    Message startTimezoneChange(String roomId);
+
+    Message cancelTimezoneChange(String roomId);
+
+    Message confirmTimezoneChange(String roomId);
 }

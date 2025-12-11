@@ -11,9 +11,12 @@ import org.springframework.stereotype.Component;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
+import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_TIMEZONE_CHANGE;
+import static com.acenexus.tata.nexusbot.constants.Actions.CHANGE_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_BOTH;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_LINE;
+import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.LIST_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_COMPLETED;
@@ -40,7 +43,10 @@ public class ReminderPostbackEventHandler implements LineBotEventHandler {
         }
 
         // 靜態動作
-        if (event.hasAction(REMINDER_MENU, ADD_REMINDER, LIST_REMINDERS, TODAY_REMINDERS, REPEAT_ONCE, REPEAT_DAILY, REPEAT_WEEKLY, CHANNEL_LINE, CHANNEL_EMAIL, CHANNEL_BOTH, CANCEL_REMINDER_INPUT)) {
+        if (event.hasAction(REMINDER_MENU, ADD_REMINDER, LIST_REMINDERS, TODAY_REMINDERS,
+                REPEAT_ONCE, REPEAT_DAILY, REPEAT_WEEKLY,
+                CHANNEL_LINE, CHANNEL_EMAIL, CHANNEL_BOTH,
+                CANCEL_REMINDER_INPUT, CHANGE_TIMEZONE, CONFIRM_TIMEZONE, CANCEL_TIMEZONE_CHANGE)) {
             return true;
         }
 
@@ -76,6 +82,9 @@ public class ReminderPostbackEventHandler implements LineBotEventHandler {
             case CHANNEL_EMAIL -> reminderFacade.setNotificationChannelEmail(roomId);
             case CHANNEL_BOTH -> reminderFacade.setNotificationChannelBoth(roomId);
             case CANCEL_REMINDER_INPUT -> reminderFacade.cancelCreation(roomId);
+            case CHANGE_TIMEZONE -> reminderFacade.startTimezoneChange(roomId);
+            case CONFIRM_TIMEZONE -> reminderFacade.confirmTimezoneChange(roomId);
+            case CANCEL_TIMEZONE_CHANGE -> reminderFacade.cancelTimezoneChange(roomId);
             default -> null;
         };
     }

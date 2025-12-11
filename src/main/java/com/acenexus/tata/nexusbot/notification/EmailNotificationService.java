@@ -4,6 +4,7 @@ import com.acenexus.tata.nexusbot.config.properties.EmailProperties;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
+import com.acenexus.tata.nexusbot.util.TimezoneValidator;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -54,14 +55,18 @@ public class EmailNotificationService {
 
             helper.setFrom(emailProperties.getFrom(), emailProperties.getFromName());
             helper.setTo(recipientEmail);
-            helper.setSubject("📅 NexusBot 提醒通知");
+            // 主旨包含提醒內容，讓使用者一眼辨識
+            helper.setSubject("📅 提醒：" + reminder.getContent());
 
             // 使用 Thymeleaf 模板生成 HTML 內容
             Context context = new Context();
+            String reminderTimeDisplay = reminder.getLocalTime() != null ? reminder.getLocalTime().format(TIME_FORMATTER) : "-";
+
             context.setVariable("reminderContent", reminder.getContent());
-            context.setVariable("reminderTime", reminder.getReminderTime().format(TIME_FORMATTER));
+            context.setVariable("reminderTime", reminderTimeDisplay);
             context.setVariable("confirmationUrl", confirmationUrl);
             context.setVariable("repeatType", getRepeatTypeText(reminder.getRepeatType()));
+            context.setVariable("timezoneDisplay", TimezoneValidator.getDisplayName(reminder.getTimezone()));
 
             String htmlContent = templateEngine.process("reminder-email", context);
             helper.setText(htmlContent, true);

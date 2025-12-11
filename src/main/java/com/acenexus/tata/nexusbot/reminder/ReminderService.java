@@ -2,21 +2,17 @@ package com.acenexus.tata.nexusbot.reminder;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ReminderService {
 
     /**
-     * 新增提醒
+     * 新增提醒（支援時區與 Instant）
      */
     Reminder createReminder(String roomId, String content, LocalDateTime reminderTime,
-                            String repeatType, String createdBy);
-
-    /**
-     * 新增提醒（指定通知管道）
-     */
-    Reminder createReminder(String roomId, String content, LocalDateTime reminderTime,
+                            String timezone, Instant reminderInstant,
                             String repeatType, String createdBy, String notificationChannel);
 
     /**

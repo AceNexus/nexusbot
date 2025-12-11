@@ -4,6 +4,7 @@ import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.acenexus.tata.nexusbot.util.TimezoneValidator;
 import com.linecorp.bot.client.LineMessagingClient;
 import com.linecorp.bot.model.PushMessage;
 import com.linecorp.bot.model.message.Message;
@@ -37,7 +38,14 @@ public class LineNotificationService {
      */
     public boolean pushReminder(Reminder reminder, String enhancedContent) {
         try {
-            Message reminderMessage = messageTemplateProvider.buildReminderNotification(enhancedContent, reminder.getContent(), reminder.getRepeatType(), reminder.getId());
+            // 確保訊息中一定包含原始提醒內容
+            String safeOriginalContent = reminder.getContent() != null && !reminder.getContent().isBlank() ? reminder.getContent() : "（未提供提醒內容）";
+            String safeEnhancedContent = enhancedContent != null && !enhancedContent.isBlank() ? enhancedContent : safeOriginalContent;
+
+            String timezoneDisplay = TimezoneValidator.getDisplayName(reminder.getTimezone());
+            String reminderTimeDisplay = reminder.getLocalTime() != null ? reminder.getLocalTime().format(com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME) : "-";
+
+            Message reminderMessage = messageTemplateProvider.buildReminderNotification(safeEnhancedContent, safeOriginalContent, reminder.getRepeatType(), reminder.getId(), timezoneDisplay, reminderTimeDisplay);
 
             PushMessage pushMessage = new PushMessage(reminder.getRoomId(), reminderMessage);
             lineMessagingClient.pushMessage(pushMessage);

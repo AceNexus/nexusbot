@@ -173,4 +173,37 @@ public class ChatRoomMetadataManager {
             return false;
         }
     }
+
+    /**
+     * 更新聊天室時區
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @param timezone IANA 時區 ID
+     * @return 是否成功
+     */
+    @Transactional
+    public boolean setTimezone(String roomId, ChatRoom.RoomType roomType, String timezone) {
+        if (roomId == null || roomId.trim().isEmpty()) {
+            logger.warn("Room ID is null or empty, cannot update timezone");
+            return false;
+        }
+
+        String resolved = com.acenexus.tata.nexusbot.util.TimezoneValidator.resolveTimezone(timezone);
+        if (resolved == null) {
+            logger.warn("Invalid timezone input for room {}: {}", roomId, timezone);
+            return false;
+        }
+
+        try {
+            ChatRoom chatRoom = chatRoomAccessor.getOrCreateChatRoom(roomId, roomType);
+            chatRoom.setTimezone(resolved);
+            chatRoomRepository.save(chatRoom);
+            logger.info("Timezone updated for room {}: {}", roomId, resolved);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to update timezone for room {}: {}", roomId, e.getMessage(), e);
+            return false;
+        }
+    }
 }

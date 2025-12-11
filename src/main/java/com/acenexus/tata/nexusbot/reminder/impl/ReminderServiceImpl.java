@@ -6,6 +6,7 @@ import com.acenexus.tata.nexusbot.repository.ReminderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -17,17 +18,13 @@ public class ReminderServiceImpl implements ReminderService {
 
     @Override
     public Reminder createReminder(String roomId, String content, LocalDateTime reminderTime,
-                                   String repeatType, String createdBy) {
-        return createReminder(roomId, content, reminderTime, repeatType, createdBy, "LINE");
-    }
-
-    @Override
-    public Reminder createReminder(String roomId, String content, LocalDateTime reminderTime,
+                                   String timezone, Instant reminderInstant,
                                    String repeatType, String createdBy, String notificationChannel) {
         Reminder reminder = Reminder.builder()
                 .roomId(roomId)
                 .content(content)
-                .reminderTime(reminderTime)
+                .timezone(timezone)
+                .reminderTimeInstant(reminderInstant != null ? reminderInstant.toEpochMilli() : null)
                 .repeatType(repeatType != null ? repeatType : "ONCE")
                 .notificationChannel(notificationChannel != null ? notificationChannel : "LINE")
                 .status("ACTIVE")

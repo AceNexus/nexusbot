@@ -134,4 +134,14 @@ public interface ChatRoomManager {
      * @return 是否正在等待位置進行廁所搜尋
      */
     boolean isWaitingForToiletSearch(String roomId);
+
+    /**
+     * 更新聊天室時區
+     *
+     * @param roomId   聊天室 ID
+     * @param roomType 聊天室類型
+     * @param timezone IANA 時區 ID
+     * @return 是否更新成功
+     */
+    boolean setTimezone(String roomId, ChatRoom.RoomType roomType, String timezone);
 }

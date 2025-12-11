@@ -160,18 +160,13 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     }
 
     @Override
-    public Message reminderInputMenu(String step) {
-        return reminderBuilder.reminderInputMenu(step);
+    public Message reminderInputMenu(String step, String reminderTime, String timezoneDisplay) {
+        return reminderBuilder.reminderInputMenu(step, reminderTime, timezoneDisplay);
     }
 
     @Override
-    public Message reminderInputMenu(String step, String reminderTime) {
-        return reminderBuilder.reminderInputMenu(step, reminderTime);
-    }
-
-    @Override
-    public Message reminderCreatedSuccess(String reminderTime, String repeatType, String content) {
-        return reminderBuilder.reminderCreatedSuccess(reminderTime, repeatType, content);
+    public Message reminderCreatedSuccess(String reminderTime, String repeatType, String content, String timezoneDisplay) {
+        return reminderBuilder.reminderCreatedSuccess(reminderTime, repeatType, content, timezoneDisplay);
     }
 
     @Override
@@ -190,8 +185,25 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     }
 
     @Override
-    public Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType, Long reminderId) {
-        return reminderBuilder.buildReminderNotification(enhancedContent, originalContent, repeatType, reminderId);
+    public Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType,
+                                             Long reminderId, String timezoneDisplay, String reminderTimeDisplay) {
+        return reminderBuilder.buildReminderNotification(enhancedContent, originalContent, repeatType, reminderId, timezoneDisplay, reminderTimeDisplay);
+    }
+
+    @Override
+    public Message timezoneInputMenu(String currentTimezone) {
+        return reminderBuilder.timezoneInputMenu(currentTimezone);
+    }
+
+    @Override
+    public Message timezoneConfirmationMenu(String resolvedTimezone, String timezoneDisplay,
+                                            String newReminderTime, String originalInput) {
+        return reminderBuilder.timezoneConfirmationMenu(resolvedTimezone, timezoneDisplay, newReminderTime, originalInput);
+    }
+
+    @Override
+    public Message timezoneInputError(String userInput) {
+        return reminderBuilder.timezoneInputError(userInput);
     }
 
     // ==================== Email 範本 ====================

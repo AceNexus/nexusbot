@@ -91,6 +91,15 @@ public class ChatRoom {
     private Boolean waitingForLocation = false;
 
     /**
+     * 使用者當前所在時區
+     * 預設：Asia/Taipei（台灣時區）
+     * 用於解析新提醒的時間，可隨時修改
+     */
+    @Column(name = "timezone", length = 50)
+    @Builder.Default
+    private String timezone = "Asia/Taipei";
+
+    /**
      * 建立時間
      */
     @Column(name = "created_at", nullable = false)

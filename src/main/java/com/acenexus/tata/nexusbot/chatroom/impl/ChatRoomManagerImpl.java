@@ -93,7 +93,10 @@ public class ChatRoomManagerImpl implements ChatRoomManager {
         return chatRoomMetadataManager.updateWaitingForToiletSearch(roomId, waitingForToiletSearch);
     }
 
-    // ==================== Utility ====================
+    @Override
+    public boolean setTimezone(String roomId, ChatRoom.RoomType roomType, String timezone) {
+        return chatRoomMetadataManager.setTimezone(roomId, roomType, timezone);
+    }
 
     @Override
     public ChatRoom.RoomType determineRoomType(String sourceType) {

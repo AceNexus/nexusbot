@@ -66,11 +66,9 @@ public interface MessageTemplateProvider {
 
     Message reminderNotificationChannelMenu();
 
-    Message reminderInputMenu(String step);
+    Message reminderInputMenu(String step, String reminderTime, String timezoneDisplay);
 
-    Message reminderInputMenu(String step, String reminderTime);
-
-    Message reminderCreatedSuccess(String reminderTime, String repeatType, String content);
+    Message reminderCreatedSuccess(String reminderTime, String repeatType, String content, String timezoneDisplay);
 
     Message reminderInputError(String userInput, String aiResult);
 
@@ -78,7 +76,15 @@ public interface MessageTemplateProvider {
 
     Message todayReminderLogs(java.util.List<com.acenexus.tata.nexusbot.reminder.ReminderLogService.TodayReminderLog> logs);
 
-    Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType, Long reminderId);
+    Message buildReminderNotification(String enhancedContent, String originalContent, String repeatType,
+                                      Long reminderId, String timezoneDisplay, String reminderTimeDisplay);
+
+    Message timezoneInputMenu(String currentTimezone);
+
+    Message timezoneConfirmationMenu(String resolvedTimezone, String timezoneDisplay,
+                                     String newReminderTime, String originalInput);
+
+    Message timezoneInputError(String userInput);
 
     Message emailSettingsMenu(java.util.List<com.acenexus.tata.nexusbot.entity.Email> emails);
 

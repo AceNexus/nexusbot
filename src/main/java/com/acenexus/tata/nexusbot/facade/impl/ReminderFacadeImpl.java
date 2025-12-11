@@ -1,5 +1,7 @@
 package com.acenexus.tata.nexusbot.facade.impl;
 
+import com.acenexus.tata.nexusbot.chatroom.ChatRoomAccessor;
+import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.entity.ReminderState;
@@ -9,13 +11,18 @@ import com.acenexus.tata.nexusbot.reminder.ReminderService;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.acenexus.tata.nexusbot.util.AnalyzerUtil;
+import com.acenexus.tata.nexusbot.util.ParsedTimeResult;
+import com.acenexus.tata.nexusbot.util.TimezoneValidator;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +45,7 @@ public class ReminderFacadeImpl implements ReminderFacade {
     private final ReminderStateManager reminderStateManager;
     private final ReminderLogService reminderLogService;
     private final MessageTemplateProvider messageTemplateProvider;
+    private final ChatRoomAccessor chatRoomAccessor;
 
     @Override
     public Message showMenu() {
@@ -115,6 +123,7 @@ public class ReminderFacadeImpl implements ReminderFacade {
         try {
             return switch (currentStep) {
                 case WAITING_FOR_TIME -> handleTimeInput(roomId, messageText);
+                case WAITING_FOR_TIMEZONE_INPUT -> handleTimezoneInput(roomId, messageText);
                 case WAITING_FOR_CONTENT -> handleContentInput(roomId, messageText);
                 default -> null;
             };
@@ -127,45 +136,62 @@ public class ReminderFacadeImpl implements ReminderFacade {
 
     private Message handleTimeInput(String roomId, String input) {
         input = input.trim();
-        LocalDateTime reminderTime;
 
-        // 先嘗試標準格式，失敗則使用 AI 解析
-        if (input.matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}")) {
-            try {
-                reminderTime = LocalDateTime.parse(input, TIME_FORMATTER)
-                        .withSecond(0).withNano(0);
-            } catch (Exception e) {
-                reminderTime = AnalyzerUtil.parseTime(input);
-            }
-        } else {
-            reminderTime = AnalyzerUtil.parseTime(input);
-        }
+        // 1. 取得聊天室預設時區
+        ChatRoom chatRoom = chatRoomAccessor.getOrCreateChatRoom(roomId, ChatRoom.RoomType.USER);
+        String defaultTimezone = chatRoom.getTimezone();
 
-        if (reminderTime == null) {
+        // 2. 使用 AI 解析時間與時區
+        ParsedTimeResult parseResult = AnalyzerUtil.parseTimeWithTimezone(input, defaultTimezone);
+
+        if (parseResult == null) {
             return messageTemplateProvider.reminderInputError(input, "無法解析時間格式");
         }
 
-        if (reminderTime.isBefore(LocalDateTime.now())) {
-            return messageTemplateProvider.reminderInputError(
-                    input,
-                    "時間必須是未來\n" + reminderTime.format(TIME_FORMATTER)
-            );
+        // 3. 決定最終使用的時區
+        String finalTimezone = parseResult.hasTimezone()
+                ? parseResult.getTimezone()      // 使用者明確指定的時區
+                : defaultTimezone;                // 使用 ChatRoom 預設時區
+
+        // 4. 轉換為 ZonedDateTime 和 Instant
+        LocalDateTime localTime = parseResult.getDateTime();
+        ZonedDateTime zonedTime = localTime.atZone(ZoneId.of(finalTimezone));
+        Instant instant = zonedTime.toInstant();
+
+        // 5. 驗證時間必須是未來
+        if (instant.isBefore(Instant.now())) {
+            String timezoneDisplay = TimezoneValidator.getDisplayName(finalTimezone);
+            return messageTemplateProvider.reminderInputError(input, String.format("時間必須是未來\n%s (%s)", localTime.format(TIME_FORMATTER), timezoneDisplay));
         }
 
-        // 儲存時間並進入下一步
-        reminderStateManager.setTime(roomId, reminderTime);
-        return messageTemplateProvider.reminderInputMenu("content", reminderTime.format(TIME_FORMATTER));
+        // 6. 儲存時間、時區、Instant 到狀態
+        reminderStateManager.setTime(roomId, localTime);
+        reminderStateManager.setTimezone(roomId, finalTimezone);
+        reminderStateManager.setInstant(roomId, instant);
+
+        // 7. 顯示確認畫面（含時區）
+        String timezoneDisplay = TimezoneValidator.getDisplayName(finalTimezone);
+        logger.info("Parsed time for room {}: {} at timezone {} (instant: {})", roomId, localTime, finalTimezone, instant);
+
+        return messageTemplateProvider.reminderInputMenu(
+                "content",
+                localTime.format(TIME_FORMATTER),
+                timezoneDisplay
+        );
     }
 
     private Message handleContentInput(String roomId, String content) {
         content = content.trim();
 
         LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
+        String timezone = reminderStateManager.getTimezone(roomId);
+        Instant instant = reminderStateManager.getInstant(roomId);
         String repeatType = reminderStateManager.getRepeatType(roomId);
         String notificationChannel = reminderStateManager.getNotificationChannel(roomId);
 
-        // 創建提醒
-        reminderService.createReminder(roomId, content, reminderTime, repeatType, roomId, notificationChannel);
+        // 創建提醒（含時區與 Instant）
+        Reminder reminder = reminderService.createReminder(roomId, content, reminderTime, timezone, instant, repeatType, roomId, notificationChannel);
+        logger.info("Reminder created: {}", reminder.toString());
 
         // 清除狀態
         reminderStateManager.clearState(roomId);
@@ -176,12 +202,10 @@ public class ReminderFacadeImpl implements ReminderFacade {
             default -> "僅一次";
         };
 
-        logger.info("Reminder created for room {}: {} at {}", roomId, content, reminderTime);
-        return messageTemplateProvider.reminderCreatedSuccess(
-                reminderTime.format(TIME_FORMATTER),
-                repeatTypeText,
-                content
-        );
+        String timezoneDisplay = TimezoneValidator.getDisplayName(timezone);
+        logger.info("Reminder created for room {}: {} at {} ({})", roomId, content, reminderTime, timezone);
+
+        return messageTemplateProvider.reminderCreatedSuccess(reminderTime.format(TIME_FORMATTER), repeatTypeText, content, timezoneDisplay);
     }
 
     private Map<Long, String> getConfirmationStatuses(List<Reminder> reminders) {
@@ -253,21 +277,21 @@ public class ReminderFacadeImpl implements ReminderFacade {
     public Message setNotificationChannelLine(String roomId) {
         reminderStateManager.setNotificationChannel(roomId, "LINE");
         logger.debug("Set notification channel to LINE for room: {}", roomId);
-        return messageTemplateProvider.reminderInputMenu("time");
+        return messageTemplateProvider.reminderInputMenu("time", "", "");
     }
 
     @Override
     public Message setNotificationChannelEmail(String roomId) {
         reminderStateManager.setNotificationChannel(roomId, "EMAIL");
         logger.debug("Set notification channel to EMAIL for room: {}", roomId);
-        return messageTemplateProvider.reminderInputMenu("time");
+        return messageTemplateProvider.reminderInputMenu("time", "", "");
     }
 
     @Override
     public Message setNotificationChannelBoth(String roomId) {
         reminderStateManager.setNotificationChannel(roomId, "BOTH");
         logger.debug("Set notification channel to BOTH for room: {}", roomId);
-        return messageTemplateProvider.reminderInputMenu("time");
+        return messageTemplateProvider.reminderInputMenu("time", "", "");
     }
 
     // ==================== 取消操作 ====================
@@ -277,5 +301,76 @@ public class ReminderFacadeImpl implements ReminderFacade {
         reminderStateManager.clearState(roomId);
         logger.info("Cancelled reminder creation for room: {}", roomId);
         return messageTemplateProvider.success("已取消新增提醒");
+    }
+
+    // ==================== 時區修改 ====================
+
+    @Override
+    public Message startTimezoneChange(String roomId) {
+        reminderStateManager.startTimezoneChange(roomId);
+        String currentTimezone = reminderStateManager.getTimezone(roomId);
+        String timezoneDisplay = TimezoneValidator.getDisplayName(currentTimezone);
+        logger.info("Started timezone change for room: {}", roomId);
+        return messageTemplateProvider.timezoneInputMenu(timezoneDisplay);
+    }
+
+    @Override
+    public Message cancelTimezoneChange(String roomId) {
+        reminderStateManager.cancelTimezoneChange(roomId);
+
+        // 取得當前時間和時區資訊顯示確認畫面
+        LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
+        String timezone = reminderStateManager.getTimezone(roomId);
+        String timezoneDisplay = TimezoneValidator.getDisplayName(timezone);
+
+        logger.info("Cancelled timezone change for room: {}", roomId);
+        return messageTemplateProvider.reminderInputMenu("content", reminderTime.format(TIME_FORMATTER), timezoneDisplay);
+    }
+
+    @Override
+    public Message confirmTimezoneChange(String roomId) {
+        // 這個方法由 postback handler 調用，已經在 handleTimezoneInput 中處理了確認邏輯
+        // 這裡只需要返回內容輸入畫面
+        LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
+        String timezone = reminderStateManager.getTimezone(roomId);
+        String timezoneDisplay = TimezoneValidator.getDisplayName(timezone);
+
+        logger.info("Confirmed timezone change for room: {}", roomId);
+        return messageTemplateProvider.reminderInputMenu("content", reminderTime.format(TIME_FORMATTER), timezoneDisplay);
+    }
+
+    /**
+     * 處理使用者輸入的時區
+     */
+    private Message handleTimezoneInput(String roomId, String input) {
+        input = input.trim();
+
+        // 1. 嘗試解析時區
+        String resolvedTimezone = TimezoneValidator.resolveTimezone(input);
+
+        if (resolvedTimezone == null) {
+            logger.warn("Unable to resolve timezone input: {}", input);
+            return messageTemplateProvider.timezoneInputError(input);
+        }
+
+        // 2. 取得原始時間並轉換到新時區
+        LocalDateTime originalTime = reminderStateManager.getTime(roomId);
+
+        // 使用新時區重新計算 Instant（保持相同的本地時間）
+        ZonedDateTime newZonedTime = originalTime.atZone(ZoneId.of(resolvedTimezone));
+        Instant newInstant = newZonedTime.toInstant();
+
+        // 3. 進入確認步驟並暫存新時區
+        reminderStateManager.moveToTimezoneConfirmation(roomId);
+        reminderStateManager.setTimezone(roomId, resolvedTimezone);
+        reminderStateManager.setInstant(roomId, newInstant);
+
+        // 4. 顯示確認畫面
+        String timezoneDisplay = TimezoneValidator.getDisplayName(resolvedTimezone);
+        String newReminderTimeDisplay = originalTime.format(TIME_FORMATTER);
+
+        logger.info("Parsed timezone for room {}: {} -> {}", roomId, input, resolvedTimezone);
+
+        return messageTemplateProvider.timezoneConfirmationMenu(resolvedTimezone, timezoneDisplay, newReminderTimeDisplay, input);
     }
 }
