@@ -192,13 +192,11 @@ public void handleLineEvent(Event event) {
 // 責任鏈方案：每個 Handler 職責單一
 public interface LineBotEventHandler {
     boolean canHandle(LineBotEvent event); // 判斷是否處理
-
     Message handle(LineBotEvent event); // 執行處理邏輯
-
     int getPriority(); // 優先級
 }
 
-// 範例 1：提醒互動 Handler (優先級 5 - 高優先)
+// 範例 1：提醒互動 Handler
 @Component
 public class ReminderInteractionEventHandler implements LineBotEventHandler {
     @Override
