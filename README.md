@@ -489,7 +489,7 @@ Bot: [顯示附近 5 個公共廁所，含距離與地圖連結]
 - **索引策略**：覆蓋常用查詢路徑，避免過度索引
 - **跨資料庫相容**：支援 H2 (本地) 與 MySQL (生產)
 - **Flyway 版本管理**：所有變更透過遷移檔案追蹤
-- **軟刪除**：`chat_messages` 使用 `is_deleted` 標記
+- **軟刪除**：`chat_messages` 使用 `deleted_at` 標記
 
 ---
 
@@ -523,18 +523,23 @@ Bot: [顯示附近 5 個公共廁所，含距離與地圖連結]
 
 #### 2. chat_messages - 對話歷史表
 
-| 欄位             | 類型           | 說明              |
-|----------------|--------------|-----------------|
-| `id`           | BIGINT       | 主鍵              |
-| `room_id`      | VARCHAR(100) | 聊天室 ID          |
-| `sender`       | VARCHAR(20)  | 發送者 (USER / AI) |
-| `message_text` | TEXT         | 訊息內容            |
-| `is_deleted`   | BOOLEAN      | 軟刪除標記           |
-| `created_at`   | TIMESTAMP    | 建立時間            |
+| 欄位                   | 類型           | 說明                   |
+|----------------------|--------------|----------------------|
+| `id`                 | BIGINT       | 主鍵                   |
+| `room_id`            | VARCHAR(100) | 聊天室 ID               |
+| `room_type`          | VARCHAR(10)  | 聊天室類型 (冗余)           |
+| `user_id`            | VARCHAR(100) | 發送者 ID (AI 訊息為 null) |
+| `message_type`       | VARCHAR(20)  | 訊息類型 (USER / AI)     |
+| `content`            | TEXT         | 訊息內容                 |
+| `tokens_used`        | INTEGER      | AI 使用的 tokens 數量     |
+| `processing_time_ms` | INTEGER      | AI 處理時間 (毫秒)         |
+| `ai_model`           | VARCHAR(50)  | 使用的 AI 模型            |
+| `deleted_at`         | TIMESTAMP    | 軟刪除標記 (NULL 表示未刪除)   |
+| `created_at`         | TIMESTAMP    | 建立時間                 |
 
 **索引**：
 
-- `idx_room_not_deleted` (room_id, is_deleted)
+- `idx_chat_messages_room_not_deleted` (room_id, deleted_at)
 
 **設計**：軟刪除設計，保留完整對話歷史供分析
 
@@ -597,7 +602,7 @@ Bot: [顯示附近 5 個公共廁所，含距離與地圖連結]
 | `repeat_type`          | VARCHAR(20)  | 重複類型                 |
 | `notification_channel` | VARCHAR(20)  | 通知管道                 |
 | `reminder_time`        | TIMESTAMP    | 提醒時間 (LocalDateTime) |
-| `reminder_instant`     | BIGINT       | 提醒時間 (Instant)       |
+| `reminder_instant`     | TIMESTAMP    | 提醒時間 (Instant)       |
 | `timezone`             | VARCHAR(50)  | 時區                   |
 | `expires_at`           | TIMESTAMP    | 過期時間 (30 分鐘)         |
 | `created_at`           | TIMESTAMP    | 建立時間                 |
@@ -623,17 +628,18 @@ Bot: [顯示附近 5 個公共廁所，含距離與地圖連結]
 
 #### 7. emails - Email 地址管理表
 
-| 欄位              | 類型           | 說明       |
-|-----------------|--------------|----------|
-| `id`            | BIGINT       | 主鍵       |
-| `room_id`       | VARCHAR(100) | 聊天室 ID   |
-| `email_address` | VARCHAR(255) | Email 地址 |
-| `is_enabled`    | BOOLEAN      | 是否啟用     |
-| `created_at`    | TIMESTAMP    | 建立時間     |
+| 欄位           | 類型           | 說明              |
+|--------------|--------------|-----------------|
+| `id`         | BIGINT       | 主鍵              |
+| `room_id`    | VARCHAR(100) | 聊天室 ID          |
+| `email`      | VARCHAR(255) | Email 地址        |
+| `is_enabled` | BOOLEAN      | 是否啟用此信箱的通知      |
+| `is_active`  | BOOLEAN      | 軟刪除標記 (true=有效) |
+| `created_at` | TIMESTAMP    | 建立時間            |
 
 **索引**：
 
-- `idx_emails_room` (room_id)
+- `idx_emails_room_id` (room_id)
 
 ---
 
@@ -642,7 +648,6 @@ Bot: [顯示附近 5 個公共廁所，含距離與地圖連結]
 | 欄位           | 類型           | 說明          |
 |--------------|--------------|-------------|
 | `room_id`    | VARCHAR(100) | 聊天室 ID (主鍵) |
-| `step`       | VARCHAR(50)  | 當前步驟        |
 | `expires_at` | TIMESTAMP    | 過期時間        |
 | `created_at` | TIMESTAMP    | 建立時間        |
 
@@ -650,12 +655,13 @@ Bot: [顯示附近 5 個公共廁所，含距離與地圖連結]
 
 #### 9. timezone_input_states - 時區輸入流程狀態表
 
-| 欄位           | 類型           | 說明          |
-|--------------|--------------|-------------|
-| `room_id`    | VARCHAR(100) | 聊天室 ID (主鍵) |
-| `step`       | VARCHAR(50)  | 當前步驟        |
-| `expires_at` | TIMESTAMP    | 過期時間        |
-| `created_at` | TIMESTAMP    | 建立時間        |
+| 欄位                  | 類型           | 說明          |
+|---------------------|--------------|-------------|
+| `room_id`           | VARCHAR(100) | 聊天室 ID (主鍵) |
+| `resolved_timezone` | VARCHAR(50)  | 解析後的時區      |
+| `original_input`    | VARCHAR(100) | 使用者原始輸入     |
+| `expires_at`        | TIMESTAMP    | 過期時間        |
+| `created_at`        | TIMESTAMP    | 建立時間        |
 
 </details>
 
@@ -691,9 +697,10 @@ erDiagram
     chat_messages {
         bigint id PK
         varchar_100 room_id FK "聊天室ID"
-        varchar_20 sender "USER/AI"
-        text message_text "訊息內容"
-        boolean is_deleted "軟刪除標記"
+        varchar_100 user_id "發送者ID"
+        varchar_20 message_type "USER/AI"
+        text content "訊息內容"
+        timestamp deleted_at "軟刪除標記"
         timestamp created_at
     }
 
@@ -736,7 +743,7 @@ erDiagram
         varchar_20 repeat_type "重複類型"
         varchar_20 notification_channel "通知管道"
         timestamp reminder_time "LocalDateTime"
-        bigint reminder_instant "Instant"
+        timestamp reminder_instant "Instant"
         varchar_50 timezone "時區"
         timestamp expires_at "30分鐘過期"
         timestamp created_at
@@ -745,21 +752,22 @@ erDiagram
     emails {
         bigint id PK
         varchar_100 room_id FK "聊天室ID"
-        varchar_255 email_address "Email地址"
+        varchar_255 email "Email地址"
         boolean is_enabled "是否啟用"
+        boolean is_active "軟刪除標記"
         timestamp created_at
     }
 
     email_input_states {
         varchar_100 room_id PK "聊天室ID"
-        varchar_50 step "當前步驟"
         timestamp expires_at "過期時間"
         timestamp created_at
     }
 
     timezone_input_states {
         varchar_100 room_id PK "聊天室ID"
-        varchar_50 step "當前步驟"
+        varchar_50 resolved_timezone "解析後的時區"
+        varchar_100 original_input "用戶原始輸入"
         timestamp expires_at "過期時間"
         timestamp created_at
     }
