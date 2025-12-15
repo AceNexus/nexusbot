@@ -1,6 +1,15 @@
+# ==========================================
+# 伺服器設定
+# ==========================================
+server:
+  port: ${SERVER_PORT:5001}
+
+# ==========================================
+# Spring Boot 核心設定
+# ==========================================
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb
+    url: jdbc:h2:mem:testdb # 注意：這裡的 URL 是 mem:testdb，請確認是否為期望值
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -20,18 +29,30 @@ spring:
     config:
       enabled: false  # 本地環境不連接 Config Server
 
+# ==========================================
+# 微服務架構設定 (本地環境停用)
+# ==========================================
 eureka:
   client:
     enabled: false  # 本地環境不使用 Eureka
 
+# ==========================================
+# 第三方服務整合 - LINE Bot
+# ==========================================
 line:
   bot:
     channel-token: ${LINE_CHANNEL_TOKEN:default-token}
     channel-secret: ${LINE_CHANNEL_SECRET:default-secret}
 
+# ==========================================
+# 第三方服務整合 - Groq AI
+# ==========================================
 groq:
   api-key: ${GROQ_API_KEY:default-groq-key}
 
+# ==========================================
+# 第三方服務整合 - Email (SMTP)
+# ==========================================
 email:
   host: smtp.gmail.com
   port: 587
@@ -42,4 +63,49 @@ email:
   auth: true
   starttls: true
   debug: false
-  confirmation-base-url: ${CONFIRMATION_BASE_URL:http://localhost:8080}
+  confirmation-base-url: ${nexusbot.base-url} # 引用 nexusbot.base-url
+
+# ==========================================
+# 業務邏輯設定 - AI 對話
+# ==========================================
+ai:
+  conversation:
+    history-limit: ${AI_HISTORY_LIMIT:15}
+
+# ==========================================
+# 第三方服務整合 - OpenStreetMap API
+# ==========================================
+osm:
+  overpass-base-url: ${OSM_OVERPASS_BASE_URL:https://overpass-api.de/api/interpreter}
+  timeout-ms: ${OSM_TIMEOUT:15000}
+  user-agent: ${OSM_USER_AGENT:NexusBot/1.0}
+  carousel-max-items: ${OSM_CAROUSEL_MAX_ITEMS:10}
+  toilet-tags:
+    - amenity=toilets          # 公共廁所
+    - amenity=public_bookcase  # 部分公共設施含廁所
+    - building=toilets         # 廁所建築
+  facility-tags:
+    - amenity=restaurant       # 餐廳
+    - amenity=cafe             # 咖啡廳
+    - amenity=fast_food        # 速食店
+    - shop=convenience         # 便利商店
+    - shop=supermarket         # 超市
+    - amenity=fuel             # 加油站
+
+# ==========================================
+# 安全設定 - 管理員
+# ==========================================
+admin:
+  password-seed: ${ADMIN_PASSWORD_SEED:1103}
+
+# ==========================================
+# 日誌設定
+# ==========================================
+logging:
+  level:
+    root: INFO
+    com.acenexus.tata.nexusbot: INFO
+    com.linecorp.bot.client.wire: WARN
+    okhttp3: WARN
+  pattern:
+    console: "[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%level] [%thread] [%logger{36}] - %msg%n"
