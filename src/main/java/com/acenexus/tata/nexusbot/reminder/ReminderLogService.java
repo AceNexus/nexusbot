@@ -11,8 +11,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 提醒日誌服務
@@ -40,15 +44,35 @@ public class ReminderLogService {
 
     /**
      * 查詢今日已發送的提醒記錄（合併同一提醒的多條 log）
+     * 優化版本：使用批量查詢避免 N+1 問題
      */
     public List<TodayReminderLog> getTodaysSentReminders(String roomId) {
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = today.atStartOfDay();
         LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
 
+        // 1. 查詢今日所有已發送的 logs
         List<ReminderLog> logs = reminderLogRepository.findTodaysSentLogs(roomId, startOfDay, endOfDay);
+
+        if (logs.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 2. 收集所有不重複的 reminderId
+        Set<Long> reminderIds = logs.stream()
+                .map(ReminderLog::getReminderId)
+                .collect(Collectors.toSet());
+
+        // 3. 批量查詢所有相關的 Reminder（只需 1 次查詢）
+        List<Reminder> reminders = reminderRepository.findAllById(reminderIds);
+
+        // 4. 建立 Map 用於快速查找
+        Map<Long, Reminder> reminderMap = reminders.stream()
+                .collect(Collectors.toMap(Reminder::getId, r -> r));
+
+        // 5. 處理每個唯一的 reminder
         List<TodayReminderLog> result = new ArrayList<>();
-        java.util.Set<Long> processedReminderIds = new java.util.HashSet<>();
+        Set<Long> processedReminderIds = new HashSet<>();
 
         for (ReminderLog log : logs) {
             // 如果這個提醒已經處理過，跳過
@@ -56,41 +80,30 @@ public class ReminderLogService {
                 continue;
             }
 
-            // 查詢對應的 Reminder
-            Optional<Reminder> reminderOpt = reminderRepository.findById(log.getReminderId());
+            // 從 Map 中獲取 Reminder（無需查詢數據庫）
+            Reminder reminder = reminderMap.get(log.getReminderId());
 
-            if (reminderOpt.isPresent()) {
-                Reminder reminder = reminderOpt.get();
-
-                // 檢查是否已確認
+            if (reminder != null) {
+                // 檢查是否已確認（遍歷同一 reminderId 的所有 logs）
                 boolean isConfirmed = false;
                 LocalDateTime sentTime = log.getSentTime();
 
                 for (ReminderLog l : logs) {
                     if (l.getReminderId().equals(reminder.getId())) {
                         // LINE 確認
-                        if ("LINE".equalsIgnoreCase(l.getDeliveryMethod())
-                                && "COMPLETED".equals(l.getUserResponseStatus())) {
+                        if ("LINE".equalsIgnoreCase(l.getDeliveryMethod()) && "COMPLETED".equals(l.getUserResponseStatus())) {
                             isConfirmed = true;
                             break;
                         }
                         // Email 確認
-                        if ("EMAIL".equalsIgnoreCase(l.getDeliveryMethod())
-                                && l.getConfirmedAt() != null) {
+                        if ("EMAIL".equalsIgnoreCase(l.getDeliveryMethod()) && l.getConfirmedAt() != null) {
                             isConfirmed = true;
                             break;
                         }
                     }
                 }
 
-                result.add(new TodayReminderLog(
-                        reminder.getId(),
-                        reminder.getContent(),
-                        sentTime,
-                        reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei",
-                        isConfirmed
-                ));
-
+                result.add(new TodayReminderLog(reminder.getId(), reminder.getContent(), sentTime, reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei", isConfirmed));
                 processedReminderIds.add(reminder.getId());
             }
         }

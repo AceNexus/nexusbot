@@ -39,11 +39,12 @@ public class EmailNotificationService {
     /**
      * 發送提醒 Email
      *
-     * @param reminder       提醒資料
-     * @param recipientEmail 收件者 Email
+     * @param reminder        提醒資料
+     * @param recipientEmail  收件者 Email
+     * @param enhancedContent AI 增強後的提醒內容
      * @return 是否發送成功
      */
-    public boolean sendReminderEmail(Reminder reminder, String recipientEmail) {
+    public boolean sendReminderEmail(Reminder reminder, String recipientEmail, String enhancedContent) {
         try {
             // 生成唯一確認 Token
             String confirmationToken = UUID.randomUUID().toString();
@@ -63,6 +64,7 @@ public class EmailNotificationService {
             String reminderTimeDisplay = reminder.getLocalTime() != null ? reminder.getLocalTime().format(TIME_FORMATTER) : "-";
 
             context.setVariable("reminderContent", reminder.getContent());
+            context.setVariable("enhancedContent", enhancedContent != null ? enhancedContent : "");
             context.setVariable("reminderTime", reminderTimeDisplay);
             context.setVariable("confirmationUrl", confirmationUrl);
             context.setVariable("repeatType", getRepeatTypeText(reminder.getRepeatType()));

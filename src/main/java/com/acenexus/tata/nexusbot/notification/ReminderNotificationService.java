@@ -32,9 +32,10 @@ public interface ReminderNotificationService {
     /**
      * 僅發送 Email 通知
      *
-     * @param reminder 提醒資料
+     * @param reminder        提醒資料
+     * @param enhancedContent AI 增強後的提醒內容
      */
-    void sendEmailOnly(Reminder reminder);
+    void sendEmailOnly(Reminder reminder, String enhancedContent);
 
     /**
      * 同時發送 LINE 和 Email 通知

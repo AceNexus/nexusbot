@@ -202,11 +202,19 @@ public class ReminderFacadeImpl implements ReminderFacade {
     private Message handleContentInput(String roomId, String content) {
         content = content.trim();
 
-        LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
-        String timezone = reminderStateManager.getTimezone(roomId);
-        Instant instant = reminderStateManager.getInstant(roomId);
-        String repeatType = reminderStateManager.getRepeatType(roomId);
-        String notificationChannel = reminderStateManager.getNotificationChannel(roomId);
+        // 優化：一次查詢獲取所有狀態資料，避免多次查詢
+        Optional<ReminderState> stateOpt = reminderStateManager.getState(roomId);
+        if (stateOpt.isEmpty()) {
+            logger.warn("No reminder state found for room: {}", roomId);
+            return messageTemplateProvider.error("提醒狀態已過期，請重新建立提醒");
+        }
+
+        ReminderState state = stateOpt.get();
+        LocalDateTime reminderTime = state.getReminderTime();
+        String timezone = state.getTimezone();
+        Instant instant = state.getReminderInstant();
+        String repeatType = state.getRepeatType();
+        String notificationChannel = state.getNotificationChannel();
 
         // 創建提醒（含時區與 Instant）
         Reminder reminder = reminderService.createReminder(roomId, content, reminderTime, timezone, instant, repeatType, roomId, notificationChannel);
@@ -373,21 +381,22 @@ public class ReminderFacadeImpl implements ReminderFacade {
             return messageTemplateProvider.timezoneInputError(input);
         }
 
-        // 2. 取得原始時間並轉換到新時區
-        LocalDateTime originalTime = reminderStateManager.getTime(roomId);
+        // 2. 取得原始 Instant（保持絕對時間點不變）
+        Instant originalInstant = reminderStateManager.getInstant(roomId);
 
-        // 使用新時區重新計算 Instant（保持相同的本地時間）
-        ZonedDateTime newZonedTime = originalTime.atZone(ZoneId.of(resolvedTimezone));
-        Instant newInstant = newZonedTime.toInstant();
+        // 3. 根據新時區計算對應的本地時間
+        ZonedDateTime newZonedTime = originalInstant.atZone(ZoneId.of(resolvedTimezone));
+        LocalDateTime newLocalTime = newZonedTime.toLocalDateTime();
 
-        // 3. 進入確認步驟並暫存新時區
+        // 4. 進入確認步驟並更新時區與本地時間（Instant 保持不變）
         reminderStateManager.moveToTimezoneConfirmation(roomId);
         reminderStateManager.setTimezone(roomId, resolvedTimezone);
-        reminderStateManager.setInstant(roomId, newInstant);
+        reminderStateManager.setTime(roomId, newLocalTime);
+        // Instant 保持不變，不需要重新設定
 
-        // 4. 顯示確認畫面
+        // 5. 顯示確認畫面
         String timezoneDisplay = TimezoneValidator.getDisplayName(resolvedTimezone);
-        String newReminderTimeDisplay = originalTime.format(TIME_FORMATTER);
+        String newReminderTimeDisplay = newLocalTime.format(TIME_FORMATTER);
 
         logger.info("Parsed timezone for room {}: {} -> {}", roomId, input, resolvedTimezone);
 

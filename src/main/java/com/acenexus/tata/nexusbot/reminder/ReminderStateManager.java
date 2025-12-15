@@ -56,11 +56,18 @@ public class ReminderStateManager {
     }
 
     /**
+     * 獲取提醒狀態（建議優先使用此方法以減少重複查詢）
+     */
+    public Optional<ReminderState> getState(String roomId) {
+        cleanupExpiredStates();
+        return reminderStateRepository.findById(roomId);
+    }
+
+    /**
      * 獲取當前步驟
      */
     public ReminderState.Step getCurrentStep(String roomId) {
-        cleanupExpiredStates();
-        return reminderStateRepository.findById(roomId)
+        return getState(roomId)
                 .map(state -> ReminderState.Step.valueOf(state.getStep()))
                 .orElse(null);
     }
@@ -69,7 +76,7 @@ public class ReminderStateManager {
      * 獲取暫存的時間
      */
     public LocalDateTime getTime(String roomId) {
-        return reminderStateRepository.findById(roomId)
+        return getState(roomId)
                 .map(ReminderState::getReminderTime)
                 .orElse(null);
     }
@@ -121,7 +128,7 @@ public class ReminderStateManager {
      * 獲取通知管道
      */
     public String getNotificationChannel(String roomId) {
-        return reminderStateRepository.findById(roomId)
+        return getState(roomId)
                 .map(ReminderState::getNotificationChannel)
                 .orElse("LINE");
     }
@@ -130,7 +137,7 @@ public class ReminderStateManager {
      * 獲取重複類型
      */
     public String getRepeatType(String roomId) {
-        return reminderStateRepository.findById(roomId)
+        return getState(roomId)
                 .map(ReminderState::getRepeatType)
                 .orElse("ONCE");
     }
@@ -161,7 +168,7 @@ public class ReminderStateManager {
      * 獲取時區
      */
     public String getTimezone(String roomId) {
-        return reminderStateRepository.findById(roomId)
+        return getState(roomId)
                 .map(ReminderState::getTimezone)
                 .orElse(null);
     }
@@ -184,7 +191,7 @@ public class ReminderStateManager {
      * 獲取 Instant
      */
     public Instant getInstant(String roomId) {
-        return reminderStateRepository.findById(roomId)
+        return getState(roomId)
                 .map(ReminderState::getReminderInstant)
                 .orElse(null);
     }

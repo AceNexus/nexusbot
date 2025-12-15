@@ -35,4 +35,5 @@ public interface ReminderLogRepository extends JpaRepository<ReminderLog, Long> 
      */
     @Query("SELECT rl FROM ReminderLog rl WHERE rl.roomId = :roomId AND rl.status = 'SENT' AND rl.sentTime >= :startOfDay AND rl.sentTime < :endOfDay ORDER BY rl.sentTime DESC")
     List<ReminderLog> findTodaysSentLogs(@Param("roomId") String roomId, @Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
+
 }

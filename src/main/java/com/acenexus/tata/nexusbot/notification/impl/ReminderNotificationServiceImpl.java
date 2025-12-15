@@ -37,7 +37,7 @@ public class ReminderNotificationServiceImpl implements ReminderNotificationServ
 
         switch (channel.toUpperCase()) {
             case "LINE" -> sendLineOnly(reminder, enhancedContent);
-            case "EMAIL" -> sendEmailOnly(reminder);
+            case "EMAIL" -> sendEmailOnly(reminder, enhancedContent);
             case "BOTH" -> sendBoth(reminder, enhancedContent);
             default -> {
                 logger.warn("Unknown notification channel '{}' for reminder [{}], using LINE", channel, reminder.getId());
@@ -61,7 +61,7 @@ public class ReminderNotificationServiceImpl implements ReminderNotificationServ
     }
 
     @Override
-    public void sendEmailOnly(Reminder reminder) {
+    public void sendEmailOnly(Reminder reminder, String enhancedContent) {
         try {
             List<String> enabledEmails = emailManager.getEnabledEmailAddresses(reminder.getRoomId());
 
@@ -73,7 +73,7 @@ public class ReminderNotificationServiceImpl implements ReminderNotificationServ
             int successCount = 0;
             for (String email : enabledEmails) {
                 try {
-                    boolean sent = emailNotificationService.sendReminderEmail(reminder, email);
+                    boolean sent = emailNotificationService.sendReminderEmail(reminder, email, enhancedContent);
                     if (sent) {
                         successCount++;
                         logger.debug("Email sent successfully to {} for reminder [{}]", email, reminder.getId());
@@ -102,7 +102,7 @@ public class ReminderNotificationServiceImpl implements ReminderNotificationServ
         }
 
         try {
-            sendEmailOnly(reminder);
+            sendEmailOnly(reminder, enhancedContent);
         } catch (Exception e) {
             logger.error("Email notification failed in BOTH mode: {}", e.getMessage());
         }
