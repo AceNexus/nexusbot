@@ -1,5 +1,7 @@
 package com.acenexus.tata.nexusbot.controller;
 
+import com.acenexus.tata.nexusbot.client.FinMindApiClient;
+import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.StockInfo;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
 import com.acenexus.tata.nexusbot.service.stock.StockService;
@@ -32,6 +34,7 @@ import java.util.concurrent.CompletableFuture;
 public class StockController {
 
     private final List<StockService> stockServices;
+    private final FinMindApiClient finMindApiClient;
 
     @Operation(
             summary = "查詢股票資訊",
@@ -138,6 +141,105 @@ public class StockController {
                     log.error("Stock query error - symbol={}, market={}, error={}", symbol, market, ex.getMessage(), ex);
                     return ResponseEntity.internalServerError().build();
                 });
+    }
+
+    @Operation(
+            summary = "查詢台股K線圖數據",
+            description = """
+                    查詢台灣上市公司的歷史K線數據（OHLCV）。
+
+                    **資料來源**: FinMind API（台灣開源金融資料庫）
+
+                    **數據包含**:
+                    - 日期 (date)
+                    - 開盤價 (open)
+                    - 最高價 (high)
+                    - 最低價 (low)
+                    - 收盤價 (close)
+                    - 成交量 (volume) - 單位：張
+                    - 成交金額 (turnover) - 單位：千元
+                    - 漲跌金額 (change)
+                    - 漲跌幅 (changePercent) - 單位：%
+
+                    **範例股票代號**:
+                    - 2330 (台積電)
+                    - 2317 (鴻海)
+                    - 2454 (聯發科)
+
+                    **注意事項**:
+                    - 預設查詢最近 6 個月的數據
+                    - 可透過 months 參數調整查詢區間（1-24個月）
+                    - 數據為日K線（每日收盤後更新）
+                    - 資料會被快取 1 天以提升效能
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "查詢成功",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CandlestickData.class),
+                            examples = @ExampleObject(
+                                    value = """
+                                            [
+                                              {
+                                                "symbol": "2330",
+                                                "date": "2024-12-29",
+                                                "open": 550.00,
+                                                "high": 555.00,
+                                                "low": 548.00,
+                                                "close": 553.00,
+                                                "volume": 25000,
+                                                "turnover": 13825.00,
+                                                "change": 3.00,
+                                                "changePercent": 0.55
+                                              }
+                                            ]
+                                            """
+                            )
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "查無此股票代號或無歷史數據",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "伺服器錯誤或資料來源無法存取",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    @GetMapping("/{symbol}/candlestick")
+    public ResponseEntity<List<CandlestickData>> getStockCandlestick(@Parameter(description = "台股代號（4位數字）", example = "2330")
+                                                                     @PathVariable String symbol,
+                                                                     @Parameter(description = "查詢月數（1-24個月，預設1個月）", example = "1")
+                                                                     @RequestParam(defaultValue = "6") int months) {
+
+        log.info("K-line query - symbol={}, months={}", symbol, months);
+
+        if (months < 1 || months > 24) {
+            log.warn("Invalid months parameter - symbol={}, months={}", symbol, months);
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            List<CandlestickData> candlesticks = finMindApiClient.getRecentMonthsKLine(symbol, months);
+
+            if (candlesticks.isEmpty()) {
+                log.warn("No K-line data found - symbol={}", symbol);
+                return ResponseEntity.notFound().build();
+            }
+
+            log.info("K-line data retrieved - symbol={}, count={}, months={}", symbol, candlesticks.size(), months);
+
+            return ResponseEntity.ok(candlesticks);
+
+        } catch (Exception ex) {
+            log.error("K-line query error - symbol={}, months={}, error={}", symbol, months, ex.getMessage(), ex);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
 }
