@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台股K線圖查詢系統</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.95em;
+        }
+
+        .control-group input,
+        .control-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        .control-group input:focus,
+        .control-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .stock-info {
+            padding: 20px 30px;
+            background: white;
+            border-bottom: 1px solid #e9ecef;
+            display: none;
+        }
+
+        .stock-info.active {
+            display: block;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .info-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .info-label {
+            font-size: 0.85em;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #212529;
+        }
+
+        .info-value.positive {
+            color: #dc3545;
+        }
+
+        .info-value.negative {
+            color: #28a745;
+        }
+
+        #chartContainer {
+            padding: 30px;
+        }
+
+        #candlestickChart {
+            width: 100%;
+            height: 600px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+
+        .loading::after {
+            content: '...';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            margin: 30px;
+            border-radius: 8px;
+            border-left: 4px solid #dc3545;
+        }
+
+        .quick-stocks {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .quick-stock-btn {
+            padding: 8px 16px;
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-radius: 6px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .quick-stock-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .control-row {
+                flex-direction: column;
+            }
+
+            .control-group {
+                width: 100%;
+            }
+
+            #candlestickChart {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>台股K線圖查詢系統</h1>
+        <p>即時查詢台灣上市公司歷史K線數據</p>
+    </div>
+
+    <div class="controls">
+        <div class="control-row">
+            <div class="control-group">
+                <label for="symbolInput">股票代號</label>
+                <input type="text" id="symbolInput" placeholder="例如：2330" value="2330">
+            </div>
+            <div class="control-group">
+                <label for="monthsSelect">查詢月數</label>
+                <select id="monthsSelect">
+                    <option value="1">1 個月</option>
+                    <option value="3">3 個月</option>
+                    <option value="6" selected>6 個月</option>
+                    <option value="12">12 個月</option>
+                    <option value="24">24 個月</option>
+                </select>
+            </div>
+            <button class="btn" id="queryBtn">查詢K線</button>
+        </div>
+
+        <div class="quick-stocks">
+            <span style="color: #6c757d; font-size: 0.9em; margin-right: 10px;">快速選擇：</span>
+            <button class="quick-stock-btn" data-symbol="2330">2330 台積電</button>
+            <button class="quick-stock-btn" data-symbol="2317">2317 鴻海</button>
+            <button class="quick-stock-btn" data-symbol="2454">2454 聯發科</button>
+            <button class="quick-stock-btn" data-symbol="2412">2412 中華電</button>
+            <button class="quick-stock-btn" data-symbol="2882">2882 國泰金</button>
+            <button class="quick-stock-btn" data-symbol="2891">2891 中信金</button>
+        </div>
+    </div>
+
+    <div class="stock-info" id="stockInfo">
+        <div class="info-grid" id="infoGrid">
+            <!-- 動態生成股票資訊 -->
+        </div>
+    </div>
+
+    <div id="chartContainer">
+        <div id="candlestickChart"></div>
+    </div>
+</div>
+
+<script>
+    let chart;
+    const API_BASE = window.location.origin;
+
+    // 初始化圖表
+    function initChart() {
+        const chartDom = document.getElementById('candlestickChart');
+        chart = echarts.init(chartDom);
+        chart.showLoading({
+            text: '載入中...',
+            color: '#667eea',
+            textColor: '#000',
+            maskColor: 'rgba(255, 255, 255, 0.8)',
+            zlevel: 0
+        });
+    }
+
+    // 查詢K線數據
+    async function queryKLine() {
+        const symbol = document.getElementById('symbolInput').value.trim();
+        const months = document.getElementById('monthsSelect').value;
+        const queryBtn = document.getElementById('queryBtn');
+
+        if (!symbol) {
+            alert('請輸入股票代號');
+            return;
+        }
+
+        queryBtn.disabled = true;
+        queryBtn.textContent = '查詢中...';
+        chart.showLoading();
+
+        try {
+            const response = await fetch(`${API_BASE}/api/stock/${symbol}/candlestick?months=${months}`);
+
+            if (!response.ok) {
+                throw new Error(`查詢失敗: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (!data || data.length === 0) {
+                throw new Error('查無數據');
+            }
+
+            renderChart(data, symbol);
+            updateStockInfo(data);
+
+        } catch (error) {
+            console.error('Error:', error);
+            chart.hideLoading();
+            const chartDom = document.getElementById('candlestickChart');
+            chartDom.innerHTML = `<div class="error">查詢失敗: ${error.message}</div>`;
+        } finally {
+            queryBtn.disabled = false;
+            queryBtn.textContent = '查詢K線';
+        }
+    }
+
+    // 渲染圖表
+    function renderChart(data, symbol) {
+        chart.hideLoading();
+
+        // 準備數據
+        const dates = data.map(item => item.date);
+        const ohlc = data.map(item => [item.open, item.close, item.low, item.high]);
+        const volumes = data.map(item => item.volume);
+
+        // 計算漲跌顏色
+        const volumeColors = data.map((item, index) => {
+            if (index === 0) return item.close >= item.open ? '#ef5350' : '#26a69a';
+            return item.close >= item.open ? '#ef5350' : '#26a69a';
+        });
+
+        const option = {
+            title: {
+                text: `${symbol} K線圖`,
+                left: 'center',
+                textStyle: {
+                    fontSize: 20,
+                    fontWeight: 600,
+                    color: '#212529'
+                }
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                },
+                formatter: function(params) {
+                    const dataIndex = params[0].dataIndex;
+                    const item = data[dataIndex];
+                    return `
+                        <div style="padding: 10px;">
+                            <strong>${item.date}</strong><br/>
+                            開盤: ${item.open.toFixed(2)}<br/>
+                            最高: ${item.high.toFixed(2)}<br/>
+                            最低: ${item.low.toFixed(2)}<br/>
+                            收盤: ${item.close.toFixed(2)}<br/>
+                            成交量: ${item.volume.toLocaleString()} 張<br/>
+                            成交額: ${item.turnover.toLocaleString()} 千元<br/>
+                            漲跌: <span style="color: ${item.change >= 0 ? '#ef5350' : '#26a69a'}">${item.change >= 0 ? '+' : ''}${item.change.toFixed(2)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent.toFixed(2)}%)</span>
+                        </div>
+                    `;
+                }
+            },
+            legend: {
+                data: ['K線', '成交量'],
+                top: 40,
+                left: 'center'
+            },
+            grid: [
+                {
+                    left: '8%',
+                    right: '8%',
+                    top: '15%',
+                    height: '50%'
+                },
+                {
+                    left: '8%',
+                    right: '8%',
+                    top: '70%',
+                    height: '15%'
+                }
+            ],
+            xAxis: [
+                {
+                    type: 'category',
+                    data: dates,
+                    boundaryGap: true,
+                    axisLine: { lineStyle: { color: '#8392A5' } },
+                    axisLabel: {
+                        formatter: function(value) {
+                            return value.substring(5);
+                        }
+                    },
+                    min: 'dataMin',
+                    max: 'dataMax',
+                    axisPointer: {
+                        show: true
+                    }
+                },
+                {
+                    type: 'category',
+                    gridIndex: 1,
+                    data: dates,
+                    boundaryGap: true,
+                    axisLine: { lineStyle: { color: '#8392A5' } },
+                    axisLabel: { show: false },
+                    axisTick: { show: false },
+                    min: 'dataMin',
+                    max: 'dataMax'
+                }
+            ],
+            yAxis: [
+                {
+                    scale: true,
+                    splitArea: {
+                        show: true
+                    },
+                    axisLine: { lineStyle: { color: '#8392A5' } },
+                    splitLine: { show: true },
+                    axisTick: { show: false },
+                    axisLabel: {
+                        formatter: '{value}'
+                    }
+                },
+                {
+                    scale: true,
+                    gridIndex: 1,
+                    splitNumber: 2,
+                    axisLabel: { show: false },
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    splitLine: { show: false }
+                }
+            ],
+            dataZoom: [
+                {
+                    type: 'inside',
+                    xAxisIndex: [0, 1],
+                    start: 0,
+                    end: 100
+                },
+                {
+                    show: true,
+                    xAxisIndex: [0, 1],
+                    type: 'slider',
+                    bottom: '5%',
+                    start: 0,
+                    end: 100,
+                    handleIcon: 'path://M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+                    handleSize: '80%',
+                    handleStyle: {
+                        color: '#fff',
+                        shadowBlur: 3,
+                        shadowColor: 'rgba(0, 0, 0, 0.6)',
+                        shadowOffsetX: 2,
+                        shadowOffsetY: 2
+                    }
+                }
+            ],
+            series: [
+                {
+                    name: 'K線',
+                    type: 'candlestick',
+                    data: ohlc,
+                    itemStyle: {
+                        color: '#ef5350',
+                        color0: '#26a69a',
+                        borderColor: '#ef5350',
+                        borderColor0: '#26a69a'
+                    },
+                    emphasis: {
+                        itemStyle: {
+                            borderColor: '#000',
+                            borderWidth: 2
+                        }
+                    }
+                },
+                {
+                    name: '成交量',
+                    type: 'bar',
+                    xAxisIndex: 1,
+                    yAxisIndex: 1,
+                    data: volumes,
+                    itemStyle: {
+                        color: function(params) {
+                            const index = params.dataIndex;
+                            return volumeColors[index];
+                        }
+                    }
+                }
+            ]
+        };
+
+        chart.setOption(option, true);
+    }
+
+    // 更新股票資訊
+    function updateStockInfo(data) {
+        const stockInfo = document.getElementById('stockInfo');
+        const infoGrid = document.getElementById('infoGrid');
+
+        const latestData = data[data.length - 1];
+        const firstData = data[0];
+
+        const periodChange = latestData.close - firstData.open;
+        const periodChangePercent = (periodChange / firstData.open) * 100;
+
+        infoGrid.innerHTML = `
+            <div class="info-item">
+                <div class="info-label">最新日期</div>
+                <div class="info-value">${latestData.date}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">收盤價</div>
+                <div class="info-value">${latestData.close.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">當日漲跌</div>
+                <div class="info-value ${latestData.change >= 0 ? 'positive' : 'negative'}">
+                    ${latestData.change >= 0 ? '+' : ''}${latestData.change.toFixed(2)} (${latestData.changePercent >= 0 ? '+' : ''}${latestData.changePercent.toFixed(2)}%)
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">區間漲跌</div>
+                <div class="info-value ${periodChange >= 0 ? 'positive' : 'negative'}">
+                    ${periodChange >= 0 ? '+' : ''}${periodChange.toFixed(2)} (${periodChangePercent >= 0 ? '+' : ''}${periodChangePercent.toFixed(2)}%)
+                </div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">最高價</div>
+                <div class="info-value">${latestData.high.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">最低價</div>
+                <div class="info-value">${latestData.low.toFixed(2)}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">成交量</div>
+                <div class="info-value">${latestData.volume.toLocaleString()} 張</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">成交金額</div>
+                <div class="info-value">${(latestData.turnover / 1000).toFixed(0)} 百萬</div>
+            </div>
+        `;
+
+        stockInfo.classList.add('active');
+    }
+
+    // 事件監聽
+    document.getElementById('queryBtn').addEventListener('click', queryKLine);
+
+    document.getElementById('symbolInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            queryKLine();
+        }
+    });
+
+    // 快速選股按鈕
+    document.querySelectorAll('.quick-stock-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('symbolInput').value = btn.dataset.symbol;
+            queryKLine();
+        });
+    });
+
+    // 響應式調整
+    window.addEventListener('resize', () => {
+        if (chart) {
+            chart.resize();
+        }
+    });
+
+    // 初始化並自動查詢
+    window.addEventListener('load', () => {
+        initChart();
+        queryKLine();
+    });
+</script>
+</body>
+</html>
