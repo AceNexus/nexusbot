@@ -72,8 +72,7 @@
             font-size: 0.95em;
         }
 
-        .control-group input,
-        .control-group select {
+        .control-group input {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid #dee2e6;
@@ -82,8 +81,7 @@
             transition: all 0.3s;
         }
 
-        .control-group input:focus,
-        .control-group select:focus {
+        .control-group input:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
@@ -251,16 +249,6 @@
                 <label for="symbolInput">股票代號</label>
                 <input type="text" id="symbolInput" placeholder="例如：2330" value="2330">
             </div>
-            <div class="control-group">
-                <label for="monthsSelect">查詢月數</label>
-                <select id="monthsSelect">
-                    <option value="1">1 個月</option>
-                    <option value="3">3 個月</option>
-                    <option value="6" selected>6 個月</option>
-                    <option value="12">12 個月</option>
-                    <option value="24">24 個月</option>
-                </select>
-            </div>
             <button class="btn" id="queryBtn">查詢K線</button>
         </div>
 
@@ -306,7 +294,6 @@
     // 查詢K線數據
     async function queryKLine() {
         const symbol = document.getElementById('symbolInput').value.trim();
-        const months = document.getElementById('monthsSelect').value;
         const queryBtn = document.getElementById('queryBtn');
 
         if (!symbol) {
@@ -319,7 +306,8 @@
         chart.showLoading();
 
         try {
-            const response = await fetch(`${API_BASE}/api/stock/${symbol}/candlestick?months=${months}`);
+            // 使用優化的 API：顯示 12 個月，基於 18 個月計算均線
+            const response = await fetch(`${API_BASE}/api/stock/${symbol}/candlestick-with-ma?displayMonths=12&maBaseMonths=18`);
 
             if (!response.ok) {
                 throw new Error(`查詢失敗: ${response.status}`);
@@ -354,11 +342,54 @@
         const ohlc = data.map(item => [item.open, item.close, item.low, item.high]);
         const volumes = data.map(item => item.volume);
 
-        // 計算漲跌顏色
-        const volumeColors = data.map((item, index) => {
-            if (index === 0) return item.close >= item.open ? '#ef5350' : '#26a69a';
-            return item.close >= item.open ? '#ef5350' : '#26a69a';
-        });
+        // 直接從後端獲取的均線數據
+        const maConfig = [
+            { name: 'MA5', color: '#FF1493' },
+            { name: 'MA10', color: '#00CED1' },
+            { name: 'MA20', color: '#FFD700' },
+            { name: 'MA60', color: '#9370DB' }
+        ];
+
+        // 提取均線數據（後端已計算好）
+        const maData = {
+            'MA5': data.map(item => item.ma5),
+            'MA10': data.map(item => item.ma10),
+            'MA20': data.map(item => item.ma20),
+            'MA60': data.map(item => item.ma60)
+        };
+
+        // 檢測稀疏數據區域（用於視覺標記）
+        const isSparseData = new Array(data.length).fill(false);
+        for (let i = 1; i < data.length; i++) {
+            const prevDate = new Date(data[i - 1].date);
+            const currDate = new Date(data[i].date);
+            const daysDiff = (currDate - prevDate) / (1000 * 60 * 60 * 24);
+
+            if (daysDiff > 5) {
+                for (let j = Math.max(0, i - 5); j <= Math.min(data.length - 1, i + 5); j++) {
+                    isSparseData[j] = true;
+                }
+            }
+        }
+
+        // 計算顯示範圍：預設顯示全部 12 個月
+        const zoomStart = 0;
+        const zoomEnd = 100;
+
+        // 找出稀疏數據區域，用於標記
+        const sparseAreas = [];
+        let areaStart = null;
+        for (let i = 0; i < isSparseData.length; i++) {
+            if (isSparseData[i] && areaStart === null) {
+                areaStart = i;
+            } else if (!isSparseData[i] && areaStart !== null) {
+                sparseAreas.push([{ xAxis: dates[areaStart] }, { xAxis: dates[i - 1] }]);
+                areaStart = null;
+            }
+        }
+        if (areaStart !== null) {
+            sparseAreas.push([{ xAxis: dates[areaStart] }, { xAxis: dates[dates.length - 1] }]);
+        }
 
         const option = {
             title: {
@@ -378,6 +409,15 @@
                 formatter: function(params) {
                     const dataIndex = params[0].dataIndex;
                     const item = data[dataIndex];
+
+                    let maInfo = '';
+                    maConfig.forEach(config => {
+                        const maValue = maData[config.name][dataIndex];
+                        if (maValue !== null && maValue !== undefined) {
+                            maInfo += `<span style="color: ${config.color}; font-weight: 600;">${config.name}: ${maValue.toFixed(2)}</span><br/>`;
+                        }
+                    });
+
                     return `
                         <div style="padding: 10px;">
                             <strong>${item.date}</strong><br/>
@@ -385,6 +425,7 @@
                             最高: ${item.high.toFixed(2)}<br/>
                             最低: ${item.low.toFixed(2)}<br/>
                             收盤: ${item.close.toFixed(2)}<br/>
+                            ${maInfo}
                             成交量: ${item.volume.toLocaleString()} 張<br/>
                             成交額: ${item.turnover.toLocaleString()} 千元<br/>
                             漲跌: <span style="color: ${item.change >= 0 ? '#ef5350' : '#26a69a'}">${item.change >= 0 ? '+' : ''}${item.change.toFixed(2)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent.toFixed(2)}%)</span>
@@ -393,7 +434,7 @@
                 }
             },
             legend: {
-                data: ['K線', '成交量'],
+                data: ['K線', ...maConfig.map(c => c.name), '成交量'],
                 top: 40,
                 left: 'center'
             },
@@ -467,16 +508,16 @@
                 {
                     type: 'inside',
                     xAxisIndex: [0, 1],
-                    start: 0,
-                    end: 100
+                    start: zoomStart,
+                    end: zoomEnd
                 },
                 {
                     show: true,
                     xAxisIndex: [0, 1],
                     type: 'slider',
                     bottom: '5%',
-                    start: 0,
-                    end: 100,
+                    start: zoomStart,
+                    end: zoomEnd,
                     handleIcon: 'path://M10.7,11.9v-1.3H9.3v1.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4v1.3h1.3v-1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
                     handleSize: '80%',
                     handleStyle: {
@@ -504,8 +545,35 @@
                             borderColor: '#000',
                             borderWidth: 2
                         }
-                    }
+                    },
+                    markArea: sparseAreas.length > 0 ? {
+                        silent: true,
+                        itemStyle: {
+                            color: 'rgba(255, 173, 177, 0.15)'
+                        },
+                        data: sparseAreas,
+                        label: {
+                            show: true,
+                            position: 'insideTop',
+                            formatter: '數據稀疏區域\n(休市期間)',
+                            fontSize: 11,
+                            color: '#999'
+                        }
+                    } : undefined
                 },
+                // 動態添加均線（後端已計算好）
+                ...maConfig.map(config => ({
+                    name: config.name,
+                    type: 'line',
+                    data: maData[config.name],
+                    smooth: false,
+                    lineStyle: {
+                        width: 2,
+                        color: config.color
+                    },
+                    showSymbol: false,
+                    z: 1
+                })),
                 {
                     name: '成交量',
                     type: 'bar',
@@ -514,8 +582,8 @@
                     data: volumes,
                     itemStyle: {
                         color: function(params) {
-                            const index = params.dataIndex;
-                            return volumeColors[index];
+                            const item = data[params.dataIndex];
+                            return item.close >= item.open ? '#ef5350' : '#26a69a';
                         }
                     }
                 }

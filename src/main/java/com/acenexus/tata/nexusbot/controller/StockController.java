@@ -2,9 +2,11 @@ package com.acenexus.tata.nexusbot.controller;
 
 import com.acenexus.tata.nexusbot.client.FinMindApiClient;
 import com.acenexus.tata.nexusbot.dto.CandlestickData;
+import com.acenexus.tata.nexusbot.dto.CandlestickWithMA;
 import com.acenexus.tata.nexusbot.dto.StockInfo;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
 import com.acenexus.tata.nexusbot.service.stock.StockService;
+import com.acenexus.tata.nexusbot.util.MovingAverageCalculator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -238,6 +240,125 @@ public class StockController {
 
         } catch (Exception ex) {
             log.error("K-line query error - symbol={}, months={}, error={}", symbol, months, ex.getMessage(), ex);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @Operation(
+            summary = "查詢台股K線圖數據（含均線，優化版）",
+            description = """
+                    查詢台灣上市公司的歷史K線數據，並包含計算好的移動平均線。
+
+                    **優化特點**:
+                    - 基於更長的歷史數據計算均線，確保準確性
+                    - 只返回需要顯示的月數，減少數據傳輸
+                    - 均線已在後端計算完成，前端無需處理
+
+                    **均線說明**:
+                    - MA5: 5日移動平均線
+                    - MA10: 10日移動平均線
+                    - MA20: 20日移動平均線
+                    - MA60: 60日移動平均線
+
+                    **參數說明**:
+                    - displayMonths: 顯示月數（前端顯示的數據範圍）
+                    - maBaseMonths: 均線計算基準月數（用於計算均線的歷史數據長度）
+
+                    **注意事項**:
+                    - maBaseMonths 必須大於等於 displayMonths
+                    - 建議 maBaseMonths 至少為 3 個月以確保 MA60 準確
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "查詢成功",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = CandlestickWithMA.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "參數錯誤",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "查無此股票代號或無歷史數據",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    @GetMapping("/{symbol}/candlestick-with-ma")
+    public ResponseEntity<List<CandlestickWithMA>> getStockCandlestickWithMA(
+            @Parameter(description = "台股代號（4位數字）", example = "2330")
+            @PathVariable String symbol,
+            @Parameter(description = "顯示月數（1-12個月，預設6個月）", example = "6")
+            @RequestParam(defaultValue = "6") int displayMonths,
+            @Parameter(description = "均線計算基準月數（3-24個月，預設12個月）", example = "12")
+            @RequestParam(defaultValue = "12") int maBaseMonths) {
+
+        log.info("K-line with MA query - symbol={}, displayMonths={}, maBaseMonths={}",
+                symbol, displayMonths, maBaseMonths);
+
+        // 參數驗證
+        if (displayMonths < 1 || displayMonths > 12) {
+            log.warn("Invalid displayMonths parameter - symbol={}, displayMonths={}", symbol, displayMonths);
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (maBaseMonths < 3 || maBaseMonths > 24) {
+            log.warn("Invalid maBaseMonths parameter - symbol={}, maBaseMonths={}", symbol, maBaseMonths);
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (maBaseMonths < displayMonths) {
+            log.warn("maBaseMonths must be >= displayMonths - symbol={}, displayMonths={}, maBaseMonths={}",
+                    symbol, displayMonths, maBaseMonths);
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            // 1. 查詢完整的歷史數據（用於計算均線）
+            List<CandlestickData> fullData = finMindApiClient.getRecentMonthsKLine(symbol, maBaseMonths);
+
+            if (fullData.isEmpty()) {
+                log.warn("No K-line data found - symbol={}", symbol);
+                return ResponseEntity.notFound().build();
+            }
+
+            // 2. 計算需要返回的數據起始索引（只返回最近 displayMonths 的數據）
+            int startIndex = Math.max(0, fullData.size() - (displayMonths * 22)); // 假設每月約 22 個交易日
+
+            // 3. 計算均線並構建返回數據
+            List<CandlestickWithMA> result = new java.util.ArrayList<>();
+            for (int i = startIndex; i < fullData.size(); i++) {
+                CandlestickData candle = fullData.get(i);
+
+                result.add(CandlestickWithMA.builder()
+                        .symbol(candle.getSymbol())
+                        .date(candle.getDate())
+                        .open(candle.getOpen())
+                        .high(candle.getHigh())
+                        .low(candle.getLow())
+                        .close(candle.getClose())
+                        .volume(candle.getVolume())
+                        .turnover(candle.getTurnover())
+                        .change(candle.getChange())
+                        .changePercent(candle.getChangePercent())
+                        .ma5(MovingAverageCalculator.calculateMA5(fullData, i))
+                        .ma10(MovingAverageCalculator.calculateMA10(fullData, i))
+                        .ma20(MovingAverageCalculator.calculateMA20(fullData, i))
+                        .ma60(MovingAverageCalculator.calculateMA60(fullData, i))
+                        .build());
+            }
+
+            log.info("K-line with MA data retrieved - symbol={}, returned={}, baseData={}, displayMonths={}, maBaseMonths={}", symbol, result.size(), fullData.size(), displayMonths, maBaseMonths);
+
+            return ResponseEntity.ok(result);
+
+        } catch (Exception ex) {
+            log.error("K-line with MA query error - symbol={}, displayMonths={}, maBaseMonths={}, error={}", symbol, displayMonths, maBaseMonths, ex.getMessage(), ex);
             return ResponseEntity.internalServerError().build();
         }
     }

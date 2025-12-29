@@ -159,6 +159,7 @@ public class FinMindApiClient {
                             .changePercent(changePercent)
                             .build();
                 })
+                .sorted((a, b) -> a.getDate().compareTo(b.getDate()))  // 按日期排序（從舊到新）
                 .collect(Collectors.toList());
     }
 
