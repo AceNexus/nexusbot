@@ -217,6 +217,209 @@
             color: white;
         }
 
+        /* 技術分析面板樣式 */
+        .analysis-panel {
+            margin: 20px 30px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .analysis-panel.active {
+            display: block;
+        }
+
+        .analysis-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .analysis-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+        }
+
+        .analysis-toggle {
+            cursor: pointer;
+            padding: 5px 10px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            font-size: 0.9em;
+            transition: background 0.3s;
+        }
+
+        .analysis-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .analysis-summary {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .recommendation-box {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .recommendation-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .recommendation-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .recommendation-value.buy {
+            color: #dc3545;  /* 紅色 - 買入 */
+        }
+
+        .recommendation-value.sell {
+            color: #28a745;  /* 綠色 - 賣出 */
+        }
+
+        .recommendation-value.wait {
+            color: #6c757d;  /* 灰色 - 觀望 */
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+        }
+
+        .confidence-text {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .signals-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .signal-item {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .signal-item.buy {
+            border-left-color: #dc3545;
+            background: #fff5f5;
+        }
+
+        .signal-item.sell {
+            border-left-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .signal-type {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .signal-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .signal-strength {
+            display: flex;
+            gap: 3px;
+        }
+
+        .signal-strength span {
+            width: 8px;
+            height: 20px;
+            background: #ddd;
+            border-radius: 2px;
+        }
+
+        .signal-strength span.active {
+            background: #667eea;
+        }
+
+        .analysis-detail {
+            padding: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .indicator-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .indicator-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .indicator-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .indicator-desc {
+            font-size: 0.75em;
+            color: #666;
+            line-height: 1.4;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid #e0e0e0;
+            text-align: left;
+        }
+
+        .analysis-text {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            color: #333;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 1.8em;
@@ -246,8 +449,10 @@
     <div class="controls">
         <div class="control-row">
             <div class="control-group">
-                <label for="symbolInput">股票代號</label>
-                <input type="text" id="symbolInput" placeholder="例如：2330" value="2330">
+                <label for="symbolInput">股票代號或名稱</label>
+                <input type="text" id="symbolInput" placeholder="例如：2330 或 台積電" value="2330" list="stockList"
+                       autocomplete="off">
+                <datalist id="stockList"></datalist>
             </div>
             <button class="btn" id="queryBtn">查詢K線</button>
         </div>
@@ -269,6 +474,39 @@
         </div>
     </div>
 
+    <!-- 技術分析面板 -->
+    <div class="analysis-panel" id="analysisPanel" style="display: none;">
+        <div class="analysis-header">
+            <h3>基於今日K線的技術分析</h3>
+            <span class="analysis-toggle" onclick="toggleAnalysisDetail()">詳細 ▼</span>
+        </div>
+
+        <div class="analysis-summary">
+            <div class="recommendation-box" id="recommendationBox">
+                <div class="recommendation-label">明日操作建議</div>
+                <div class="recommendation-value" id="recommendationValue">-</div>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidenceFill"></div>
+                </div>
+                <div class="confidence-text" id="confidenceText">信心指數: -</div>
+            </div>
+
+            <div class="signals-summary" id="signalsSummary">
+                <!-- 動態生成訊號摘要 -->
+            </div>
+        </div>
+
+        <div class="analysis-detail" id="analysisDetail" style="display: none;">
+            <div class="indicators-grid" id="indicatorsGrid">
+                <!-- 動態生成技術指標 -->
+            </div>
+
+            <div class="analysis-text" id="analysisText">
+                <!-- 動態生成分析文字 -->
+            </div>
+        </div>
+    </div>
+
     <div id="chartContainer">
         <div id="candlestickChart"></div>
     </div>
@@ -277,6 +515,99 @@
 <script>
     let chart;
     const API_BASE = window.location.origin;
+
+    // 常用台股列表（代號和中文名稱）
+    const stockList = [
+        { symbol: '2330', name: '台積電' },
+        { symbol: '2317', name: '鴻海' },
+        { symbol: '2454', name: '聯發科' },
+        { symbol: '2412', name: '中華電' },
+        { symbol: '2882', name: '國泰金' },
+        { symbol: '2891', name: '中信金' },
+        { symbol: '2886', name: '兆豐金' },
+        { symbol: '2308', name: '台達電' },
+        { symbol: '2303', name: '聯電' },
+        { symbol: '2880', name: '華南金' },
+        { symbol: '2881', name: '富邦金' },
+        { symbol: '2892', name: '第一金' },
+        { symbol: '2884', name: '玉山金' },
+        { symbol: '2603', name: '長榮' },
+        { symbol: '2609', name: '陽明' },
+        { symbol: '2615', name: '萬海' },
+        { symbol: '3008', name: '大立光' },
+        { symbol: '2357', name: '華碩' },
+        { symbol: '2382', name: '廣達' },
+        { symbol: '2395', name: '研華' },
+        { symbol: '2912', name: '統一超' },
+        { symbol: '2327', name: '國巨' },
+        { symbol: '6505', name: '台塑化' },
+        { symbol: '1301', name: '台塑' },
+        { symbol: '1303', name: '南亞' },
+        { symbol: '1326', name: '台化' },
+        { symbol: '2002', name: '中鋼' },
+        { symbol: '2207', name: '和泰車' },
+        { symbol: '5880', name: '合庫金' },
+        { symbol: '9904', name: '寶成' }
+    ];
+
+    // 初始化股票列表選項
+    function initStockList() {
+        console.log('========== initStockList ==========');
+        console.log('初始化股票列表，總共', stockList.length, '支股票');
+        const datalist = document.getElementById('stockList');
+        stockList.forEach(stock => {
+            const option = document.createElement('option');
+            option.value = `${stock.symbol} ${stock.name}`;
+            option.dataset.symbol = stock.symbol;
+            datalist.appendChild(option);
+        });
+        console.log('股票列表初始化完成，datalist 選項數量:', datalist.options.length);
+    }
+
+    // 將輸入轉換為股票代號
+    function parseSymbolInput(input) {
+        // 去除空白
+        input = input.trim();
+        console.log('========== parseSymbolInput ==========');
+        console.log('原始輸入:', input);
+        console.log('stockList 長度:', stockList ? stockList.length : 'undefined');
+
+        // 如果是純數字，直接返回
+        if (/^\d+$/.test(input)) {
+            console.log('✓ 匹配純數字:', input);
+            return input;
+        }
+
+        // 嘗試從 "代號 名稱" 格式中提取代號
+        const match = input.match(/^(\d+)\s/);
+        if (match) {
+            console.log('✓ 匹配 "代號 名稱" 格式:', match[1]);
+            return match[1];
+        }
+
+        // 嘗試根據中文名稱查找
+        console.log('嘗試在 stockList 中查找:', input);
+        if (stockList && stockList.length > 0) {
+            console.log('stockList 前3項:', stockList.slice(0, 3));
+            const stock = stockList.find(s => {
+                const nameMatch = s.name === input || s.name.includes(input);
+                if (nameMatch) {
+                    console.log('✓ 找到匹配:', s.symbol, s.name);
+                }
+                return nameMatch;
+            });
+            if (stock) {
+                console.log('✓ 找到股票:', stock.symbol, stock.name);
+                return stock.symbol;
+            }
+        } else {
+            console.error('✗ stockList 未載入或為空!');
+        }
+
+        // 都找不到，返回原輸入（可能是不在列表中的股票代號）
+        console.log('✗ 找不到匹配，返回原輸入:', input);
+        return input;
+    }
 
     // 初始化圖表
     function initChart() {
@@ -293,11 +624,14 @@
 
     // 查詢K線數據
     async function queryKLine() {
-        const symbol = document.getElementById('symbolInput').value.trim();
+        const input = document.getElementById('symbolInput').value.trim();
+        const symbol = parseSymbolInput(input);
         const queryBtn = document.getElementById('queryBtn');
 
+        console.log('解析後的股票代號:', symbol);
+
         if (!symbol) {
-            alert('請輸入股票代號');
+            alert('請輸入股票代號或名稱');
             return;
         }
 
@@ -307,7 +641,9 @@
 
         try {
             // 使用優化的 API：顯示 12 個月，基於 18 個月計算均線
-            const response = await fetch(`${API_BASE}/api/stock/${symbol}/candlestick-with-ma?displayMonths=12&maBaseMonths=18`);
+            const apiUrl = `${API_BASE}/api/stock/${symbol}/candlestick-with-ma?displayMonths=12&maBaseMonths=18`;
+            console.log('API URL:', apiUrl);
+            const response = await fetch(apiUrl);
 
             if (!response.ok) {
                 throw new Error(`查詢失敗: ${response.status}`);
@@ -322,6 +658,9 @@
             renderChart(data, symbol);
             updateStockInfo(data);
 
+            // 查詢技術分析
+            fetchTechnicalAnalysis(symbol);
+
         } catch (error) {
             console.error('Error:', error);
             chart.hideLoading();
@@ -330,6 +669,184 @@
         } finally {
             queryBtn.disabled = false;
             queryBtn.textContent = '查詢K線';
+        }
+    }
+
+    // 查詢技術分析
+    async function fetchTechnicalAnalysis(symbol) {
+        try {
+            const response = await fetch(`${API_BASE}/api/stock/${symbol}/analysis`);
+
+            if (!response.ok) {
+                console.warn('技術分析查詢失敗:', response.status);
+                document.getElementById('analysisPanel').style.display = 'none';
+                return;
+            }
+
+            const analysis = await response.json();
+            displayTechnicalAnalysis(analysis);
+
+        } catch (error) {
+            console.error('技術分析錯誤:', error);
+            document.getElementById('analysisPanel').style.display = 'none';
+        }
+    }
+
+    // 顯示技術分析結果
+    function displayTechnicalAnalysis(analysis) {
+        const panel = document.getElementById('analysisPanel');
+        panel.style.display = 'block';
+
+        // 顯示操作建議
+        const recommendationValue = document.getElementById('recommendationValue');
+        recommendationValue.textContent = analysis.recommendation;
+        recommendationValue.className = 'recommendation-value';
+
+        // 根據建議類型添加樣式（明日操作建議）
+        if (analysis.recommendation === '買入') {
+            recommendationValue.classList.add('buy');
+        } else if (analysis.recommendation === '賣出') {
+            recommendationValue.classList.add('sell');
+        } else if (analysis.recommendation === '觀望') {
+            recommendationValue.classList.add('wait');
+        }
+
+        // 顯示信心指數
+        const confidenceFill = document.getElementById('confidenceFill');
+        const confidenceText = document.getElementById('confidenceText');
+        confidenceFill.style.width = `${analysis.confidence}%`;
+        confidenceText.textContent = `信心指數: ${analysis.confidence}%`;
+
+        // 顯示訊號摘要
+        const signalsSummary = document.getElementById('signalsSummary');
+        signalsSummary.innerHTML = '';
+
+        if (analysis.signals && analysis.signals.length > 0) {
+            // 只顯示前 5 個最重要的訊號
+            analysis.signals.slice(0, 5).forEach(signal => {
+                const signalDiv = document.createElement('div');
+                signalDiv.className = `signal-item ${signal.direction === '買進' ? 'buy' : 'sell'}`;
+
+                // 強度顯示
+                const strengthHtml = Array(5).fill(0).map((_, i) =>
+                    `<span class="${i < signal.strength ? 'active' : ''}"></span>`
+                ).join('');
+
+                signalDiv.innerHTML = `
+                    <div>
+                        <div class="signal-type">${signal.type}</div>
+                        <div class="signal-description">${signal.description}</div>
+                    </div>
+                    <div class="signal-strength">${strengthHtml}</div>
+                `;
+                signalsSummary.appendChild(signalDiv);
+            });
+        } else {
+            signalsSummary.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暫無明顯訊號</div>';
+        }
+
+        // 顯示技術指標
+        const indicatorsGrid = document.getElementById('indicatorsGrid');
+        indicatorsGrid.innerHTML = '';
+
+        const indicators = analysis.indicators;
+        const indicatorsList = [
+            {
+                label: 'RSI(6)',
+                value: indicators.rsi6,
+                desc: '6日相對強弱指標：>70超買，<30超賣，衡量短期買賣力道'
+            },
+            {
+                label: 'RSI(12)',
+                value: indicators.rsi12,
+                desc: '12日相對強弱指標：>70超買，<30超賣，衡量中期買賣力道'
+            },
+            {
+                label: 'KD-K',
+                value: indicators.kdK,
+                desc: 'K值：>80超買，<20超賣，反應靈敏的短期指標'
+            },
+            {
+                label: 'KD-D',
+                value: indicators.kdD,
+                desc: 'D值：K值的平滑線，K>D黃金交叉（買進），K<D死亡交叉（賣出）'
+            },
+            {
+                label: 'MACD-DIF',
+                value: indicators.macdDif,
+                desc: 'DIF快線：12日與26日EMA差，反映短期趨勢動能'
+            },
+            {
+                label: 'MACD-DEA',
+                value: indicators.macdDea,
+                desc: 'DEA慢線：DIF的9日平均，DIF>DEA看多，DIF<DEA看空'
+            },
+            {
+                label: '布林上軌',
+                value: indicators.bbandsUpper,
+                desc: '上軌：價格觸及表示超買，可能回檔'
+            },
+            {
+                label: '布林中軌',
+                value: indicators.bbandsMiddle,
+                desc: '中軌：20日移動平均線，中期趨勢參考'
+            },
+            {
+                label: '布林下軌',
+                value: indicators.bbandsLower,
+                desc: '下軌：價格觸及表示超賣，可能反彈'
+            },
+            {
+                label: 'MA5',
+                value: indicators.ma5,
+                desc: '5日均線：短期趨勢，價格在上方為多頭'
+            },
+            {
+                label: 'MA10',
+                value: indicators.ma10,
+                desc: '10日均線：短中期趨勢，與MA5交叉形成訊號'
+            },
+            {
+                label: 'MA20',
+                value: indicators.ma20,
+                desc: '20日均線：中期趨勢，重要支撐壓力'
+            },
+            {
+                label: 'MA60',
+                value: indicators.ma60,
+                desc: '60日均線：長期趨勢，季線位置'
+            }
+        ];
+
+        indicatorsList.forEach(ind => {
+            if (ind.value !== null && ind.value !== undefined) {
+                const indDiv = document.createElement('div');
+                indDiv.className = 'indicator-item';
+                indDiv.innerHTML = `
+                    <div class="indicator-label">${ind.label}</div>
+                    <div class="indicator-value">${typeof ind.value === 'number' ? ind.value.toFixed(2) : ind.value}</div>
+                    <div class="indicator-desc">${ind.desc}</div>
+                `;
+                indicatorsGrid.appendChild(indDiv);
+            }
+        });
+
+        // 顯示分析文字
+        const analysisText = document.getElementById('analysisText');
+        analysisText.textContent = analysis.analysis;
+    }
+
+    // 切換詳細分析
+    function toggleAnalysisDetail() {
+        const detail = document.getElementById('analysisDetail');
+        const toggle = document.querySelector('.analysis-toggle');
+
+        if (detail.style.display === 'none') {
+            detail.style.display = 'block';
+            toggle.textContent = '收起 ▲';
+        } else {
+            detail.style.display = 'none';
+            toggle.textContent = '詳細 ▼';
         }
     }
 
@@ -605,6 +1122,10 @@
         const periodChangePercent = (periodChange / firstData.open) * 100;
 
         infoGrid.innerHTML = `
+            <div class="info-item stock-name-item">
+                <div class="info-label">股票</div>
+                <div class="info-value"><strong>${latestData.name || latestData.symbol}</strong> (${latestData.symbol})</div>
+            </div>
             <div class="info-item">
                 <div class="info-label">最新日期</div>
                 <div class="info-value">${latestData.date}</div>
@@ -672,6 +1193,7 @@
 
     // 初始化並自動查詢
     window.addEventListener('load', () => {
+        initStockList();  // 初始化股票列表選項
         initChart();
         queryKLine();
     });

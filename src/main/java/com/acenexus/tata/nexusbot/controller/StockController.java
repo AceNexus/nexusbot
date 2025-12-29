@@ -4,7 +4,9 @@ import com.acenexus.tata.nexusbot.client.FinMindApiClient;
 import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.CandlestickWithMA;
 import com.acenexus.tata.nexusbot.dto.StockInfo;
+import com.acenexus.tata.nexusbot.dto.TechnicalAnalysisResult;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
+import com.acenexus.tata.nexusbot.service.TechnicalAnalysisService;
 import com.acenexus.tata.nexusbot.service.stock.StockService;
 import com.acenexus.tata.nexusbot.util.MovingAverageCalculator;
 import io.swagger.v3.oas.annotations.Operation;
@@ -37,6 +39,7 @@ public class StockController {
 
     private final List<StockService> stockServices;
     private final FinMindApiClient finMindApiClient;
+    private final TechnicalAnalysisService technicalAnalysisService;
 
     @Operation(
             summary = "查詢股票資訊",
@@ -359,6 +362,107 @@ public class StockController {
 
         } catch (Exception ex) {
             log.error("K-line with MA query error - symbol={}, displayMonths={}, maBaseMonths={}, error={}", symbol, displayMonths, maBaseMonths, ex.getMessage(), ex);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @Operation(
+            summary = "技術分析",
+            description = """
+                    對台股進行完整技術分析，提供買賣建議。
+
+                    **分析內容包括**:
+                    - RSI (相對強弱指標)
+                    - KD (隨機指標)
+                    - MACD (指數平滑異同移動平均線)
+                    - 布林帶 (Bollinger Bands)
+                    - 移動平均線 (MA5/MA10/MA20/MA60)
+                    - 買賣訊號分析
+                    - 支撐壓力位
+                    - 綜合操作建議
+
+                    **注意事項**:
+                    - 需要至少 3 個月以上的歷史數據
+                    - 分析結果僅供參考，不構成投資建議
+                    - 投資有風險，請審慎評估
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "分析成功",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = TechnicalAnalysisResult.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "數據不足或參數錯誤",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "查無此股票代號",
+                    content = @Content(mediaType = "application/json")
+            )
+    })
+    @GetMapping("/{symbol}/analysis")
+    public ResponseEntity<TechnicalAnalysisResult> getTechnicalAnalysis(
+            @Parameter(description = "台股代號（4位數字）", example = "2330")
+            @PathVariable String symbol) {
+
+        log.info("Technical analysis request - symbol={}", symbol);
+
+        try {
+            // 查詢至少 3 個月的數據用於技術分析
+            List<CandlestickData> data = finMindApiClient.getRecentMonthsKLine(symbol, 3);
+
+            if (data.isEmpty()) {
+                log.warn("No data found for analysis - symbol={}", symbol);
+                return ResponseEntity.notFound().build();
+            }
+
+            if (data.size() < 60) {
+                log.warn("Insufficient data for analysis - symbol={}, dataPoints={}", symbol, data.size());
+                return ResponseEntity.badRequest().build();
+            }
+
+            // 獲取股票中文名稱
+            String fetchedName = symbol;  // 預設使用股票代號
+            try {
+                // 找到支援台股的服務
+                Optional<StockService> serviceOpt = stockServices.stream()
+                        .filter(service -> service.supports(StockMarket.TW))
+                        .findFirst();
+
+                if (serviceOpt.isPresent()) {
+                    StockService stockService = serviceOpt.get();
+                    Optional<StockInfo> stockInfoOpt = stockService.getStockInfo(symbol, StockMarket.TW).join();
+                    if (stockInfoOpt.isPresent()) {
+                        fetchedName = stockInfoOpt.get().getName();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to fetch stock name - symbol={}, using symbol as fallback", symbol);
+            }
+            final String stockName = fetchedName;
+
+            // 將股票名稱設定到所有K線數據中
+            data.forEach(candle -> candle.setName(stockName));
+
+            // 執行技術分析
+            TechnicalAnalysisResult result = technicalAnalysisService.analyze(symbol, data);
+
+            log.info("Technical analysis completed - symbol={}, recommendation={}, confidence={}", symbol, result.getRecommendation(), result.getConfidence());
+
+            return ResponseEntity.ok(result);
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Analysis validation error - symbol={}, error={}", symbol, e.getMessage());
+            return ResponseEntity.badRequest().build();
+        } catch (Exception ex) {
+            log.error("Technical analysis error - symbol={}, error={}", symbol, ex.getMessage(), ex);
             return ResponseEntity.internalServerError().build();
         }
     }
