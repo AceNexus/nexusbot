@@ -514,7 +514,12 @@
 
 <script>
     let chart;
-    const API_BASE = window.location.origin;
+    // 自動偵測 API 基礎 URL
+    // 如果從 Spring Boot (port 5001) 提供服務，使用當前 origin
+    // 否則使用預設的 localhost:5001
+    const API_BASE = window.location.port === '5001'
+        ? window.location.origin
+        : 'http://localhost:5001';
 
     // 常用台股列表（代號和中文名稱）
     const stockList = [

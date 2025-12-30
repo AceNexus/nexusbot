@@ -6,6 +6,7 @@ import com.acenexus.tata.nexusbot.dto.CandlestickWithMA;
 import com.acenexus.tata.nexusbot.dto.StockInfo;
 import com.acenexus.tata.nexusbot.dto.TechnicalAnalysisResult;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
+import com.acenexus.tata.nexusbot.service.StockSymbolService;
 import com.acenexus.tata.nexusbot.service.TechnicalAnalysisService;
 import com.acenexus.tata.nexusbot.service.stock.StockService;
 import com.acenexus.tata.nexusbot.util.MovingAverageCalculator;
@@ -40,20 +41,26 @@ public class StockController {
     private final List<StockService> stockServices;
     private final FinMindApiClient finMindApiClient;
     private final TechnicalAnalysisService technicalAnalysisService;
+    private final StockSymbolService stockSymbolService;
 
     @Operation(
             summary = "查詢股票資訊",
             description = """
-                    根據股票代號和市場類型查詢即時股票資訊。
+                    根據股票代號或名稱和市場類型查詢即時股票資訊。
+
+                    **支援輸入格式**:
+                    - 股票代號（如 "2330"）
+                    - 股票中文名稱（如 "台積電"）
+                    - 股票英文名稱（如 "TSMC"）
 
                     **支援市場**:
                     - TW: 台灣股市 (預設)
                     - US: 美國股市
 
                     **台股範例**:
-                    - 2330 (台積電)
-                    - 2317 (鴻海)
-                    - 2454 (聯發科)
+                    - 2330 或 台積電 或 TSMC
+                    - 2317 或 鴻海 或 Hon Hai
+                    - 2454 或 聯發科 或 MediaTek
 
                     **美股範例**:
                     - AAPL (蘋果)
@@ -111,12 +118,16 @@ public class StockController {
             )
     })
     @GetMapping("/{symbol}")
-    public CompletableFuture<ResponseEntity<StockInfo>> getStockInfo(@Parameter(description = "股票代號 (台股:4位數字, 美股:英文代碼)", example = "2330")
+    public CompletableFuture<ResponseEntity<StockInfo>> getStockInfo(@Parameter(description = "股票代號或名稱 (台股:代號如2330或名稱如台積電, 美股:英文代碼)", example = "2330")
                                                                      @PathVariable String symbol,
                                                                      @Parameter(description = "市場類型 (TW=台灣, US=美國)", example = "TW")
                                                                      @RequestParam(defaultValue = "TW") StockMarket market) {
 
-        log.info("Stock query - symbol={}, market={}", symbol, market);
+        log.info("Stock query - input={}, market={}", symbol, market);
+
+        // 解析輸入：可能是股票代號或名稱
+        String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, market);
+        log.debug("Resolved symbol - input={}, resolved={}, market={}", symbol, resolvedSymbol, market);
 
         // 找到支援此市場的服務
         Optional<StockService> serviceOpt = stockServices.stream()
@@ -131,7 +142,7 @@ public class StockController {
         StockService stockService = serviceOpt.get();
         log.debug("Using stock service - service={}", stockService.getClass().getSimpleName());
 
-        return stockService.getStockInfo(symbol, market)
+        return stockService.getStockInfo(resolvedSymbol, market)
                 .thenApply(stockInfoOpt -> {
                     if (stockInfoOpt.isEmpty()) {
                         log.warn("Stock not found - symbol={}, market={}", symbol, market);
@@ -155,6 +166,11 @@ public class StockController {
 
                     **資料來源**: FinMind API（台灣開源金融資料庫）
 
+                    **支援輸入格式**:
+                    - 股票代號（如 "2330"）
+                    - 股票中文名稱（如 "台積電"）
+                    - 股票英文名稱（如 "TSMC"）
+
                     **數據包含**:
                     - 日期 (date)
                     - 開盤價 (open)
@@ -166,10 +182,10 @@ public class StockController {
                     - 漲跌金額 (change)
                     - 漲跌幅 (changePercent) - 單位：%
 
-                    **範例股票代號**:
-                    - 2330 (台積電)
-                    - 2317 (鴻海)
-                    - 2454 (聯發科)
+                    **範例**:
+                    - 2330 或 台積電 或 TSMC
+                    - 2317 或 鴻海 或 Hon Hai
+                    - 2454 或 聯發科 或 MediaTek
 
                     **注意事項**:
                     - 預設查詢最近 6 個月的數據
@@ -217,20 +233,24 @@ public class StockController {
             )
     })
     @GetMapping("/{symbol}/candlestick")
-    public ResponseEntity<List<CandlestickData>> getStockCandlestick(@Parameter(description = "台股代號（4位數字）", example = "2330")
+    public ResponseEntity<List<CandlestickData>> getStockCandlestick(@Parameter(description = "台股代號或名稱（代號如2330或名稱如台積電）", example = "2330")
                                                                      @PathVariable String symbol,
-                                                                     @Parameter(description = "查詢月數（1-24個月，預設1個月）", example = "1")
+                                                                     @Parameter(description = "查詢月數（1-24個月，預設6個月）", example = "6")
                                                                      @RequestParam(defaultValue = "6") int months) {
 
-        log.info("K-line query - symbol={}, months={}", symbol, months);
+        log.info("K-line query - input={}, months={}", symbol, months);
+
+        // 解析輸入：可能是股票代號或名稱
+        String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+        log.debug("Resolved symbol - input={}, resolved={}", symbol, resolvedSymbol);
 
         if (months < 1 || months > 24) {
-            log.warn("Invalid months parameter - symbol={}, months={}", symbol, months);
+            log.warn("Invalid months parameter - input={}, months={}", symbol, months);
             return ResponseEntity.badRequest().build();
         }
 
         try {
-            List<CandlestickData> candlesticks = finMindApiClient.getRecentMonthsKLine(symbol, months);
+            List<CandlestickData> candlesticks = finMindApiClient.getRecentMonthsKLine(resolvedSymbol, months);
 
             if (candlesticks.isEmpty()) {
                 log.warn("No K-line data found - symbol={}", symbol);
@@ -251,6 +271,11 @@ public class StockController {
             summary = "查詢台股K線圖數據（含均線，優化版）",
             description = """
                     查詢台灣上市公司的歷史K線數據，並包含計算好的移動平均線。
+
+                    **支援輸入格式**:
+                    - 股票代號（如 "2330"）
+                    - 股票中文名稱（如 "台積電"）
+                    - 股票英文名稱（如 "TSMC"）
 
                     **優化特點**:
                     - 基於更長的歷史數據計算均線，確保準確性
@@ -293,37 +318,40 @@ public class StockController {
             )
     })
     @GetMapping("/{symbol}/candlestick-with-ma")
-    public ResponseEntity<List<CandlestickWithMA>> getStockCandlestickWithMA(
-            @Parameter(description = "台股代號（4位數字）", example = "2330")
-            @PathVariable String symbol,
-            @Parameter(description = "顯示月數（1-12個月，預設6個月）", example = "6")
-            @RequestParam(defaultValue = "6") int displayMonths,
-            @Parameter(description = "均線計算基準月數（3-24個月，預設12個月）", example = "12")
-            @RequestParam(defaultValue = "12") int maBaseMonths) {
+    public ResponseEntity<List<CandlestickWithMA>> getStockCandlestickWithMA(@Parameter(description = "台股代號或名稱（代號如2330或名稱如台積電）", example = "2330")
+                                                                             @PathVariable String symbol,
+                                                                             @Parameter(description = "顯示月數（1-12個月，預設6個月）", example = "6")
+                                                                             @RequestParam(defaultValue = "6") int displayMonths,
+                                                                             @Parameter(description = "均線計算基準月數（3-24個月，預設12個月）", example = "12")
+                                                                             @RequestParam(defaultValue = "12") int maBaseMonths) {
 
-        log.info("K-line with MA query - symbol={}, displayMonths={}, maBaseMonths={}",
+        log.info("K-line with MA query - input={}, displayMonths={}, maBaseMonths={}",
                 symbol, displayMonths, maBaseMonths);
+
+        // 解析輸入：可能是股票代號或名稱
+        String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+        log.debug("Resolved symbol - input={}, resolved={}", symbol, resolvedSymbol);
 
         // 參數驗證
         if (displayMonths < 1 || displayMonths > 12) {
-            log.warn("Invalid displayMonths parameter - symbol={}, displayMonths={}", symbol, displayMonths);
+            log.warn("Invalid displayMonths parameter - input={}, displayMonths={}", symbol, displayMonths);
             return ResponseEntity.badRequest().build();
         }
 
         if (maBaseMonths < 3 || maBaseMonths > 24) {
-            log.warn("Invalid maBaseMonths parameter - symbol={}, maBaseMonths={}", symbol, maBaseMonths);
+            log.warn("Invalid maBaseMonths parameter - input={}, maBaseMonths={}", symbol, maBaseMonths);
             return ResponseEntity.badRequest().build();
         }
 
         if (maBaseMonths < displayMonths) {
-            log.warn("maBaseMonths must be >= displayMonths - symbol={}, displayMonths={}, maBaseMonths={}",
+            log.warn("maBaseMonths must be >= displayMonths - input={}, displayMonths={}, maBaseMonths={}",
                     symbol, displayMonths, maBaseMonths);
             return ResponseEntity.badRequest().build();
         }
 
         try {
             // 1. 查詢完整的歷史數據（用於計算均線）
-            List<CandlestickData> fullData = finMindApiClient.getRecentMonthsKLine(symbol, maBaseMonths);
+            List<CandlestickData> fullData = finMindApiClient.getRecentMonthsKLine(resolvedSymbol, maBaseMonths);
 
             if (fullData.isEmpty()) {
                 log.warn("No K-line data found - symbol={}", symbol);
@@ -371,6 +399,11 @@ public class StockController {
             description = """
                     對台股進行完整技術分析，提供買賣建議。
 
+                    **支援輸入格式**:
+                    - 股票代號（如 "2330"）
+                    - 股票中文名稱（如 "台積電"）
+                    - 股票英文名稱（如 "TSMC"）
+
                     **分析內容包括**:
                     - RSI (相對強弱指標)
                     - KD (隨機指標)
@@ -408,15 +441,18 @@ public class StockController {
             )
     })
     @GetMapping("/{symbol}/analysis")
-    public ResponseEntity<TechnicalAnalysisResult> getTechnicalAnalysis(
-            @Parameter(description = "台股代號（4位數字）", example = "2330")
-            @PathVariable String symbol) {
+    public ResponseEntity<TechnicalAnalysisResult> getTechnicalAnalysis(@Parameter(description = "台股代號或名稱（代號如2330或名稱如台積電）", example = "2330")
+                                                                        @PathVariable String symbol) {
 
-        log.info("Technical analysis request - symbol={}", symbol);
+        log.info("Technical analysis request - input={}", symbol);
+
+        // 解析輸入：可能是股票代號或名稱
+        String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+        log.debug("Resolved symbol - input={}, resolved={}", symbol, resolvedSymbol);
 
         try {
             // 查詢至少 3 個月的數據用於技術分析
-            List<CandlestickData> data = finMindApiClient.getRecentMonthsKLine(symbol, 3);
+            List<CandlestickData> data = finMindApiClient.getRecentMonthsKLine(resolvedSymbol, 3);
 
             if (data.isEmpty()) {
                 log.warn("No data found for analysis - symbol={}", symbol);
@@ -429,7 +465,7 @@ public class StockController {
             }
 
             // 獲取股票中文名稱
-            String fetchedName = symbol;  // 預設使用股票代號
+            String fetchedName = resolvedSymbol;  // 預設使用股票代號
             try {
                 // 找到支援台股的服務
                 Optional<StockService> serviceOpt = stockServices.stream()
@@ -438,13 +474,13 @@ public class StockController {
 
                 if (serviceOpt.isPresent()) {
                     StockService stockService = serviceOpt.get();
-                    Optional<StockInfo> stockInfoOpt = stockService.getStockInfo(symbol, StockMarket.TW).join();
+                    Optional<StockInfo> stockInfoOpt = stockService.getStockInfo(resolvedSymbol, StockMarket.TW).join();
                     if (stockInfoOpt.isPresent()) {
                         fetchedName = stockInfoOpt.get().getName();
                     }
                 }
             } catch (Exception e) {
-                log.warn("Failed to fetch stock name - symbol={}, using symbol as fallback", symbol);
+                log.warn("Failed to fetch stock name - symbol={}, using symbol as fallback", resolvedSymbol);
             }
             final String stockName = fetchedName;
 

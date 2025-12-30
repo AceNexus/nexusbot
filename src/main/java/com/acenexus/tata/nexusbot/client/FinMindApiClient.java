@@ -2,6 +2,7 @@ package com.acenexus.tata.nexusbot.client;
 
 import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.FinMindStockPriceResponse;
+import com.acenexus.tata.nexusbot.dto.TaiwanStockInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -16,7 +17,9 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -190,6 +193,51 @@ public class FinMindApiClient {
         } catch (NumberFormatException e) {
             log.warn("Failed to parse long: {}", value);
             return null;
+        }
+    }
+
+    /**
+     * 取得台灣股票代號與名稱映射
+     * 使用 FinMind TaiwanStockInfo API 取得所有台股代號與名稱映射
+     * API 文件：https://finmind.github.io/tutor/TaiwanMarket/Technical/#taiwanstockinfo
+     *
+     * @return Map<股票名稱, 股票代號>
+     */
+    public Map<String, String> getTaiwanStockNameToSymbolMap() {
+        try {
+            String url = BASE_URL + "?dataset=TaiwanStockInfo";
+
+            log.debug("FinMind TaiwanStockInfo query - url={}", url);
+
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.warn("FinMind TaiwanStockInfo query failed - status={}", response.getStatusCode());
+                return Map.of();
+            }
+
+            TaiwanStockInfo apiResponse = objectMapper.readValue(response.getBody(), TaiwanStockInfo.class);
+
+            if (apiResponse.getStatus() != 200 || apiResponse.getData() == null) {
+                log.warn("FinMind TaiwanStockInfo API error - message={}", apiResponse.getMessage());
+                return Map.of();
+            }
+
+            // 建立名稱 -> 代號的映射
+            Map<String, String> nameToSymbolMap = new HashMap<>();
+            for (TaiwanStockInfo.StockData stock : apiResponse.getData()) {
+                nameToSymbolMap.put(stock.getStockName(), stock.getStockId());
+            }
+
+            log.info("FinMind TaiwanStockInfo data retrieved - count={}", nameToSymbolMap.size());
+            return nameToSymbolMap;
+
+        } catch (RestClientException e) {
+            log.error("FinMind TaiwanStockInfo network error - error={}", e.getMessage());
+            return Map.of();
+        } catch (Exception e) {
+            log.error("FinMind TaiwanStockInfo parse error - error={}", e.getMessage(), e);
+            return Map.of();
         }
     }
 }
