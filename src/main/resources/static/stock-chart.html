@@ -999,6 +999,11 @@
                 throw new Error('查無數據');
             }
 
+            // 保存數據供調試使用
+            window.latestData = data;
+            console.log('已載入', data.length, '筆 K 線數據');
+            console.log('前 3 筆數據範例：', data.slice(0, 3));
+
             renderChart(data, symbol);
             updateStockInfo(data);
 
@@ -1217,6 +1222,22 @@
         const ohlc = data.map(item => [item.open, item.close, item.low, item.high]);
         const volumes = data.map(item => item.volume);
 
+        // 調試：檢查影線
+        const sampleData = data.slice(0, 5);
+        console.log('檢查前 5 筆 K 線數據：');
+        sampleData.forEach((item, idx) => {
+            const upperShadow = item.high - Math.max(item.open, item.close);
+            const lowerShadow = Math.min(item.open, item.close) - item.low;
+            console.log(`  ${idx + 1}. ${item.date}:`, {
+                開盤: item.open,
+                收盤: item.close,
+                最高: item.high,
+                最低: item.low,
+                上影線: upperShadow.toFixed(2),
+                下影線: lowerShadow.toFixed(2)
+            });
+        });
+
         // 直接從後端獲取的均線數據
         const maConfig = [
             { name: 'MA5', color: '#FF1493' },
@@ -1410,10 +1431,11 @@
                     type: 'candlestick',
                     data: ohlc,
                     itemStyle: {
-                        color: '#ef5350',
-                        color0: '#26a69a',
-                        borderColor: '#ef5350',
-                        borderColor0: '#26a69a'
+                        color: '#ef5350',        // 陽線實體顏色（紅色）
+                        color0: '#26a69a',       // 陰線實體顏色（綠色）
+                        borderColor: '#ef5350',  // 陽線邊框和影線顏色
+                        borderColor0: '#26a69a', // 陰線邊框和影線顏色
+                        borderWidth: 1           // 邊框和影線寬度（關鍵！）
                     },
                     emphasis: {
                         itemStyle: {
