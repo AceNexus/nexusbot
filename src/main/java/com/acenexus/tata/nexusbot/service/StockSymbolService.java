@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.service;
 
 import com.acenexus.tata.nexusbot.client.FinMindApiClient;
+import com.acenexus.tata.nexusbot.dto.StockSymbolDto;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -8,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -136,5 +139,29 @@ public class StockSymbolService {
      */
     public long getCacheSize() {
         return taiwanStockCache.estimatedSize();
+    }
+
+    /**
+     * 取得所有台股代號列表
+     *
+     * @return 包含代號和名稱的列表
+     */
+    public List<StockSymbolDto> getAllStocks() {
+        if (taiwanStockCache.estimatedSize() == 0) {
+            loadTaiwanStockCache();
+        }
+
+        List<StockSymbolDto> result = new ArrayList<>();
+        for (Map.Entry<String, String> entry : taiwanStockCache.asMap().entrySet()) {
+            result.add(StockSymbolDto.builder()
+                    .name(entry.getKey())
+                    .symbol(entry.getValue())
+                    .build());
+        }
+
+        // 根據代號排序，方便前端顯示
+        result.sort((a, b) -> a.getSymbol().compareTo(b.getSymbol()));
+
+        return result;
     }
 }

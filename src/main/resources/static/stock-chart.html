@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -180,9 +181,20 @@
         }
 
         @keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60%, 100% { content: '...'; }
+
+            0%,
+            20% {
+                content: '.';
+            }
+
+            40% {
+                content: '..';
+            }
+
+            60%,
+            100% {
+                content: '...';
+            }
         }
 
         .error {
@@ -284,15 +296,18 @@
         }
 
         .recommendation-value.buy {
-            color: #dc3545;  /* 紅色 - 買入 */
+            color: #dc3545;
+            /* 紅色 - 買入 */
         }
 
         .recommendation-value.sell {
-            color: #28a745;  /* 綠色 - 賣出 */
+            color: #28a745;
+            /* 綠色 - 賣出 */
         }
 
         .recommendation-value.wait {
-            color: #6c757d;  /* 灰色 - 觀望 */
+            color: #6c757d;
+            /* 灰色 - 觀望 */
         }
 
         .confidence-bar {
@@ -439,6 +454,7 @@
         }
     </style>
 </head>
+
 <body>
 <div class="container">
     <div class="header">
@@ -522,51 +538,69 @@
         : 'http://localhost:5001';
 
     // 常用台股列表（代號和中文名稱）
-    const stockList = [
-        { symbol: '2330', name: '台積電' },
-        { symbol: '2317', name: '鴻海' },
-        { symbol: '2454', name: '聯發科' },
-        { symbol: '2412', name: '中華電' },
-        { symbol: '2882', name: '國泰金' },
-        { symbol: '2891', name: '中信金' },
-        { symbol: '2886', name: '兆豐金' },
-        { symbol: '2308', name: '台達電' },
-        { symbol: '2303', name: '聯電' },
-        { symbol: '2880', name: '華南金' },
-        { symbol: '2881', name: '富邦金' },
-        { symbol: '2892', name: '第一金' },
-        { symbol: '2884', name: '玉山金' },
-        { symbol: '2603', name: '長榮' },
-        { symbol: '2609', name: '陽明' },
-        { symbol: '2615', name: '萬海' },
-        { symbol: '3008', name: '大立光' },
-        { symbol: '2357', name: '華碩' },
-        { symbol: '2382', name: '廣達' },
-        { symbol: '2395', name: '研華' },
-        { symbol: '2912', name: '統一超' },
-        { symbol: '2327', name: '國巨' },
-        { symbol: '6505', name: '台塑化' },
-        { symbol: '1301', name: '台塑' },
-        { symbol: '1303', name: '南亞' },
-        { symbol: '1326', name: '台化' },
-        { symbol: '2002', name: '中鋼' },
-        { symbol: '2207', name: '和泰車' },
-        { symbol: '5880', name: '合庫金' },
-        { symbol: '9904', name: '寶成' }
-    ];
-
     // 初始化股票列表選項
-    function initStockList() {
+    async function initStockList() {
         console.log('========== initStockList ==========');
-        console.log('初始化股票列表，總共', stockList.length, '支股票');
         const datalist = document.getElementById('stockList');
-        stockList.forEach(stock => {
-            const option = document.createElement('option');
-            option.value = `${stock.symbol} ${stock.name}`;
-            option.dataset.symbol = stock.symbol;
-            datalist.appendChild(option);
-        });
-        console.log('股票列表初始化完成，datalist 選項數量:', datalist.options.length);
+        const input = document.getElementById('symbolInput');
+
+        // 顯示載入中提示
+        input.placeholder = "載入股票列表中...";
+
+        try {
+            console.log('正在從 API 獲取股票列表...');
+            const response = await fetch(`${API_BASE}/api/stock/list`);
+
+            if (!response.ok) {
+                throw new Error(`獲取股票列表失敗: ${response.status}`);
+            }
+
+            const stocks = await response.json();
+            console.log('股票列表獲取成功，共', stocks.length, '筆');
+
+            // 全域變數儲存，供搜尋使用
+            window.allStocks = stocks;
+
+            // 清空舊選項
+            datalist.innerHTML = '';
+
+            // 建立 Fragment 以提升效能
+            const fragment = document.createDocumentFragment();
+
+            stocks.forEach(stock => {
+                const option = document.createElement('option');
+                option.value = `${stock.symbol} ${stock.name}`;
+                option.dataset.symbol = stock.symbol;
+                fragment.appendChild(option);
+            });
+
+            datalist.appendChild(fragment);
+            console.log('datalist 更新完成');
+
+            // 恢復輸入框提示
+            input.placeholder = "請輸入股票代號或名稱";
+
+        } catch (error) {
+            console.error('初始化股票列表錯誤:', error);
+            input.placeholder = "股票列表載入失敗，請手動輸入代號";
+
+            // 發生錯誤時，至少保留熱門股以供使用 (Fallback)
+            const fallbackStocks = [
+                { symbol: '2330', name: '台積電' },
+                { symbol: '2317', name: '鴻海' },
+                { symbol: '2454', name: '聯發科' }
+            ];
+            window.allStocks = fallbackStocks;
+
+            // 建立 Fragment
+            const fragment = document.createDocumentFragment();
+            fallbackStocks.forEach(stock => {
+                const option = document.createElement('option');
+                option.value = `${stock.symbol} ${stock.name}`;
+                fragment.appendChild(option);
+            });
+            datalist.appendChild(fragment);
+        }
     }
 
     // 將輸入轉換為股票代號
@@ -575,7 +609,8 @@
         input = input.trim();
         console.log('========== parseSymbolInput ==========');
         console.log('原始輸入:', input);
-        console.log('stockList 長度:', stockList ? stockList.length : 'undefined');
+
+        const stocks = window.allStocks || [];
 
         // 如果是純數字，直接返回
         if (/^\d+$/.test(input)) {
@@ -591,25 +626,16 @@
         }
 
         // 嘗試根據中文名稱查找
-        console.log('嘗試在 stockList 中查找:', input);
-        if (stockList && stockList.length > 0) {
-            console.log('stockList 前3項:', stockList.slice(0, 3));
-            const stock = stockList.find(s => {
-                const nameMatch = s.name === input || s.name.includes(input);
-                if (nameMatch) {
-                    console.log('✓ 找到匹配:', s.symbol, s.name);
-                }
-                return nameMatch;
-            });
+        console.log('嘗試在股票列表中查找:', input);
+        if (stocks.length > 0) {
+            const stock = stocks.find(s => s.name === input || s.name.includes(input));
             if (stock) {
-                console.log('✓ 找到股票:', stock.symbol, stock.name);
+                console.log('✓ 找到匹配:', stock.symbol, stock.name);
                 return stock.symbol;
             }
-        } else {
-            console.error('✗ stockList 未載入或為空!');
         }
 
-        // 都找不到，返回原輸入（可能是不在列表中的股票代號）
+        // 都找不到，返回原輸入
         console.log('✗ 找不到匹配，返回原輸入:', input);
         return input;
     }
@@ -738,12 +764,12 @@
                 ).join('');
 
                 signalDiv.innerHTML = `
-                    <div>
-                        <div class="signal-type">${signal.type}</div>
-                        <div class="signal-description">${signal.description}</div>
-                    </div>
-                    <div class="signal-strength">${strengthHtml}</div>
-                `;
+                <div>
+                    <div class="signal-type">${signal.type}</div>
+                    <div class="signal-description">${signal.description}</div>
+                </div>
+                <div class="signal-strength">${strengthHtml}</div>
+            `;
                 signalsSummary.appendChild(signalDiv);
             });
         } else {
@@ -828,10 +854,10 @@
                 const indDiv = document.createElement('div');
                 indDiv.className = 'indicator-item';
                 indDiv.innerHTML = `
-                    <div class="indicator-label">${ind.label}</div>
-                    <div class="indicator-value">${typeof ind.value === 'number' ? ind.value.toFixed(2) : ind.value}</div>
-                    <div class="indicator-desc">${ind.desc}</div>
-                `;
+                <div class="indicator-label">${ind.label}</div>
+                <div class="indicator-value">${typeof ind.value === 'number' ? ind.value.toFixed(2) : ind.value}</div>
+                <div class="indicator-desc">${ind.desc}</div>
+            `;
                 indicatorsGrid.appendChild(indDiv);
             }
         });
@@ -928,7 +954,7 @@
                 axisPointer: {
                     type: 'cross'
                 },
-                formatter: function(params) {
+                formatter: function (params) {
                     const dataIndex = params[0].dataIndex;
                     const item = data[dataIndex];
 
@@ -941,18 +967,18 @@
                     });
 
                     return `
-                        <div style="padding: 10px;">
-                            <strong>${item.date}</strong><br/>
-                            開盤: ${item.open.toFixed(2)}<br/>
-                            最高: ${item.high.toFixed(2)}<br/>
-                            最低: ${item.low.toFixed(2)}<br/>
-                            收盤: ${item.close.toFixed(2)}<br/>
-                            ${maInfo}
-                            成交量: ${item.volume.toLocaleString()} 張<br/>
-                            成交額: ${item.turnover.toLocaleString()} 千元<br/>
-                            漲跌: <span style="color: ${item.change >= 0 ? '#ef5350' : '#26a69a'}">${item.change >= 0 ? '+' : ''}${item.change.toFixed(2)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent.toFixed(2)}%)</span>
-                        </div>
-                    `;
+                    <div style="padding: 10px;">
+                        <strong>${item.date}</strong><br/>
+                        開盤: ${item.open.toFixed(2)}<br/>
+                        最高: ${item.high.toFixed(2)}<br/>
+                        最低: ${item.low.toFixed(2)}<br/>
+                        收盤: ${item.close.toFixed(2)}<br/>
+                        ${maInfo}
+                        成交量: ${item.volume.toLocaleString()} 張<br/>
+                        成交額: ${item.turnover.toLocaleString()} 千元<br/>
+                        漲跌: <span style="color: ${item.change >= 0 ? '#ef5350' : '#26a69a'}">${item.change >= 0 ? '+' : ''}${item.change.toFixed(2)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent.toFixed(2)}%)</span>
+                    </div>
+                `;
                 }
             },
             legend: {
@@ -981,7 +1007,7 @@
                     boundaryGap: true,
                     axisLine: { lineStyle: { color: '#8392A5' } },
                     axisLabel: {
-                        formatter: function(value) {
+                        formatter: function (value) {
                             return value.substring(5);
                         }
                     },
@@ -1103,7 +1129,7 @@
                     yAxisIndex: 1,
                     data: volumes,
                     itemStyle: {
-                        color: function(params) {
+                        color: function (params) {
                             const item = data[params.dataIndex];
                             return item.close >= item.open ? '#ef5350' : '#26a69a';
                         }
@@ -1127,47 +1153,47 @@
         const periodChangePercent = (periodChange / firstData.open) * 100;
 
         infoGrid.innerHTML = `
-            <div class="info-item stock-name-item">
-                <div class="info-label">股票</div>
-                <div class="info-value"><strong>${latestData.name || latestData.symbol}</strong> (${latestData.symbol})</div>
+        <div class="info-item stock-name-item">
+            <div class="info-label">股票</div>
+            <div class="info-value"><strong>${latestData.name || latestData.symbol}</strong> (${latestData.symbol})</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">最新日期</div>
+            <div class="info-value">${latestData.date}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">收盤價</div>
+            <div class="info-value">${latestData.close.toFixed(2)}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">當日漲跌</div>
+            <div class="info-value ${latestData.change >= 0 ? 'positive' : 'negative'}">
+                ${latestData.change >= 0 ? '+' : ''}${latestData.change.toFixed(2)} (${latestData.changePercent >= 0 ? '+' : ''}${latestData.changePercent.toFixed(2)}%)
             </div>
-            <div class="info-item">
-                <div class="info-label">最新日期</div>
-                <div class="info-value">${latestData.date}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">區間漲跌</div>
+            <div class="info-value ${periodChange >= 0 ? 'positive' : 'negative'}">
+                ${periodChange >= 0 ? '+' : ''}${periodChange.toFixed(2)} (${periodChangePercent >= 0 ? '+' : ''}${periodChangePercent.toFixed(2)}%)
             </div>
-            <div class="info-item">
-                <div class="info-label">收盤價</div>
-                <div class="info-value">${latestData.close.toFixed(2)}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">當日漲跌</div>
-                <div class="info-value ${latestData.change >= 0 ? 'positive' : 'negative'}">
-                    ${latestData.change >= 0 ? '+' : ''}${latestData.change.toFixed(2)} (${latestData.changePercent >= 0 ? '+' : ''}${latestData.changePercent.toFixed(2)}%)
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">區間漲跌</div>
-                <div class="info-value ${periodChange >= 0 ? 'positive' : 'negative'}">
-                    ${periodChange >= 0 ? '+' : ''}${periodChange.toFixed(2)} (${periodChangePercent >= 0 ? '+' : ''}${periodChangePercent.toFixed(2)}%)
-                </div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">最高價</div>
-                <div class="info-value">${latestData.high.toFixed(2)}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">最低價</div>
-                <div class="info-value">${latestData.low.toFixed(2)}</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">成交量</div>
-                <div class="info-value">${latestData.volume.toLocaleString()} 張</div>
-            </div>
-            <div class="info-item">
-                <div class="info-label">成交金額</div>
-                <div class="info-value">${(latestData.turnover / 1000).toFixed(0)} 百萬</div>
-            </div>
-        `;
+        </div>
+        <div class="info-item">
+            <div class="info-label">最高價</div>
+            <div class="info-value">${latestData.high.toFixed(2)}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">最低價</div>
+            <div class="info-value">${latestData.low.toFixed(2)}</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">成交量</div>
+            <div class="info-value">${latestData.volume.toLocaleString()} 張</div>
+        </div>
+        <div class="info-item">
+            <div class="info-label">成交金額</div>
+            <div class="info-value">${(latestData.turnover / 1000).toFixed(0)} 百萬</div>
+        </div>
+    `;
 
         stockInfo.classList.add('active');
     }
@@ -1204,4 +1230,5 @@
     });
 </script>
 </body>
+
 </html>
