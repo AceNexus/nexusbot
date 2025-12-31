@@ -14,112 +14,113 @@
         }
 
         body {
-            font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+            background: #f5f6fa;
             min-height: 100vh;
             padding: 20px;
+            color: #2c3e50;
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
             overflow: hidden;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
+            background: white;
+            color: #2c3e50;
+            padding: 32px 24px;
+            border-bottom: 1px solid #e8eaed;
         }
 
         .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 1.75em;
+            margin-bottom: 6px;
             font-weight: 600;
+            color: #1a1a1a;
         }
 
         .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+            font-size: 0.95em;
+            color: #5f6368;
         }
 
         .controls {
-            padding: 30px;
-            background: #f8f9fa;
-            border-bottom: 2px solid #e9ecef;
+            padding: 24px;
+            background: #fafbfc;
+            border-bottom: 1px solid #e8eaed;
         }
 
         .control-row {
             display: flex;
-            gap: 15px;
+            gap: 12px;
             flex-wrap: wrap;
             align-items: flex-end;
         }
 
         .control-group {
             flex: 1;
-            min-width: 200px;
+            min-width: 240px;
         }
 
         .control-group label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
-            color: #495057;
-            font-size: 0.95em;
+            font-weight: 500;
+            color: #3c4043;
+            font-size: 0.9em;
         }
 
         .control-group input {
             width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            font-size: 1em;
-            transition: all 0.3s;
+            padding: 10px 14px;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            font-size: 0.95em;
+            transition: all 0.2s;
+            background: white;
         }
 
         .control-group input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.1);
         }
 
         .btn {
-            padding: 12px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 10px 24px;
+            background: #1a73e8;
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 1em;
-            font-weight: 600;
+            border-radius: 6px;
+            font-size: 0.95em;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.2s;
         }
 
         .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            background: #1557b0;
         }
 
         .btn:active {
-            transform: translateY(0);
+            background: #0d47a1;
         }
 
         .btn:disabled {
-            background: #adb5bd;
+            background: #dadce0;
+            color: #5f6368;
             cursor: not-allowed;
-            box-shadow: none;
         }
 
         .stock-info {
-            padding: 20px 30px;
+            padding: 20px 24px;
             background: white;
-            border-bottom: 1px solid #e9ecef;
+            border-bottom: 1px solid #e8eaed;
             display: none;
         }
 
@@ -129,50 +130,53 @@
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
         }
 
         .info-item {
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
+            padding: 14px;
+            background: #fafbfc;
+            border: 1px solid #e8eaed;
+            border-radius: 6px;
             text-align: center;
         }
 
         .info-label {
-            font-size: 0.85em;
-            color: #6c757d;
-            margin-bottom: 5px;
+            font-size: 0.8em;
+            color: #5f6368;
+            margin-bottom: 6px;
+            font-weight: 400;
         }
 
         .info-value {
-            font-size: 1.3em;
+            font-size: 1.15em;
             font-weight: 600;
-            color: #212529;
+            color: #1a1a1a;
         }
 
         .info-value.positive {
-            color: #dc3545;
+            color: #d93025;
         }
 
         .info-value.negative {
-            color: #28a745;
+            color: #0f9d58;
         }
 
         #chartContainer {
-            padding: 30px;
+            padding: 24px;
         }
 
         #candlestickChart {
             width: 100%;
-            height: 600px;
+            height: 540px;
         }
 
         .loading {
             text-align: center;
-            padding: 60px;
-            color: #6c757d;
+            padding: 48px;
+            color: #5f6368;
+            font-size: 0.95em;
         }
 
         .loading::after {
@@ -181,60 +185,57 @@
         }
 
         @keyframes dots {
-
-            0%,
-            20% {
+            0%, 20% {
                 content: '.';
             }
-
             40% {
                 content: '..';
             }
-
-            60%,
-            100% {
+            60%, 100% {
                 content: '...';
             }
         }
 
         .error {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 20px;
-            margin: 30px;
-            border-radius: 8px;
-            border-left: 4px solid #dc3545;
+            background: #fce8e6;
+            color: #c5221f;
+            padding: 16px 20px;
+            margin: 24px;
+            border-radius: 6px;
+            border-left: 3px solid #d93025;
+            font-size: 0.9em;
         }
 
         .quick-stocks {
             display: flex;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 8px;
+            margin-top: 14px;
             flex-wrap: wrap;
         }
 
         .quick-stock-btn {
-            padding: 8px 16px;
+            padding: 7px 14px;
             background: white;
-            color: #667eea;
-            border: 2px solid #667eea;
-            border-radius: 6px;
-            font-size: 0.9em;
+            color: #5f6368;
+            border: 1px solid #dadce0;
+            border-radius: 16px;
+            font-size: 0.85em;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.2s;
         }
 
         .quick-stock-btn:hover {
-            background: #667eea;
-            color: white;
+            background: #f1f3f4;
+            border-color: #1a73e8;
+            color: #1a73e8;
         }
 
         /* 技術分析面板樣式 */
         .analysis-panel {
-            margin: 20px 30px;
+            margin: 16px 24px;
             background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
             overflow: hidden;
         }
 
@@ -243,129 +244,135 @@
         }
 
         .analysis-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 20px;
+            background: #f8f9fa;
+            color: #1a1a1a;
+            padding: 14px 18px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            border-bottom: 1px solid #e8eaed;
         }
 
         .analysis-header h3 {
             margin: 0;
-            font-size: 1.2em;
+            font-size: 1.05em;
+            font-weight: 600;
         }
 
         .analysis-toggle {
             cursor: pointer;
-            padding: 5px 10px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 5px;
-            font-size: 0.9em;
-            transition: background 0.3s;
+            padding: 4px 10px;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #5f6368;
+            transition: all 0.2s;
         }
 
         .analysis-toggle:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: #f1f3f4;
+            border-color: #1a73e8;
+            color: #1a73e8;
         }
 
         .analysis-summary {
             display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
-            padding: 20px;
+            grid-template-columns: 260px 1fr;
+            gap: 16px;
+            padding: 18px;
         }
 
         .recommendation-box {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            border-radius: 10px;
-            padding: 20px;
+            background: #fafbfc;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            padding: 18px;
             text-align: center;
         }
 
         .recommendation-label {
-            font-size: 0.9em;
-            color: #666;
+            font-size: 0.85em;
+            color: #5f6368;
             margin-bottom: 10px;
+            font-weight: 400;
         }
 
         .recommendation-value {
-            font-size: 2.5em;
-            font-weight: 700;
-            margin: 10px 0;
+            font-size: 2em;
+            font-weight: 600;
+            margin: 12px 0;
         }
 
         .recommendation-value.buy {
-            color: #dc3545;
-            /* 紅色 - 買入 */
+            color: #d93025;
         }
 
         .recommendation-value.sell {
-            color: #28a745;
-            /* 綠色 - 賣出 */
+            color: #0f9d58;
         }
 
         .recommendation-value.wait {
-            color: #6c757d;
-            /* 灰色 - 觀望 */
+            color: #5f6368;
         }
 
         .confidence-bar {
             width: 100%;
-            height: 8px;
-            background: #e9ecef;
-            border-radius: 4px;
+            height: 6px;
+            background: #e8eaed;
+            border-radius: 3px;
             overflow: hidden;
-            margin: 10px 0;
+            margin: 12px 0;
         }
 
         .confidence-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.5s ease;
+            background: #1a73e8;
+            transition: width 0.4s ease;
         }
 
         .confidence-text {
-            font-size: 0.85em;
-            color: #666;
-            margin-top: 5px;
+            font-size: 0.8em;
+            color: #5f6368;
+            margin-top: 6px;
         }
 
         .signals-summary {
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         .signal-item {
-            background: #f8f9fa;
-            padding: 12px 15px;
-            border-radius: 8px;
-            border-left: 4px solid #667eea;
+            background: #fafbfc;
+            padding: 12px 14px;
+            border-radius: 6px;
+            border-left: 3px solid #dadce0;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .signal-item.buy {
-            border-left-color: #dc3545;
-            background: #fff5f5;
+            border-left-color: #d93025;
+            background: #fce8e6;
         }
 
         .signal-item.sell {
-            border-left-color: #28a745;
-            background: #f0fff4;
+            border-left-color: #0f9d58;
+            background: #e6f4ea;
         }
 
         .signal-type {
-            font-weight: 600;
-            color: #333;
+            font-weight: 500;
+            color: #1a1a1a;
+            font-size: 0.9em;
         }
 
         .signal-description {
-            font-size: 0.9em;
-            color: #666;
-            margin-top: 5px;
+            font-size: 0.85em;
+            color: #5f6368;
+            margin-top: 4px;
         }
 
         .signal-strength {
@@ -374,65 +381,252 @@
         }
 
         .signal-strength span {
-            width: 8px;
-            height: 20px;
-            background: #ddd;
+            width: 6px;
+            height: 18px;
+            background: #dadce0;
             border-radius: 2px;
         }
 
         .signal-strength span.active {
-            background: #667eea;
+            background: #1a73e8;
         }
 
         .analysis-detail {
-            padding: 20px;
-            border-top: 1px solid #e9ecef;
+            padding: 18px;
+            border-top: 1px solid #e8eaed;
         }
 
         .indicators-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px;
+            margin-bottom: 16px;
         }
 
         .indicator-item {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
+            background: #fafbfc;
+            border: 1px solid #e8eaed;
+            padding: 14px;
+            border-radius: 6px;
             text-align: center;
         }
 
         .indicator-label {
-            font-size: 0.85em;
-            color: #666;
-            margin-bottom: 5px;
+            font-size: 0.8em;
+            color: #5f6368;
+            margin-bottom: 6px;
+            font-weight: 400;
         }
 
         .indicator-value {
-            font-size: 1.5em;
+            font-size: 1.3em;
             font-weight: 600;
-            color: #333;
+            color: #1a1a1a;
             margin-bottom: 8px;
         }
 
         .indicator-desc {
             font-size: 0.75em;
-            color: #666;
-            line-height: 1.4;
+            color: #5f6368;
+            line-height: 1.5;
             margin-top: 8px;
             padding-top: 8px;
-            border-top: 1px solid #e0e0e0;
+            border-top: 1px solid #e8eaed;
             text-align: left;
         }
 
         .analysis-text {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 8px;
-            line-height: 1.8;
+            background: #fafbfc;
+            border: 1px solid #e8eaed;
+            padding: 16px;
+            border-radius: 6px;
+            line-height: 1.7;
             white-space: pre-wrap;
-            color: #333;
+            color: #3c4043;
+            font-size: 0.9em;
+        }
+
+        /* 股票分析四大面向 */
+        .education-panel {
+            margin: 16px 24px;
+            background: white;
+            border: 1px solid #e8eaed;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .education-header {
+            background: #f8f9fa;
+            color: #1a1a1a;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border-bottom: 1px solid #e8eaed;
+            transition: all 0.2s;
+        }
+
+        .education-header:hover {
+            background: #f1f3f4;
+        }
+
+        .education-header h3 {
+            margin: 0;
+            font-size: 1.05em;
+            font-weight: 600;
+        }
+
+        .education-toggle {
+            padding: 4px 10px;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 0.85em;
+            color: #5f6368;
+            transition: all 0.2s;
+        }
+
+        .education-content {
+            padding: 20px;
+            display: none;
+        }
+
+        .education-content.active {
+            display: block;
+        }
+
+        .aspects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .aspect-card {
+            background: #fafbfc;
+            border: 1px solid #e8eaed;
+            border-radius: 6px;
+            padding: 16px;
+            transition: all 0.2s;
+        }
+
+        .aspect-card:hover {
+            border-color: #dadce0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        .aspect-card.fundamental {
+            border-left: 3px solid #ea8600;
+        }
+
+        .aspect-card.technical {
+            border-left: 3px solid #1a73e8;
+        }
+
+        .aspect-card.chip {
+            border-left: 3px solid #9334e6;
+        }
+
+        .aspect-card.macro {
+            border-left: 3px solid #0f9d58;
+        }
+
+        .aspect-header {
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e8eaed;
+        }
+
+        .aspect-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .aspect-subtitle {
+            font-size: 0.85em;
+            color: #5f6368;
+        }
+
+        .aspect-content {
+            color: #3c4043;
+            line-height: 1.7;
+        }
+
+        .aspect-items {
+            margin: 12px 0;
+        }
+
+        .aspect-item {
+            padding: 6px 0 6px 18px;
+            position: relative;
+            font-size: 0.9em;
+            color: #3c4043;
+        }
+
+        .aspect-item::before {
+            content: "•";
+            position: absolute;
+            left: 5px;
+            color: #5f6368;
+        }
+
+        .aspect-purpose {
+            background: white;
+            border: 1px solid #e8eaed;
+            padding: 10px 12px;
+            border-radius: 4px;
+            margin-top: 12px;
+            font-weight: 500;
+            color: #1a1a1a;
+            text-align: center;
+            font-size: 0.9em;
+        }
+
+        .workflow-section {
+            background: #f8f9fa;
+            border: 1px solid #e8eaed;
+            padding: 20px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .workflow-title {
+            font-size: 1.05em;
+            font-weight: 600;
+            margin-bottom: 14px;
+            color: #1a1a1a;
+        }
+
+        .workflow-steps {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            font-size: 0.9em;
+        }
+
+        .workflow-step {
+            background: white;
+            border: 1px solid #dadce0;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            color: #3c4043;
+            transition: all 0.2s;
+        }
+
+        .workflow-step:hover {
+            border-color: #1a73e8;
+            color: #1a73e8;
+        }
+
+        .workflow-arrow {
+            font-size: 1.2em;
+            color: #5f6368;
         }
 
         @media (max-width: 768px) {
@@ -519,6 +713,125 @@
 
             <div class="analysis-text" id="analysisText">
                 <!-- 動態生成分析文字 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 股票分析四大面向教育板块 -->
+    <div class="education-panel">
+        <div class="education-header" onclick="toggleEducationPanel()">
+            <h3>股票分析四大面向</h3>
+            <span class="education-toggle" id="educationToggle">展開 ▼</span>
+        </div>
+
+        <div class="education-content" id="educationContent">
+            <div class="aspects-grid">
+                <!-- 基本面 -->
+                <div class="aspect-card fundamental">
+                    <div class="aspect-header">
+                        <div>
+                            <div class="aspect-title">基本面</div>
+                            <div class="aspect-subtitle">公司好不好</div>
+                        </div>
+                    </div>
+                    <div class="aspect-content">
+                        <div class="aspect-items">
+                            <div class="aspect-item">營收 / EPS / 利潤</div>
+                            <div class="aspect-item">現金流</div>
+                            <div class="aspect-item">ROE（股東權益報酬率）</div>
+                            <div class="aspect-item">配息 & 殖利率</div>
+                            <div class="aspect-item">負債比</div>
+                            <div class="aspect-item">產業前景 & 市占</div>
+                        </div>
+                        <div class="aspect-purpose">
+                            判斷：值不值得長期投資
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 技術面 -->
+                <div class="aspect-card technical">
+                    <div class="aspect-header">
+                        <div>
+                            <div class="aspect-title">技術面</div>
+                            <div class="aspect-subtitle">何時買賣</div>
+                        </div>
+                    </div>
+                    <div class="aspect-content">
+                        <div class="aspect-items">
+                            <div class="aspect-item">K 線</div>
+                            <div class="aspect-item">均線（MA5/10/20/60）</div>
+                            <div class="aspect-item">RSI / MACD 等指標</div>
+                            <div class="aspect-item">成交量</div>
+                            <div class="aspect-item">支撐 / 壓力位</div>
+                        </div>
+                        <div class="aspect-purpose">
+                            判斷：進場 / 出場時機
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 籌碼面 -->
+                <div class="aspect-card chip">
+                    <div class="aspect-header">
+                        <div>
+                            <div class="aspect-title">籌碼面</div>
+                            <div class="aspect-subtitle">誰在買股票</div>
+                        </div>
+                    </div>
+                    <div class="aspect-content">
+                        <div class="aspect-items">
+                            <div class="aspect-item">外資 / 投信 / 自營商</div>
+                            <div class="aspect-item">大股東持股</div>
+                            <div class="aspect-item">融資融券</div>
+                            <div class="aspect-item">籌碼集中度</div>
+                            <div class="aspect-item">董監持股變化</div>
+                        </div>
+                        <div class="aspect-purpose">
+                            判斷：是否有大戶在布局或撤退
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 總體與事件 -->
+                <div class="aspect-card macro">
+                    <div class="aspect-header">
+                        <div>
+                            <div class="aspect-title">總體與事件</div>
+                            <div class="aspect-subtitle">外在影響</div>
+                        </div>
+                    </div>
+                    <div class="aspect-content">
+                        <div class="aspect-items">
+                            <div class="aspect-item">美股 / 景氣循環</div>
+                            <div class="aspect-item">利率 / 通膨</div>
+                            <div class="aspect-item">匯率</div>
+                            <div class="aspect-item">政策</div>
+                            <div class="aspect-item">公司重大事件（財報、併購）</div>
+                        </div>
+                        <div class="aspect-purpose">
+                            判斷：趨勢方向與風險
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分析流程 -->
+            <div class="workflow-section">
+                <div class="workflow-title">常用分析流程</div>
+                <div class="workflow-steps">
+                    <div class="workflow-step">環境</div>
+                    <div class="workflow-arrow">→</div>
+                    <div class="workflow-step">產業</div>
+                    <div class="workflow-arrow">→</div>
+                    <div class="workflow-step">基本面</div>
+                    <div class="workflow-arrow">→</div>
+                    <div class="workflow-step">籌碼</div>
+                    <div class="workflow-arrow">→</div>
+                    <div class="workflow-step">技術面</div>
+                    <div class="workflow-arrow">→</div>
+                    <div class="workflow-step">進出場</div>
+                </div>
             </div>
         </div>
     </div>
@@ -878,6 +1191,20 @@
         } else {
             detail.style.display = 'none';
             toggle.textContent = '詳細 ▼';
+        }
+    }
+
+    // 切換教育面板
+    function toggleEducationPanel() {
+        const content = document.getElementById('educationContent');
+        const toggle = document.getElementById('educationToggle');
+
+        if (content.classList.contains('active')) {
+            content.classList.remove('active');
+            toggle.textContent = '展開 ▼';
+        } else {
+            content.classList.add('active');
+            toggle.textContent = '收起 ▲';
         }
     }
 
