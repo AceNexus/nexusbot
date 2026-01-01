@@ -34,26 +34,20 @@
         .header {
             background: white;
             color: #2c3e50;
-            padding: 32px 24px;
+            padding: 20px 24px;
             border-bottom: 1px solid #e8eaed;
         }
 
         .header h1 {
-            font-size: 2em;
-            margin-bottom: 8px;
-            font-weight: 700;
+            font-size: 1.5em;
+            margin: 0;
+            font-weight: 600;
             color: #1a1a1a;
-            letter-spacing: -0.5px;
-        }
-
-        .header p {
-            font-size: 0.95em;
-            color: #5f6368;
         }
 
         .controls {
-            padding: 24px;
-            background: #fafbfc;
+            padding: 16px 24px;
+            background: white;
             border-bottom: 1px solid #e8eaed;
         }
 
@@ -234,10 +228,10 @@
 
         /* 技術分析面板樣式 */
         .analysis-panel {
-            margin: 16px 24px;
+            margin: 12px 20px;
             background: white;
             border: 1px solid #e8eaed;
-            border-radius: 8px;
+            border-radius: 6px;
             overflow: hidden;
         }
 
@@ -818,6 +812,71 @@
             color: #5f6368;
         }
 
+        /* K線型態與趨勢分析樣式 */
+        .pattern-analysis {
+            background: white;
+            border: 1px solid #e8eaed;
+            padding: 20px;
+            margin: 20px;
+            border-radius: 6px;
+        }
+
+        .pattern-section {
+            margin-bottom: 20px;
+        }
+
+        .pattern-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .pattern-title {
+            font-size: 1em;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e8eaed;
+        }
+
+        .pattern-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .pattern-tag {
+            background: #f8f9fa;
+            border: 1px solid #dadce0;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 0.85em;
+            color: #3c4043;
+        }
+
+        .pattern-tag.bullish {
+            background: #e8f5e9;
+            border-color: #81c784;
+            color: #2e7d32;
+        }
+
+        .pattern-tag.bearish {
+            background: #ffebee;
+            border-color: #e57373;
+            color: #c62828;
+        }
+
+        .trend-text {
+            color: #3c4043;
+            line-height: 1.75;
+            font-size: 0.95em;
+        }
+
+        .volume-text {
+            color: #3c4043;
+            line-height: 1.75;
+            font-size: 0.95em;
+        }
+
         @media (max-width: 768px) {
             .header h1 {
                 font-size: 1.8em;
@@ -841,8 +900,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>台股K線圖查詢系統</h1>
-        <p>即時查詢台灣上市公司歷史K線數據</p>
+        <h1>台股技術分析</h1>
     </div>
 
     <div class="controls">
@@ -857,13 +915,10 @@
         </div>
 
         <div class="quick-stocks">
-            <span style="color: #6c757d; font-size: 0.9em; margin-right: 10px;">快速選擇：</span>
-            <button class="quick-stock-btn" data-symbol="2330">2330 台積電</button>
-            <button class="quick-stock-btn" data-symbol="2317">2317 鴻海</button>
-            <button class="quick-stock-btn" data-symbol="2454">2454 聯發科</button>
-            <button class="quick-stock-btn" data-symbol="2412">2412 中華電</button>
-            <button class="quick-stock-btn" data-symbol="2882">2882 國泰金</button>
-            <button class="quick-stock-btn" data-symbol="2891">2891 中信金</button>
+            <button class="quick-stock-btn" data-symbol="2330">台積電</button>
+            <button class="quick-stock-btn" data-symbol="2317">鴻海</button>
+            <button class="quick-stock-btn" data-symbol="2454">聯發科</button>
+            <button class="quick-stock-btn" data-symbol="2412">中華電</button>
         </div>
     </div>
 
@@ -877,12 +932,9 @@
     <div class="analysis-panel" id="analysisPanel" style="display: none;">
         <div class="analysis-summary">
             <div class="recommendation-box" id="recommendationBox">
-                <div class="recommendation-label">明日操作建議</div>
+                <div class="recommendation-label">操作建議</div>
                 <div class="recommendation-value" id="recommendationValue">-</div>
-                <div class="confidence-bar">
-                    <div class="confidence-fill" id="confidenceFill"></div>
-                </div>
-                <div class="confidence-text" id="confidenceText">信心指數: -</div>
+                <div class="confidence-text" id="confidenceText" style="margin-top: 8px;">-</div>
             </div>
 
             <div class="signals-summary" id="signalsSummary">
@@ -893,7 +945,7 @@
         <!-- 進出場時機分析 -->
         <div class="entry-exit-timing" id="entryExitTiming" style="display: none;">
             <div class="timing-header">
-                <h4 class="timing-title">進出場時機分析</h4>
+                <h4 class="timing-title">價格建議</h4>
                 <span class="timing-action" id="timingAction">-</span>
             </div>
 
@@ -908,14 +960,37 @@
         </div>
 
         <!-- analysis-detail 已移除 -->
+
+        <!-- K線型態與趨勢分析 -->
+        <div class="pattern-analysis" id="patternAnalysis" style="display: none;">
+            <!-- K線型態識別 -->
+            <div class="pattern-section" id="patternSection" style="display: none;">
+                <div class="pattern-title">型態</div>
+                <div class="pattern-list" id="patternList">
+                    <!-- 動態生成型態標籤 -->
+                </div>
+            </div>
+
+            <!-- 趨勢分析 -->
+            <div class="pattern-section" id="trendSection" style="display: none;">
+                <div class="pattern-title">趨勢</div>
+                <div class="trend-text" id="trendText">-</div>
+            </div>
+
+            <!-- 量價配合 -->
+            <div class="pattern-section" id="volumeSection" style="display: none;">
+                <div class="pattern-title">量價</div>
+                <div class="volume-text" id="volumeText">-</div>
+            </div>
+        </div>
     </div>
 
     <div id="chartContainer">
         <div id="candlestickChart"></div>
     </div>
 
-    <!-- 股票分析四大面向教育板块 -->
-    <div class="education-panel">
+    <!-- 教育面板已移除 -->
+    <div class="education-panel" style="display: none;">
         <div class="education-header">
             <h3>股票分析四大面向</h3>
         </div>
@@ -1253,18 +1328,16 @@
         }
 
         // 顯示信心指數
-        const confidenceFill = document.getElementById('confidenceFill');
         const confidenceText = document.getElementById('confidenceText');
-        confidenceFill.style.width = `${analysis.confidence}%`;
-        confidenceText.textContent = `信心指數: ${analysis.confidence}%`;
+        confidenceText.textContent = `信心指數 ${analysis.confidence}%`;
 
         // 顯示訊號摘要
         const signalsSummary = document.getElementById('signalsSummary');
         signalsSummary.innerHTML = '';
 
         if (analysis.signals && analysis.signals.length > 0) {
-            // 只顯示前 5 個最重要的訊號
-            analysis.signals.slice(0, 5).forEach(signal => {
+            // 只顯示前 3 個最重要的訊號
+            analysis.signals.slice(0, 3).forEach(signal => {
                 const signalDiv = document.createElement('div');
                 signalDiv.className = `signal-item ${signal.direction === '買進' ? 'buy' : 'sell'}`;
 
@@ -1291,6 +1364,77 @@
         // 顯示進出場時機分析
         if (analysis.entryExitTiming) {
             displayEntryExitTiming(analysis.entryExitTiming);
+        }
+
+        // 顯示K線型態與趨勢分析
+        displayPatternAnalysis(analysis);
+    }
+
+    // 顯示K線型態與趨勢分析
+    function displayPatternAnalysis(analysis) {
+        const patternAnalysisPanel = document.getElementById('patternAnalysis');
+        const patternSection = document.getElementById('patternSection');
+        const trendSection = document.getElementById('trendSection');
+        const volumeSection = document.getElementById('volumeSection');
+
+        let hasContent = false;
+
+        // 顯示K線型態識別
+        if (analysis.candlestickPatterns && analysis.candlestickPatterns.length > 0) {
+            const patternList = document.getElementById('patternList');
+            patternList.innerHTML = '';
+
+            analysis.candlestickPatterns.forEach(pattern => {
+                const tag = document.createElement('div');
+                tag.className = 'pattern-tag';
+
+                // 根據型態類型添加樣式
+                const patternText = pattern.toLowerCase();
+                if (patternText.includes('買進') || patternText.includes('看漲') ||
+                    patternText.includes('早晨') || patternText.includes('錘子') ||
+                    patternText.includes('倒錘') || patternText.includes('反轉向上')) {
+                    tag.classList.add('bullish');
+                } else if (patternText.includes('賣出') || patternText.includes('看跌') ||
+                           patternText.includes('黃昏') || patternText.includes('流星') ||
+                           patternText.includes('上吊') || patternText.includes('上漲結束')) {
+                    tag.classList.add('bearish');
+                }
+
+                tag.textContent = pattern;
+                patternList.appendChild(tag);
+            });
+
+            patternSection.style.display = 'block';
+            hasContent = true;
+        } else {
+            patternSection.style.display = 'none';
+        }
+
+        // 顯示趨勢描述
+        if (analysis.trendDescription) {
+            const trendText = document.getElementById('trendText');
+            trendText.textContent = analysis.trendDescription;
+            trendSection.style.display = 'block';
+            hasContent = true;
+        } else {
+            trendSection.style.display = 'none';
+        }
+
+        // 顯示量價關係
+        if (analysis.priceVolumeAnalysis) {
+            const volumeText = document.getElementById('volumeText');
+            volumeText.textContent = analysis.priceVolumeAnalysis;
+            volumeSection.style.display = 'block';
+            hasContent = true;
+        } else {
+            volumeSection.style.display = 'none';
+        }
+
+        // 如果有任何內容，顯示整個面板
+        if (hasContent) {
+            patternAnalysisPanel.style.display = 'block';
+        } else {
+            patternAnalysisPanel.style.display = 'none';
         }
     }
 
