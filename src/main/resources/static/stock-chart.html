@@ -19,6 +19,7 @@
             min-height: 100vh;
             padding: 20px;
             color: #2c3e50;
+            line-height: 1.6;
         }
 
         .container {
@@ -38,10 +39,11 @@
         }
 
         .header h1 {
-            font-size: 1.75em;
-            margin-bottom: 6px;
-            font-weight: 600;
+            font-size: 2em;
+            margin-bottom: 8px;
+            font-weight: 700;
             color: #1a1a1a;
+            letter-spacing: -0.5px;
         }
 
         .header p {
@@ -255,11 +257,12 @@
 
         .analysis-header h3 {
             margin: 0;
-            font-size: 1.05em;
-            font-weight: 600;
+            font-size: 1.15em;
+            font-weight: 700;
         }
 
-        .analysis-toggle {
+        /* 一頁式設計 - 移除折疊按鈕樣式 */
+        /* .analysis-toggle {
             cursor: pointer;
             padding: 4px 10px;
             background: white;
@@ -274,7 +277,7 @@
             background: #f1f3f4;
             border-color: #1a73e8;
             color: #1a73e8;
-        }
+        } */
 
         .analysis-summary {
             display: grid;
@@ -299,9 +302,10 @@
         }
 
         .recommendation-value {
-            font-size: 2em;
-            font-weight: 600;
+            font-size: 2.4em;
+            font-weight: 700;
             margin: 12px 0;
+            letter-spacing: 1px;
         }
 
         .recommendation-value.buy {
@@ -391,60 +395,249 @@
             background: #1a73e8;
         }
 
-        .analysis-detail {
+        /* analysis-detail 樣式已移除 */
+
+        /* indicator-item 和 analysis-text 樣式已移除 */
+
+        /* 進出場時機分析樣式 */
+        .entry-exit-timing {
             padding: 18px;
+            background: white;
             border-top: 1px solid #e8eaed;
         }
 
-        .indicators-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 12px;
+        .timing-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e8eaed;
+        }
+
+        .timing-title {
+            font-size: 1.25em;
+            font-weight: 700;
+            color: #1a1a1a;
+        }
+
+        .timing-action {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .timing-action.entry {
+            background: #fce8e6;
+            color: #d93025;
+            border: 2px solid #d93025;
+        }
+
+        .timing-action.exit {
+            background: #e6f4ea;
+            color: #0f9d58;
+            border: 2px solid #0f9d58;
+        }
+
+        .timing-action.wait {
+            background: #f5f5f5;
+            color: #5f6368;
+            border: 2px solid #dadce0;
+        }
+
+        .timing-content {
             margin-bottom: 16px;
         }
 
-        .indicator-item {
+        .timing-card {
             background: #fafbfc;
             border: 1px solid #e8eaed;
-            padding: 14px;
-            border-radius: 6px;
-            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            transition: all 0.2s;
         }
 
-        .indicator-label {
-            font-size: 0.8em;
+        .timing-card:hover {
+            border-color: #dadce0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+
+        .timing-card-title {
+            font-size: 0.85em;
             color: #5f6368;
-            margin-bottom: 6px;
-            font-weight: 400;
+            margin-bottom: 10px;
+            font-weight: 500;
         }
 
-        .indicator-value {
-            font-size: 1.3em;
+        .timing-price {
+            font-size: 1.6em;
             font-weight: 600;
             color: #1a1a1a;
-            margin-bottom: 8px;
+            margin-bottom: 4px;
         }
 
-        .indicator-desc {
-            font-size: 0.75em;
+        .timing-price.entry-price {
+            color: #d93025;
+        }
+
+        .timing-price.exit-price {
+            color: #0f9d58;
+        }
+
+        .timing-price.stop-loss {
+            color: #ea8600;
+        }
+
+        .timing-price.take-profit {
+            color: #1a73e8;
+        }
+
+        .timing-subtitle {
+            font-size: 0.8em;
             color: #5f6368;
-            line-height: 1.5;
-            margin-top: 8px;
-            padding-top: 8px;
-            border-top: 1px solid #e8eaed;
-            text-align: left;
+            margin-top: 4px;
         }
 
-        .analysis-text {
-            background: #fafbfc;
-            border: 1px solid #e8eaed;
-            padding: 16px;
-            border-radius: 6px;
-            line-height: 1.7;
-            white-space: pre-wrap;
-            color: #3c4043;
-            font-size: 0.9em;
+        .timing-analysis-detail {
+            background: #e8f0fe;
+            border: 1px solid #d2e3fc;
+            padding: 18px;
+            border-radius: 8px;
+            margin-top: 16px;
+            border-left: 4px solid #1a73e8;
         }
+
+        .timing-analysis-title {
+            font-size: 1.05em;
+            color: #1967d2;
+            margin-bottom: 14px;
+            font-weight: 700;
+        }
+
+        .timing-analysis-text {
+            font-size: 0.9em;
+            color: #1a1a1a;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        /* 價格區間樣式 - 新設計 */
+        .price-section {
+            margin-bottom: 28px;
+            background: #fafbfc;
+            border-radius: 8px;
+            padding: 18px;
+            border: 1px solid #e8eaed;
+        }
+
+        .price-section-header {
+            font-size: 1.15em;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e8eaed;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .price-range-value {
+            font-size: 1.1em;
+            color: #1a73e8;
+            background: #e8f0fe;
+            padding: 6px 14px;
+            border-radius: 16px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        .price-range-container {
+            margin-bottom: 12px;
+        }
+
+        .price-range-visual {
+            margin-bottom: 20px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+        }
+
+        .price-range-bar {
+            position: relative;
+            height: 40px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+        }
+
+        .price-range-bar.entry-bar {
+            background: rgba(217, 48, 37, 0.12);
+            border: 2px solid #d93025;
+        }
+
+        .price-range-bar.exit-bar {
+            background: rgba(15, 157, 88, 0.12);
+            border: 2px solid #0f9d58;
+        }
+
+        .range-label {
+            font-size: 0.75em;
+            font-weight: 600;
+            color: rgba(0, 0, 0, 0.7);
+        }
+
+        .range-label.center {
+            font-size: 0.85em;
+            font-weight: 700;
+        }
+
+        .price-cards-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 14px;
+        }
+
+        .timing-card.compact {
+            padding: 12px;
+            min-height: auto;
+        }
+
+        .timing-card.featured {
+            background: linear-gradient(135deg, #e8f0fe 0%, #ffffff 100%);
+            border: 3px solid #1a73e8;
+            box-shadow: 0 6px 20px rgba(26, 115, 232, 0.25);
+            position: relative;
+        }
+
+        .timing-card.featured::before {
+            content: '推薦';
+            position: absolute;
+            top: -10px;
+            right: 16px;
+            background: #1a73e8;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+        }
+
+        .timing-card.featured .timing-card-title {
+            color: #1a73e8;
+            font-weight: 700;
+        }
+
+        .timing-card.featured .timing-price {
+            font-weight: 700;
+        }
+
 
         /* 股票分析四大面向 */
         .education-panel {
@@ -473,8 +666,8 @@
 
         .education-header h3 {
             margin: 0;
-            font-size: 1.05em;
-            font-weight: 600;
+            font-size: 1.15em;
+            font-weight: 700;
         }
 
         .education-toggle {
@@ -489,18 +682,14 @@
 
         .education-content {
             padding: 20px;
-            display: none;
-        }
-
-        .education-content.active {
             display: block;
         }
 
         .aspects-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 14px;
-            margin-bottom: 20px;
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
         .aspect-card {
@@ -552,7 +741,7 @@
 
         .aspect-content {
             color: #3c4043;
-            line-height: 1.7;
+            line-height: 1.75;
         }
 
         .aspect-items {
@@ -686,11 +875,6 @@
 
     <!-- 技術分析面板 -->
     <div class="analysis-panel" id="analysisPanel" style="display: none;">
-        <div class="analysis-header">
-            <h3>基於今日K線的技術分析</h3>
-            <span class="analysis-toggle" onclick="toggleAnalysisDetail()">詳細 ▼</span>
-        </div>
-
         <div class="analysis-summary">
             <div class="recommendation-box" id="recommendationBox">
                 <div class="recommendation-label">明日操作建議</div>
@@ -706,25 +890,37 @@
             </div>
         </div>
 
-        <div class="analysis-detail" id="analysisDetail" style="display: none;">
-            <div class="indicators-grid" id="indicatorsGrid">
-                <!-- 動態生成技術指標 -->
+        <!-- 進出場時機分析 -->
+        <div class="entry-exit-timing" id="entryExitTiming" style="display: none;">
+            <div class="timing-header">
+                <h4 class="timing-title">進出場時機分析</h4>
+                <span class="timing-action" id="timingAction">-</span>
             </div>
 
-            <div class="analysis-text" id="analysisText">
-                <!-- 動態生成分析文字 -->
+            <div class="timing-content" id="timingContent">
+                <!-- 動態生成進出場價位資訊 -->
+            </div>
+
+            <div class="timing-analysis-detail" id="timingAnalysisDetail" style="display: none;">
+                <div class="timing-analysis-title">分析與建議</div>
+                <div class="timing-analysis-text" id="timingAnalysisText">-</div>
             </div>
         </div>
+
+        <!-- analysis-detail 已移除 -->
+    </div>
+
+    <div id="chartContainer">
+        <div id="candlestickChart"></div>
     </div>
 
     <!-- 股票分析四大面向教育板块 -->
     <div class="education-panel">
-        <div class="education-header" onclick="toggleEducationPanel()">
+        <div class="education-header">
             <h3>股票分析四大面向</h3>
-            <span class="education-toggle" id="educationToggle">展開 ▼</span>
         </div>
 
-        <div class="education-content" id="educationContent">
+        <div class="education-content" id="educationContent" style="display: block;">
             <div class="aspects-grid">
                 <!-- 基本面 -->
                 <div class="aspect-card fundamental">
@@ -834,10 +1030,6 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div id="chartContainer">
-        <div id="candlestickChart"></div>
     </div>
 </div>
 
@@ -1094,124 +1286,267 @@
             signalsSummary.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暫無明顯訊號</div>';
         }
 
-        // 顯示技術指標
-        const indicatorsGrid = document.getElementById('indicatorsGrid');
-        indicatorsGrid.innerHTML = '';
+        // 技術指標與分析文字顯示已移除
 
-        const indicators = analysis.indicators;
-        const indicatorsList = [
-            {
-                label: 'RSI(6)',
-                value: indicators.rsi6,
-                desc: '6日相對強弱指標：>70超買，<30超賣，衡量短期買賣力道'
-            },
-            {
-                label: 'RSI(12)',
-                value: indicators.rsi12,
-                desc: '12日相對強弱指標：>70超買，<30超賣，衡量中期買賣力道'
-            },
-            {
-                label: 'KD-K',
-                value: indicators.kdK,
-                desc: 'K值：>80超買，<20超賣，反應靈敏的短期指標'
-            },
-            {
-                label: 'KD-D',
-                value: indicators.kdD,
-                desc: 'D值：K值的平滑線，K>D黃金交叉（買進），K<D死亡交叉（賣出）'
-            },
-            {
-                label: 'MACD-DIF',
-                value: indicators.macdDif,
-                desc: 'DIF快線：12日與26日EMA差，反映短期趨勢動能'
-            },
-            {
-                label: 'MACD-DEA',
-                value: indicators.macdDea,
-                desc: 'DEA慢線：DIF的9日平均，DIF>DEA看多，DIF<DEA看空'
-            },
-            {
-                label: '布林上軌',
-                value: indicators.bbandsUpper,
-                desc: '上軌：價格觸及表示超買，可能回檔'
-            },
-            {
-                label: '布林中軌',
-                value: indicators.bbandsMiddle,
-                desc: '中軌：20日移動平均線，中期趨勢參考'
-            },
-            {
-                label: '布林下軌',
-                value: indicators.bbandsLower,
-                desc: '下軌：價格觸及表示超賣，可能反彈'
-            },
-            {
-                label: 'MA5',
-                value: indicators.ma5,
-                desc: '5日均線：短期趨勢，價格在上方為多頭'
-            },
-            {
-                label: 'MA10',
-                value: indicators.ma10,
-                desc: '10日均線：短中期趨勢，與MA5交叉形成訊號'
-            },
-            {
-                label: 'MA20',
-                value: indicators.ma20,
-                desc: '20日均線：中期趨勢，重要支撐壓力'
-            },
-            {
-                label: 'MA60',
-                value: indicators.ma60,
-                desc: '60日均線：長期趨勢，季線位置'
+        // 顯示進出場時機分析
+        if (analysis.entryExitTiming) {
+            displayEntryExitTiming(analysis.entryExitTiming);
+        }
+    }
+
+    // 顯示進出場時機分析
+    function displayEntryExitTiming(timing) {
+        const timingPanel = document.getElementById('entryExitTiming');
+        const timingAction = document.getElementById('timingAction');
+        const timingContent = document.getElementById('timingContent');
+        const timingAnalysisDetail = document.getElementById('timingAnalysisDetail');
+        const timingAnalysisText = document.getElementById('timingAnalysisText');
+
+        // 顯示面板
+        timingPanel.style.display = 'block';
+
+        // 顯示操作建議
+        timingAction.textContent = timing.action;
+        timingAction.className = 'timing-action';
+        if (timing.action === '進場') {
+            timingAction.classList.add('entry');
+        } else if (timing.action === '出場') {
+            timingAction.classList.add('exit');
+        } else {
+            timingAction.classList.add('wait');
+        }
+
+        // 清空內容
+        timingContent.innerHTML = '';
+
+        // === 進場價格區間 ===
+        if (timing.entryPrice !== null && timing.entryPrice !== undefined) {
+            const entrySection = document.createElement('div');
+            entrySection.className = 'price-section';
+
+            // 計算價格區間
+            const entryMin = timing.entryPriceMin !== null ? timing.entryPriceMin : timing.entryPrice;
+            const entryMax = timing.entryPriceMax !== null ? timing.entryPriceMax : timing.entryPrice;
+            const entryRangeText = entryMin !== entryMax
+                ? `${entryMin.toFixed(2)} - ${entryMax.toFixed(2)}`
+                : timing.entryPrice.toFixed(2);
+
+            let entryHTML = `<div class="price-section-header">買入價格區間<span class="price-range-value">${entryRangeText}</span></div>`;
+            entryHTML += '<div class="price-range-container">';
+
+            // 價格區間視覺化（僅顯示範圍，不顯示具體數字）
+            if (timing.entryPriceMin !== null && timing.entryPriceMax !== null) {
+                entryHTML += '<div class="price-range-visual">';
+                entryHTML += `<div class="price-range-bar entry-bar">`;
+                entryHTML += `<span class="range-label">保守</span>`;
+                entryHTML += `<span class="range-label center">建議</span>`;
+                entryHTML += `<span class="range-label">積極</span>`;
+                entryHTML += '</div></div>';
             }
-        ];
 
-        indicatorsList.forEach(ind => {
-            if (ind.value !== null && ind.value !== undefined) {
-                const indDiv = document.createElement('div');
-                indDiv.className = 'indicator-item';
-                indDiv.innerHTML = `
-                <div class="indicator-label">${ind.label}</div>
-                <div class="indicator-value">${typeof ind.value === 'number' ? ind.value.toFixed(2) : ind.value}</div>
-                <div class="indicator-desc">${ind.desc}</div>
+            // 價格卡片
+            entryHTML += '<div class="price-cards-row">';
+
+            if (timing.entryPriceMin !== null && timing.entryPriceMin !== undefined) {
+                entryHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">最佳買入價</div>
+                        <div class="timing-price entry-price">${timing.entryPriceMin.toFixed(2)}</div>
+                        <div class="timing-subtitle">保守策略・耐心等待</div>
+                    </div>
+                `;
+            }
+
+            entryHTML += `
+                <div class="timing-card compact featured">
+                    <div class="timing-card-title">建議買入價</div>
+                    <div class="timing-price entry-price" style="font-size: 1.8em;">${timing.entryPrice.toFixed(2)}</div>
+                    <div class="timing-subtitle">平衡風險與機會</div>
+                </div>
             `;
-                indicatorsGrid.appendChild(indDiv);
+
+            if (timing.entryPriceMax !== null && timing.entryPriceMax !== undefined) {
+                entryHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">可接受買入價</div>
+                        <div class="timing-price entry-price">${timing.entryPriceMax.toFixed(2)}</div>
+                        <div class="timing-subtitle">積極策略・急於進場</div>
+                    </div>
+                `;
             }
-        });
 
-        // 顯示分析文字
-        const analysisText = document.getElementById('analysisText');
-        analysisText.textContent = analysis.analysis;
-    }
+            entryHTML += '</div></div>';
+            entrySection.innerHTML = entryHTML;
+            timingContent.appendChild(entrySection);
+        }
 
-    // 切換詳細分析
-    function toggleAnalysisDetail() {
-        const detail = document.getElementById('analysisDetail');
-        const toggle = document.querySelector('.analysis-toggle');
+        // === 出場價格區間 ===
+        if (timing.exitPrice !== null && timing.exitPrice !== undefined) {
+            const exitSection = document.createElement('div');
+            exitSection.className = 'price-section';
 
-        if (detail.style.display === 'none') {
-            detail.style.display = 'block';
-            toggle.textContent = '收起 ▲';
+            // 計算價格區間
+            const exitMin = timing.exitPriceMin !== null ? timing.exitPriceMin : timing.exitPrice;
+            const exitMax = timing.exitPriceMax !== null ? timing.exitPriceMax : timing.exitPrice;
+            const exitRangeText = exitMin !== exitMax
+                ? `${exitMin.toFixed(2)} - ${exitMax.toFixed(2)}`
+                : timing.exitPrice.toFixed(2);
+
+            let exitHTML = `<div class="price-section-header">賣出價格區間<span class="price-range-value">${exitRangeText}</span></div>`;
+            exitHTML += '<div class="price-range-container">';
+
+            // 價格區間視覺化（僅顯示範圍，不顯示具體數字）
+            if (timing.exitPriceMin !== null && timing.exitPriceMax !== null) {
+                exitHTML += '<div class="price-range-visual">';
+                exitHTML += `<div class="price-range-bar exit-bar">`;
+                exitHTML += `<span class="range-label">保守</span>`;
+                exitHTML += `<span class="range-label center">建議</span>`;
+                exitHTML += `<span class="range-label">積極</span>`;
+                exitHTML += '</div></div>';
+            }
+
+            // 價格卡片
+            exitHTML += '<div class="price-cards-row">';
+
+            if (timing.exitPriceMin !== null && timing.exitPriceMin !== undefined) {
+                exitHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">保守賣出價</div>
+                        <div class="timing-price exit-price">${timing.exitPriceMin.toFixed(2)}</div>
+                        <div class="timing-subtitle">確保獲利・提早出場</div>
+                    </div>
+                `;
+            }
+
+            exitHTML += `
+                <div class="timing-card compact featured">
+                    <div class="timing-card-title">建議賣出價</div>
+                    <div class="timing-price exit-price" style="font-size: 1.8em;">${timing.exitPrice.toFixed(2)}</div>
+                    <div class="timing-subtitle">平衡風險與收益</div>
+                </div>
+            `;
+
+            if (timing.exitPriceMax !== null && timing.exitPriceMax !== undefined) {
+                exitHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">最佳賣出價</div>
+                        <div class="timing-price exit-price">${timing.exitPriceMax.toFixed(2)}</div>
+                        <div class="timing-subtitle">積極策略・等待高點</div>
+                    </div>
+                `;
+            }
+
+            exitHTML += '</div></div>';
+            exitSection.innerHTML = exitHTML;
+            timingContent.appendChild(exitSection);
+        }
+
+        // === 風險控制與目標區 ===
+        const hasRiskControl = timing.stopLossPrice || timing.takeProfit1 || timing.takeProfit2 || timing.riskRewardRatio || timing.positionSize;
+
+        if (hasRiskControl) {
+            const riskSection = document.createElement('div');
+            riskSection.className = 'price-section';
+
+            let riskHTML = '<div class="price-section-header">風險控制與目標</div>';
+            riskHTML += '<div class="price-cards-row">';
+
+            // 停損價
+            if (timing.stopLossPrice !== null && timing.stopLossPrice !== undefined) {
+                riskHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">停損價位</div>
+                        <div class="timing-price stop-loss">${timing.stopLossPrice.toFixed(2)}</div>
+                        <div class="timing-subtitle">跌破此價位停損</div>
+                    </div>
+                `;
+            }
+
+            // 第一停利價
+            if (timing.takeProfit1 !== null && timing.takeProfit1 !== undefined) {
+                riskHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">第一目標價</div>
+                        <div class="timing-price take-profit">${timing.takeProfit1.toFixed(2)}</div>
+                        <div class="timing-subtitle">建議分批出場 50%</div>
+                    </div>
+                `;
+            }
+
+            // 第二停利價
+            if (timing.takeProfit2 !== null && timing.takeProfit2 !== undefined) {
+                riskHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">第二目標價</div>
+                        <div class="timing-price take-profit">${timing.takeProfit2.toFixed(2)}</div>
+                        <div class="timing-subtitle">建議全部出場</div>
+                    </div>
+                `;
+            }
+
+            // 風險報酬比
+            if (timing.riskRewardRatio) {
+                riskHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">風險報酬比</div>
+                        <div class="timing-price" style="color: #1a73e8;">${timing.riskRewardRatio}</div>
+                        <div class="timing-subtitle">每 1 元風險的潛在報酬</div>
+                    </div>
+                `;
+            }
+
+            // 建議部位大小
+            if (timing.positionSize !== null && timing.positionSize !== undefined) {
+                const positionLabel = timing.action === '進場' ? '建議資金配置比例' : timing.action === '出場' ? '建議出場比例' : '不建議操作';
+                riskHTML += `
+                    <div class="timing-card compact">
+                        <div class="timing-card-title">建議部位</div>
+                        <div class="timing-price" style="color: #9334e6;">${timing.positionSize}%</div>
+                        <div class="timing-subtitle">${positionLabel}</div>
+                    </div>
+                `;
+            }
+
+            riskHTML += '</div>';
+            riskSection.innerHTML = riskHTML;
+            timingContent.appendChild(riskSection);
+        }
+
+        // 顯示整合的分析與建議
+        if (timing.analysisDetail) {
+            timingAnalysisDetail.style.display = 'block';
+            timingAnalysisText.textContent = timing.analysisDetail;
         } else {
-            detail.style.display = 'none';
-            toggle.textContent = '詳細 ▼';
+            timingAnalysisDetail.style.display = 'none';
         }
     }
 
-    // 切換教育面板
-    function toggleEducationPanel() {
-        const content = document.getElementById('educationContent');
-        const toggle = document.getElementById('educationToggle');
-
-        if (content.classList.contains('active')) {
-            content.classList.remove('active');
-            toggle.textContent = '展開 ▼';
-        } else {
-            content.classList.add('active');
-            toggle.textContent = '收起 ▲';
-        }
-    }
+    // 一頁式設計 - 不需要折疊功能
+    // function toggleAnalysisDetail() {
+    //     const detail = document.getElementById('analysisDetail');
+    //     const toggle = document.querySelector('.analysis-toggle');
+    //
+    //     if (detail.style.display === 'none') {
+    //         detail.style.display = 'block';
+    //         toggle.textContent = '收起 ▲';
+    //     } else {
+    //         detail.style.display = 'none';
+    //         toggle.textContent = '詳細 ▼';
+    //     }
+    // }
+    //
+    // function toggleEducationPanel() {
+    //     const content = document.getElementById('educationContent');
+    //     const toggle = document.getElementById('educationToggle');
+    //
+    //     if (content.classList.contains('active')) {
+    //         content.classList.remove('active');
+    //         toggle.textContent = '展開 ▼';
+    //     } else {
+    //         content.classList.add('active');
+    //         toggle.textContent = '收起 ▲';
+    //     }
+    // }
 
     // 渲染圖表
     function renderChart(data, symbol) {
