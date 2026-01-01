@@ -47,6 +47,18 @@ public class TechnicalAnalysisResult {
     @Schema(description = "支撐壓力位")
     private SupportResistance supportResistance;
 
+    @Schema(description = "進出場時機分析")
+    private EntryExitTiming entryExitTiming;
+
+    @Schema(description = "K線型態識別")
+    private List<String> candlestickPatterns;
+
+    @Schema(description = "趨勢描述", example = "強勢上升趨勢")
+    private String trendDescription;
+
+    @Schema(description = "量價關係描述", example = "價漲量增，多頭強勢")
+    private String priceVolumeAnalysis;
+
     @Schema(description = "分析說明")
     private String analysis;
 
@@ -144,5 +156,53 @@ public class TechnicalAnalysisResult {
 
         @Schema(description = "第二壓力位", example = "595.00")
         private BigDecimal resistance2;
+    }
+
+    /**
+     * 進出場時機分析
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class EntryExitTiming {
+        @Schema(description = "操作建議", example = "進場")
+        private String action;  // 進場、出場、觀望、加碼、減碼
+
+        @Schema(description = "建議買入價位（若為進場建議）", example = "580.00")
+        private BigDecimal entryPrice;
+
+        @Schema(description = "建議賣出價位（若為出場建議）", example = "590.00")
+        private BigDecimal exitPrice;
+
+        @Schema(description = "最佳買入價位（保守）", example = "575.00")
+        private BigDecimal entryPriceMin;
+
+        @Schema(description = "可接受買入價位（積極）", example = "585.00")
+        private BigDecimal entryPriceMax;
+
+        @Schema(description = "可接受賣出價位（保守）", example = "590.00")
+        private BigDecimal exitPriceMin;
+
+        @Schema(description = "最佳賣出價位（積極）", example = "600.00")
+        private BigDecimal exitPriceMax;
+
+        @Schema(description = "停損價位", example = "570.00")
+        private BigDecimal stopLossPrice;
+
+        @Schema(description = "第一停利價位", example = "600.00")
+        private BigDecimal takeProfit1;
+
+        @Schema(description = "第二停利價位", example = "610.00")
+        private BigDecimal takeProfit2;
+
+        @Schema(description = "風險報酬比", example = "1:2.5")
+        private String riskRewardRatio;
+
+        @Schema(description = "分析與建議（整合技術分析依據與操作建議）")
+        private String analysisDetail;
+
+        @Schema(description = "建議部位大小 (%)", example = "30")
+        private Integer positionSize;
     }
 }
