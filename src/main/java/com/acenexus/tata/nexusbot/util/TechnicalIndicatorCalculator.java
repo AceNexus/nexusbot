@@ -195,8 +195,8 @@ public class TechnicalIndicatorCalculator {
         BigDecimal dea = deaPrevious == null ? dif :
                 dif.subtract(deaPrevious).multiply(multiplierSignal).add(deaPrevious);
 
-        // MACD = (DIF - DEA) * 2
-        BigDecimal macd = dif.subtract(dea).multiply(new BigDecimal("2"));
+        // MACD = DIF - DEA (符合業界標準)
+        BigDecimal macd = dif.subtract(dea);
 
         return new MACDResult(
                 dif.setScale(2, RoundingMode.HALF_UP),

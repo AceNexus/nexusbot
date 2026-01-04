@@ -697,6 +697,55 @@
             font-size: 0.95em;
         }
 
+        /* 免責聲明樣式 */
+        .disclaimer {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-left: 5px solid #ff9800;
+            padding: 16px 20px;
+            margin: 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            color: #856404;
+            line-height: 1.6;
+        }
+
+        .disclaimer-title {
+            font-weight: 700;
+            font-size: 1.05em;
+            margin-bottom: 8px;
+            color: #ff6f00;
+        }
+
+        .disclaimer-text {
+            margin: 0;
+        }
+
+        .disclaimer-text strong {
+            color: #d84315;
+        }
+
+        /* 資料來源樣式 */
+        .data-source {
+            background: #f8f9fa;
+            border-top: 1px solid #e8eaed;
+            padding: 16px 24px;
+            text-align: center;
+            font-size: 0.85em;
+            color: #5f6368;
+            margin-top: 20px;
+        }
+
+        .data-source a {
+            color: #1a73e8;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .data-source a:hover {
+            text-decoration: underline;
+        }
+
         /* K線型態與趨勢總結樣式 */
         .pattern-trend-summary {
             padding: 20px 24px;
@@ -915,6 +964,26 @@
     <div id="chartContainer">
         <div id="candlestickChart"></div>
     </div>
+
+    <!-- 資料來源標示 -->
+    <div class="data-source" id="dataSource" style="display: none;">
+        資料來源：<a href="https://finmind.github.io/" target="_blank" rel="noopener noreferrer">FinMind
+        台灣金融資料庫</a>
+        ｜技術分析演算法：NexusBot 自主研發
+        ｜最後更新時間：<span id="lastUpdateTime">-</span>
+    </div>
+
+    <!-- 免責聲明 -->
+    <div class="disclaimer" id="disclaimer" style="display: none;">
+        <div class="disclaimer-title">
+            重要聲明
+        </div>
+        <div class="disclaimer-text">
+            本技術分析結果<strong>僅供參考，不構成投資建議</strong>。股票投資有風險，過往績效不代表未來表現。
+            技術指標可能產生誤判，請投資人自行審慎評估風險，並考量個人財務狀況後再做投資決策。
+            本系統不對任何投資損失負責。
+        </div>
+    </div>
 </div>
 
 <script>
@@ -1082,6 +1151,19 @@
 
             renderChart(data, symbol);
             updateStockInfo(data);
+
+            // 顯示免責聲明和資料來源
+            document.getElementById('disclaimer').style.display = 'block';
+            document.getElementById('dataSource').style.display = 'block';
+
+            // 更新最後更新時間
+            const now = new Date();
+            const timeStr = now.getFullYear() + '-' +
+                          String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                          String(now.getDate()).padStart(2, '0') + ' ' +
+                          String(now.getHours()).padStart(2, '0') + ':' +
+                          String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('lastUpdateTime').textContent = timeStr;
 
             // 查詢技術分析
             fetchTechnicalAnalysis(symbol);
