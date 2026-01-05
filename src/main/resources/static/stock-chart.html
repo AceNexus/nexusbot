@@ -228,7 +228,7 @@
 
         /* 技術分析面板樣式 */
         .analysis-panel {
-            margin: 12px 20px;
+            margin: 8px 20px;
             background: white;
             border: 1px solid #e8eaed;
             border-radius: 6px;
@@ -276,8 +276,8 @@
         .analysis-summary {
             display: grid;
             grid-template-columns: 260px 1fr;
-            gap: 16px;
-            padding: 18px;
+            gap: 14px;
+            padding: 14px;
         }
 
         .recommendation-box {
@@ -520,10 +520,10 @@
 
         /* 價格區間樣式 - 新設計 */
         .price-section {
-            margin-bottom: 28px;
+            margin-bottom: 14px;
             background: #fafbfc;
             border-radius: 8px;
-            padding: 18px;
+            padding: 14px;
             border: 1px solid #e8eaed;
         }
 
@@ -748,7 +748,7 @@
 
         /* K線型態與趨勢總結樣式 */
         .pattern-trend-summary {
-            padding: 20px 24px;
+            padding: 14px 20px;
             background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
             border-top: 1px solid #e8eaed;
             border-bottom: 1px solid #e8eaed;
@@ -764,14 +764,14 @@
         .summary-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 16px;
+            gap: 10px;
         }
 
         .summary-card {
             background: white;
             border: 2px solid #e8eaed;
             border-radius: 8px;
-            padding: 16px;
+            padding: 12px;
             transition: all 0.2s;
         }
 
@@ -850,9 +850,74 @@
             color: #c62828;
         }
 
+        /* Desktop Layout - Left-Right Split (≥1024px) */
+        @media (min-width: 1024px) {
+            /* Expand container for desktop */
+            .container {
+                max-width: 1400px;
+            }
+
+            /* Main content wrapper with grid layout */
+            .main-content-wrapper {
+                display: grid;
+                grid-template-columns: 1fr 400px;
+                grid-template-rows: auto auto;
+                gap: 16px;
+                padding: 0 20px;
+            }
+
+            /* Analysis panel spans full width at top */
+            .analysis-panel {
+                grid-column: 1 / -1;
+                grid-row: 1;
+                display: flex !important;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            /* Chart container in left column, row 2 */
+            #chartContainer {
+                grid-column: 1;
+                grid-row: 2;
+                margin: 0;
+            }
+
+            /* Price suggestions in right column with sticky positioning */
+            .entry-exit-timing {
+                grid-column: 2;
+                grid-row: 2;
+                position: sticky;
+                top: 20px;
+                align-self: start;
+                max-height: calc(100vh - 40px);
+                overflow-y: auto;
+            }
+
+            /* Adjust chart height for desktop */
+            #candlestickChart {
+                height: 600px !important;
+            }
+        }
+
+        /* Tablet Layout (768px - 1023px) */
+        @media (min-width: 769px) and (max-width: 1023px) {
+            #candlestickChart {
+                height: 480px;
+            }
+
+            .main-content-wrapper {
+                padding: 0 16px;
+            }
+        }
+
+        /* Mobile Layout (≤768px) */
         @media (max-width: 768px) {
+            body {
+                padding: 12px;
+            }
+
             .header h1 {
-                font-size: 1.8em;
+                font-size: 1.3em;
             }
 
             .control-row {
@@ -863,8 +928,54 @@
                 width: 100%;
             }
 
+            /* Mobile content wrapper uses flexbox for reordering */
+            .main-content-wrapper {
+                display: flex;
+                flex-direction: column;
+            }
+
+            /* Price suggestions shown first on mobile */
+            .entry-exit-timing {
+                order: -1;
+                margin-bottom: 12px;
+            }
+
+            /* Analysis panel comes second */
+            .analysis-panel {
+                order: 1;
+            }
+
+            /* Chart comes last */
+            #chartContainer {
+                order: 2;
+            }
+
+            /* Reduce font sizes for mobile */
+            .timing-title {
+                font-size: 1.1em;
+            }
+
+            .summary-header {
+                font-size: 1em;
+            }
+
+            /* Adjust chart height for mobile */
             #candlestickChart {
                 height: 400px;
+            }
+
+            /* Compact spacing for mobile */
+            .analysis-panel {
+                margin: 8px 12px !important;
+            }
+
+            .pattern-trend-summary {
+                padding: 12px 16px !important;
+            }
+
+            .summary-grid {
+                grid-template-columns: 1fr !important;
+                gap: 8px !important;
             }
         }
     </style>
@@ -901,49 +1012,52 @@
         </div>
     </div>
 
-    <!-- 技術分析面板 -->
-    <div class="analysis-panel" id="analysisPanel" style="display: none;">
-        <div class="analysis-summary">
-            <div class="signals-summary" id="signalsSummary">
-                <!-- 動態生成訊號摘要 -->
+    <!-- Main Content Wrapper for Desktop Layout -->
+    <div class="main-content-wrapper">
+        <!-- 技術分析面板 -->
+        <div class="analysis-panel" id="analysisPanel" style="display: none;">
+            <div class="analysis-summary">
+                <div class="signals-summary" id="signalsSummary">
+                    <!-- 動態生成訊號摘要 -->
+                </div>
+            </div>
+
+            <!-- K線型態與趨勢總結 -->
+            <div class="pattern-trend-summary" id="patternTrendSummary" style="display: none;">
+                <div class="summary-header">當前K線型態與趨勢</div>
+                <div class="summary-grid">
+                    <!-- 趨勢卡片 -->
+                    <div class="summary-card">
+                        <div class="summary-card-header">趨勢方向</div>
+                        <div class="summary-card-content" id="trendSummary">
+                            <span class="trend-arrow" id="trendArrow">-</span>
+                            <span id="trendSummaryText">-</span>
+                        </div>
+                    </div>
+
+                    <!-- 型態卡片 -->
+                    <div class="summary-card">
+                        <div class="summary-card-header">K線型態</div>
+                        <div class="summary-card-content" id="patternSummary">
+                            <span id="patternSummaryText">-</span>
+                        </div>
+                        <div class="pattern-badges" id="patternBadges">
+                            <!-- 動態生成型態標籤 -->
+                        </div>
+                    </div>
+
+                    <!-- 量價關係卡片 -->
+                    <div class="summary-card">
+                        <div class="summary-card-header">量價配合</div>
+                        <div class="summary-card-content" id="volumeSummary">
+                            <span id="volumeSummaryText">-</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- K線型態與趨勢總結 -->
-        <div class="pattern-trend-summary" id="patternTrendSummary" style="display: none;">
-            <div class="summary-header">當前K線型態與趨勢</div>
-            <div class="summary-grid">
-                <!-- 趨勢卡片 -->
-                <div class="summary-card">
-                    <div class="summary-card-header">趨勢方向</div>
-                    <div class="summary-card-content" id="trendSummary">
-                        <span class="trend-arrow" id="trendArrow">-</span>
-                        <span id="trendSummaryText">-</span>
-                    </div>
-                </div>
-
-                <!-- 型態卡片 -->
-                <div class="summary-card">
-                    <div class="summary-card-header">K線型態</div>
-                    <div class="summary-card-content" id="patternSummary">
-                        <span id="patternSummaryText">-</span>
-                    </div>
-                    <div class="pattern-badges" id="patternBadges">
-                        <!-- 動態生成型態標籤 -->
-                    </div>
-                </div>
-
-                <!-- 量價關係卡片 -->
-                <div class="summary-card">
-                    <div class="summary-card-header">量價配合</div>
-                    <div class="summary-card-content" id="volumeSummary">
-                        <span id="volumeSummaryText">-</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 進出場時機分析 -->
+        <!-- 進出場時機分析 (Price Suggestions) -->
         <div class="entry-exit-timing" id="entryExitTiming" style="display: none;">
             <div class="timing-header">
                 <h4 class="timing-title">價格建議</h4>
@@ -959,11 +1073,12 @@
                 <div class="timing-analysis-text" id="timingAnalysisText">-</div>
             </div>
         </div>
-    </div>
 
-    <div id="chartContainer">
-        <div id="candlestickChart"></div>
+        <div id="chartContainer">
+            <div id="candlestickChart"></div>
+        </div>
     </div>
+    <!-- End of Main Content Wrapper -->
 
     <!-- 資料來源標示 -->
     <div class="data-source" id="dataSource" style="display: none;">
