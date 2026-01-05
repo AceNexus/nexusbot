@@ -2,6 +2,7 @@ package com.acenexus.tata.nexusbot.service;
 
 import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.TechnicalAnalysisResult;
+import com.acenexus.tata.nexusbot.enums.CandlestickPattern;
 import com.acenexus.tata.nexusbot.util.MovingAverageCalculator;
 import com.acenexus.tata.nexusbot.util.TechnicalIndicatorCalculator;
 import com.acenexus.tata.nexusbot.util.TechnicalIndicatorCalculator.BollingerBandsResult;
@@ -47,7 +48,7 @@ public class TechnicalAnalysisService {
         TechnicalAnalysisResult.SupportResistance sr = calculateSupportResistance(data, lastIndex, indicators);
 
         // K線型態識別（先執行，供後續價格計算使用）
-        List<String> patterns = identifyCandlestickPatterns(data);
+        List<TechnicalAnalysisResult.CandlestickPatternDetail> patternDetails = identifyCandlestickPatterns(data);
 
         // 趨勢描述
         String trendDescription = generateTrendDescription(data, lastIndex, indicators);
@@ -61,7 +62,7 @@ public class TechnicalAnalysisService {
 
         // 計算進出場時機（整合型態資訊）
         TechnicalAnalysisResult.EntryExitTiming entryExitTiming = calculateEntryExitTiming(
-                recommendation, latestCandle.getClose(), indicators, sr, signals, patterns, trendDescription);
+                recommendation, latestCandle.getClose(), indicators, sr, signals, patternDetails, trendDescription);
 
         // 生成結構化分析文字（包含所有分析項目）
         String analysis = generateAnalysisText(
@@ -71,7 +72,7 @@ public class TechnicalAnalysisService {
                 entryExitTiming,
                 trendDescription,
                 sr,
-                patterns,
+                patternDetails,
                 priceVolumeAnalysis,
                 latestCandle.getClose()
         );
@@ -87,7 +88,7 @@ public class TechnicalAnalysisService {
                 .signals(signals)
                 .supportResistance(sr)
                 .entryExitTiming(entryExitTiming)
-                .candlestickPatterns(patterns)
+                .candlestickPatternDetails(patternDetails)
                 .trendDescription(trendDescription)
                 .priceVolumeAnalysis(priceVolumeAnalysis)
                 .analysis(analysis)
@@ -123,6 +124,14 @@ public class TechnicalAnalysisService {
         BigDecimal ma20 = MovingAverageCalculator.calculateMA20(data, index);
         BigDecimal ma60 = MovingAverageCalculator.calculateMA60(data, index);
 
+        // Williams %R
+        BigDecimal williamsR = TechnicalIndicatorCalculator.calculateWilliamsR(data, index, 14);
+
+        // BIAS 乖離率
+        BigDecimal bias6 = TechnicalIndicatorCalculator.calculateBIAS(data, index, 6);
+        BigDecimal bias12 = TechnicalIndicatorCalculator.calculateBIAS(data, index, 12);
+        BigDecimal bias24 = TechnicalIndicatorCalculator.calculateBIAS(data, index, 24);
+
         return TechnicalAnalysisResult.TechnicalIndicators.builder()
                 .rsi6(rsi6)
                 .rsi12(rsi12)
@@ -138,6 +147,10 @@ public class TechnicalAnalysisService {
                 .ma10(ma10)
                 .ma20(ma20)
                 .ma60(ma60)
+                .williamsR14(williamsR)
+                .bias6(bias6)
+                .bias12(bias12)
+                .bias24(bias24)
                 .build();
     }
 
@@ -155,7 +168,6 @@ public class TechnicalAnalysisService {
         if (index > 0) {
             BigDecimal prevMa5 = MovingAverageCalculator.calculateMA5(data, index - 1);
             BigDecimal prevMa10 = MovingAverageCalculator.calculateMA10(data, index - 1);
-            BigDecimal prevMa20 = MovingAverageCalculator.calculateMA20(data, index - 1);
 
             // 黃金交叉 (MA5 向上穿越 MA10)
             if (indicators.getMa5() != null && indicators.getMa10() != null &&
@@ -303,6 +315,44 @@ public class TechnicalAnalysisService {
             }
         }
 
+        // 6. Williams %R 訊號
+        if (indicators.getWilliamsR14() != null) {
+            BigDecimal wr = indicators.getWilliamsR14();
+
+            // Williams %R 超買 (> -20)
+            if (wr.compareTo(new BigDecimal("-20")) >= 0) {
+                signals.add(createSignal("Williams %%R 超買", "賣出", 3,
+                        String.format("Williams %%R 進入超買區 (%.2f)，注意回檔風險", wr),
+                        current.getDate()));
+            }
+
+            // Williams %R 超賣 (< -80)
+            if (wr.compareTo(new BigDecimal("-80")) <= 0) {
+                signals.add(createSignal("Williams %%R 超賣", "買進", 3,
+                        String.format("Williams %%R 進入超賣區 (%.2f)，可能反彈", wr),
+                        current.getDate()));
+            }
+        }
+
+        // 7. BIAS 乖離率訊號
+        if (indicators.getBias6() != null) {
+            BigDecimal bias = indicators.getBias6();
+
+            // BIAS 正乖離過大 (> 5%)
+            if (bias.compareTo(new BigDecimal("5")) > 0) {
+                signals.add(createSignal("乖離率過高", "賣出", 2,
+                        String.format("價格偏離 6 日均線 %.2f%%，可能回歸均線", bias),
+                        current.getDate()));
+            }
+
+            // BIAS 負乖離過大 (< -5%)
+            if (bias.compareTo(new BigDecimal("-5")) < 0) {
+                signals.add(createSignal("乖離率過低", "買進", 2,
+                        String.format("價格低於 6 日均線 %.2f%%，可能反彈", bias.abs()),
+                        current.getDate()));
+            }
+        }
+
         return signals;
     }
 
@@ -380,7 +430,6 @@ public class TechnicalAnalysisService {
 
     /**
      * 計算信心指數（改進版，更貼近實務）
-     *
      * 考慮因素：
      * 1. 訊號一致性（買賣訊號衝突會降低信心）
      * 2. 訊號強度加權
@@ -440,7 +489,7 @@ public class TechnicalAnalysisService {
             TechnicalAnalysisResult.TechnicalIndicators indicators,
             TechnicalAnalysisResult.SupportResistance sr,
             List<TechnicalAnalysisResult.TradingSignal> signals,
-            List<String> patterns,
+            List<TechnicalAnalysisResult.CandlestickPatternDetail> patternDetails,
             String trendDescription) {
 
         String action;
@@ -462,7 +511,7 @@ public class TechnicalAnalysisService {
                 action = "進場";
 
                 // 使用智能買入價計算（整合型態和趨勢）
-                BigDecimal[] entryPrices = calculateSmartEntryPrice(currentPrice, indicators, sr, signals, patterns, trendDescription);
+                BigDecimal[] entryPrices = calculateSmartEntryPrice(currentPrice, indicators, sr, signals, patternDetails, trendDescription);
                 entryPrice = entryPrices[0];      // 建議價
                 entryPriceMin = entryPrices[1];   // 最佳價（保守）
                 entryPriceMax = entryPrices[2];   // 可接受價（積極）
@@ -517,7 +566,7 @@ public class TechnicalAnalysisService {
                 action = "出場";
 
                 // 使用智能賣出價計算（整合型態和趨勢）
-                BigDecimal[] exitPrices = calculateSmartExitPrice(currentPrice, indicators, sr, signals, patterns, trendDescription);
+                BigDecimal[] exitPrices = calculateSmartExitPrice(currentPrice, indicators, sr, signals, patternDetails, trendDescription);
                 exitPrice = exitPrices[0];      // 建議價
                 exitPriceMin = exitPrices[1];   // 可接受價（保守）
                 exitPriceMax = exitPrices[2];   // 最佳價（積極）
@@ -549,12 +598,12 @@ public class TechnicalAnalysisService {
 
                 // 觀望時給予進場和出場的參考價位及區間
                 // 使用智能計算提供觀望時的參考價格區間（整合型態和趨勢）
-                BigDecimal[] observeEntryPrices = calculateSmartEntryPrice(currentPrice, indicators, sr, signals, patterns, trendDescription);
+                BigDecimal[] observeEntryPrices = calculateSmartEntryPrice(currentPrice, indicators, sr, signals, patternDetails, trendDescription);
                 entryPrice = observeEntryPrices[0];
                 entryPriceMin = observeEntryPrices[1];
                 entryPriceMax = observeEntryPrices[2];
 
-                BigDecimal[] observeExitPrices = calculateSmartExitPrice(currentPrice, indicators, sr, signals, patterns, trendDescription);
+                BigDecimal[] observeExitPrices = calculateSmartExitPrice(currentPrice, indicators, sr, signals, patternDetails, trendDescription);
                 exitPrice = observeExitPrices[0];
                 exitPriceMin = observeExitPrices[1];
                 exitPriceMax = observeExitPrices[2];
@@ -593,7 +642,7 @@ public class TechnicalAnalysisService {
             TechnicalAnalysisResult.EntryExitTiming entryExitTiming,
             String trendDescription,
             TechnicalAnalysisResult.SupportResistance sr,
-            List<String> candlestickPatterns,
+            List<TechnicalAnalysisResult.CandlestickPatternDetail> patternDetails,
             String priceVolumeAnalysis,
             BigDecimal currentPrice) {
 
@@ -637,28 +686,11 @@ public class TechnicalAnalysisService {
 
         // 3. K線型態
         analysis.append("\n【K線型態判讀】\n");
-        if (candlestickPatterns != null && !candlestickPatterns.isEmpty()) {
-            for (String pattern : candlestickPatterns) {
-                analysis.append("• ").append(pattern);
-
-                // 白話解釋
-                if (pattern.contains("看漲吞沒")) {
-                    analysis.append("\n  → 紅K包住前一根黑K，多方力量變強\n");
-                } else if (pattern.contains("看跌吞沒")) {
-                    analysis.append("\n  → 黑K包住前一根紅K，空方力量變強\n");
-                } else if (pattern.contains("錘子線")) {
-                    analysis.append("\n  → 長下影線，下方有買盤撐住\n");
-                } else if (pattern.contains("流星線")) {
-                    analysis.append("\n  → 長上影線，上方賣壓重\n");
-                } else if (pattern.contains("十字線")) {
-                    analysis.append("\n  → 開收盤價相近，多空陷入拉鋸\n");
-                } else if (pattern.contains("早晨之星")) {
-                    analysis.append("\n  → 底部反轉訊號，可能止跌回升\n");
-                } else if (pattern.contains("黃昏之星")) {
-                    analysis.append("\n  → 頭部反轉訊號，可能見高回落\n");
-                } else {
-                    analysis.append("\n");
-                }
+        if (patternDetails != null && !patternDetails.isEmpty()) {
+            for (TechnicalAnalysisResult.CandlestickPatternDetail pattern : patternDetails) {
+                analysis.append("• ").append(pattern.getName())
+                        .append(" [").append(pattern.getReliability()).append("]\n");
+                analysis.append("  → ").append(pattern.getDescription()).append("\n");
             }
         } else {
             analysis.append("• 近期無明顯特殊K線型態\n");
@@ -706,12 +738,12 @@ public class TechnicalAnalysisService {
         boolean isOverbought = (indicators.getRsi12() != null &&
                 indicators.getRsi12().compareTo(new BigDecimal("70")) > 0) ||
                 (indicators.getKdK() != null &&
-                indicators.getKdK().compareTo(new BigDecimal("80")) > 0);
+                        indicators.getKdK().compareTo(new BigDecimal("80")) > 0);
 
         boolean isOversold = (indicators.getRsi12() != null &&
                 indicators.getRsi12().compareTo(new BigDecimal("30")) < 0) ||
                 (indicators.getKdK() != null &&
-                indicators.getKdK().compareTo(new BigDecimal("20")) < 0);
+                        indicators.getKdK().compareTo(new BigDecimal("20")) < 0);
 
         if (isOverbought) {
             analysis.append("• 風險：目前技術指標顯示過熱，短線有回檔壓力\n");
@@ -765,22 +797,18 @@ public class TechnicalAnalysisService {
             TechnicalAnalysisResult.TechnicalIndicators indicators,
             TechnicalAnalysisResult.SupportResistance sr,
             List<TechnicalAnalysisResult.TradingSignal> signals,
-            List<String> patterns,
+            List<TechnicalAnalysisResult.CandlestickPatternDetail> patternDetails,
             String trendDescription) {
 
         // 返回 [建議價, 可接受價(保守), 最佳價(積極)]
         BigDecimal[] result = new BigDecimal[3];
 
         // 分析K線型態影響
-        boolean hasBearishPattern = patterns.stream()
-                .anyMatch(p -> p.contains("看跌") || p.contains("黃昏") ||
-                              p.contains("流星") || p.contains("上吊") ||
-                              p.contains("上漲結束"));
+        boolean hasBearishPattern = patternDetails.stream()
+                .anyMatch(p -> Boolean.FALSE.equals(p.getBullish()));
 
-        boolean hasBullishPattern = patterns.stream()
-                .anyMatch(p -> p.contains("看漲") || p.contains("早晨") ||
-                              p.contains("錘子") || p.contains("倒錘") ||
-                              p.contains("反轉向上"));
+        boolean hasBullishPattern = patternDetails.stream()
+                .anyMatch(p -> Boolean.TRUE.equals(p.getBullish()));
 
         // 分析趨勢強度
         boolean isStrongDowntrend = trendDescription != null &&
@@ -947,22 +975,18 @@ public class TechnicalAnalysisService {
             TechnicalAnalysisResult.TechnicalIndicators indicators,
             TechnicalAnalysisResult.SupportResistance sr,
             List<TechnicalAnalysisResult.TradingSignal> signals,
-            List<String> patterns,
+            List<TechnicalAnalysisResult.CandlestickPatternDetail> patternDetails,
             String trendDescription) {
 
         // 返回 [建議價, 最佳價(保守), 可接受價(積極)]
         BigDecimal[] result = new BigDecimal[3];
 
         // 分析K線型態影響
-        boolean hasBullishPattern = patterns.stream()
-                .anyMatch(p -> p.contains("看漲") || p.contains("早晨") ||
-                              p.contains("錘子") || p.contains("倒錘") ||
-                              p.contains("反轉向上"));
+        boolean hasBullishPattern = patternDetails.stream()
+                .anyMatch(p -> Boolean.TRUE.equals(p.getBullish()));
 
-        boolean hasBearishPattern = patterns.stream()
-                .anyMatch(p -> p.contains("看跌") || p.contains("黃昏") ||
-                              p.contains("流星") || p.contains("上吊") ||
-                              p.contains("上漲結束"));
+        boolean hasBearishPattern = patternDetails.stream()
+                .anyMatch(p -> Boolean.FALSE.equals(p.getBullish()));
 
         // 分析趨勢強度
         boolean isStrongUptrend = trendDescription != null &&
@@ -1129,7 +1153,7 @@ public class TechnicalAnalysisService {
         // 檢查超買
         boolean isOverbought =
                 (indicators.getRsi12() != null && indicators.getRsi12().compareTo(new BigDecimal("70")) > 0) ||
-                (indicators.getKdK() != null && indicators.getKdK().compareTo(new BigDecimal("80")) > 0);
+                        (indicators.getKdK() != null && indicators.getKdK().compareTo(new BigDecimal("80")) > 0);
 
         // 計算布林帶位置
         BigDecimal pricePosition = null;
@@ -1182,7 +1206,7 @@ public class TechnicalAnalysisService {
         // 檢查超賣
         boolean isOversold =
                 (indicators.getRsi12() != null && indicators.getRsi12().compareTo(new BigDecimal("30")) < 0) ||
-                (indicators.getKdK() != null && indicators.getKdK().compareTo(new BigDecimal("20")) < 0);
+                        (indicators.getKdK() != null && indicators.getKdK().compareTo(new BigDecimal("20")) < 0);
 
         // 計算布林帶位置
         BigDecimal pricePosition = null;
@@ -1238,13 +1262,13 @@ public class TechnicalAnalysisService {
     // ==================== K線型態識別相關方法 ====================
 
     /**
-     * 辨識 K 線型態
+     * 辨識 K 線型態（使用 CandlestickPattern 枚舉）
      */
-    private List<String> identifyCandlestickPatterns(List<CandlestickData> candles) {
-        List<String> patterns = new ArrayList<>();
+    private List<TechnicalAnalysisResult.CandlestickPatternDetail> identifyCandlestickPatterns(List<CandlestickData> candles) {
+        List<TechnicalAnalysisResult.CandlestickPatternDetail> patternDetails = new ArrayList<>();
 
         if (candles.size() < 3) {
-            return patterns;
+            return patternDetails;
         }
 
         // 取最近3-5根K線
@@ -1257,48 +1281,48 @@ public class TechnicalAnalysisService {
 
         // 1. 十字星
         if (isDoji(today)) {
-            patterns.add("十字星");
+            addPatternDetail(patternDetails, CandlestickPattern.DOJI, today.getDate());
         }
 
         // 2. 看漲吞沒
         if (isBullishEngulfing(yesterday, today)) {
-            patterns.add("看漲吞沒");
+            addPatternDetail(patternDetails, CandlestickPattern.BULLISH_ENGULFING, today.getDate());
         }
 
         // 3. 看跌吞沒
         if (isBearishEngulfing(yesterday, today)) {
-            patterns.add("看跌吞沒");
+            addPatternDetail(patternDetails, CandlestickPattern.BEARISH_ENGULFING, today.getDate());
         }
 
         // 4. 早晨之星
         if (isMorningStar(dayBefore, yesterday, today)) {
-            patterns.add("早晨之星");
+            addPatternDetail(patternDetails, CandlestickPattern.MORNING_STAR, today.getDate());
         }
 
         // 5. 黃昏之星
         if (isEveningStar(dayBefore, yesterday, today)) {
-            patterns.add("黃昏之星");
+            addPatternDetail(patternDetails, CandlestickPattern.EVENING_STAR, today.getDate());
         }
 
-        // 6. 錘子線（放寬條件：不要求前一根必須是黑K）
+        // 6. 錘子線/上吊線
         if (isHammer(today)) {
             // 判斷是在下跌趨勢中還是上漲趨勢中
             boolean inDowntrend = yesterday.getClose().compareTo(yesterday.getOpen()) < 0;
             if (inDowntrend) {
-                patterns.add("錘子線");
+                addPatternDetail(patternDetails, CandlestickPattern.HAMMER, today.getDate());
             } else {
-                patterns.add("上吊線");
+                addPatternDetail(patternDetails, CandlestickPattern.HANGING_MAN, today.getDate());
             }
         }
 
-        // 7. 流星線（放寬條件）
+        // 7. 流星線/倒錘線
         if (isShootingStar(today)) {
             // 判斷是在上漲趨勢中還是下跌趨勢中
             boolean inUptrend = yesterday.getClose().compareTo(yesterday.getOpen()) > 0;
             if (inUptrend) {
-                patterns.add("流星線");
+                addPatternDetail(patternDetails, CandlestickPattern.SHOOTING_STAR, today.getDate());
             } else {
-                patterns.add("倒錘線");
+                addPatternDetail(patternDetails, CandlestickPattern.INVERTED_HAMMER, today.getDate());
             }
         }
 
@@ -1310,14 +1334,14 @@ public class TechnicalAnalysisService {
                 .multiply(new BigDecimal("100")).abs();
 
         if (today.getClose().compareTo(today.getOpen()) > 0 &&
-            bodyPercent.compareTo(new BigDecimal("2")) > 0) {
-            patterns.add("長紅K");
+                bodyPercent.compareTo(new BigDecimal("2")) > 0) {
+            addPatternDetail(patternDetails, CandlestickPattern.LONG_BULLISH, today.getDate());
         }
 
         // 9. 大陰線（實體 > 2%）
         if (today.getClose().compareTo(today.getOpen()) < 0 &&
-            bodyPercent.compareTo(new BigDecimal("2")) > 0) {
-            patterns.add("長黑K");
+                bodyPercent.compareTo(new BigDecimal("2")) > 0) {
+            addPatternDetail(patternDetails, CandlestickPattern.LONG_BEARISH, today.getDate());
         }
 
         // 10. 連續上漲
@@ -1331,7 +1355,7 @@ public class TechnicalAnalysisService {
                 }
             }
             if (threeRising) {
-                patterns.add("三連陽");
+                addPatternDetail(patternDetails, CandlestickPattern.THREE_WHITE_SOLDIERS, today.getDate());
             }
         }
 
@@ -1346,7 +1370,7 @@ public class TechnicalAnalysisService {
                 }
             }
             if (threeFalling) {
-                patterns.add("三連陰");
+                addPatternDetail(patternDetails, CandlestickPattern.THREE_BLACK_CROWS, today.getDate());
             }
         }
 
@@ -1354,33 +1378,42 @@ public class TechnicalAnalysisService {
         BigDecimal todayBody = today.getClose().subtract(today.getOpen()).abs();
         BigDecimal todayUpperShadow = today.getHigh().subtract(today.getOpen().max(today.getClose()));
         if (todayBody.compareTo(BigDecimal.ZERO) > 0 &&
-            todayUpperShadow.compareTo(todayBody.multiply(new BigDecimal("1.5"))) > 0) {
-            if (!patterns.contains("流星線")) {
-                patterns.add("長上影線");
+                todayUpperShadow.compareTo(todayBody.multiply(new BigDecimal("1.5"))) > 0) {
+            boolean hasShootingStar = patternDetails.stream()
+                    .anyMatch(p -> p.getName().equals(CandlestickPattern.SHOOTING_STAR.getName()));
+            if (!hasShootingStar) {
+                addPatternDetail(patternDetails, CandlestickPattern.LONG_UPPER_SHADOW, today.getDate());
             }
         }
 
         // 13. 長下影線（下影線 > 實體1.5倍，不一定要是錘子）
         BigDecimal todayLowerShadow = today.getOpen().min(today.getClose()).subtract(today.getLow());
         if (todayBody.compareTo(BigDecimal.ZERO) > 0 &&
-            todayLowerShadow.compareTo(todayBody.multiply(new BigDecimal("1.5"))) > 0) {
-            if (!patterns.contains("錘子線") && !patterns.contains("上吊線")) {
-                patterns.add("長下影線");
+                todayLowerShadow.compareTo(todayBody.multiply(new BigDecimal("1.5"))) > 0) {
+            boolean hasHammer = patternDetails.stream()
+                    .anyMatch(p -> p.getName().equals(CandlestickPattern.HAMMER.getName()) ||
+                            p.getName().equals(CandlestickPattern.HANGING_MAN.getName()));
+            if (!hasHammer) {
+                addPatternDetail(patternDetails, CandlestickPattern.LONG_LOWER_SHADOW, today.getDate());
             }
         }
 
-        // 如果沒有任何型態，至少給出當前K線的基本描述
-        if (patterns.isEmpty()) {
-            if (today.getClose().compareTo(today.getOpen()) > 0) {
-                patterns.add("小陽線");
-            } else if (today.getClose().compareTo(today.getOpen()) < 0) {
-                patterns.add("小陰線");
-            } else {
-                patterns.add("平盤");
-            }
-        }
+        return patternDetails;
+    }
 
-        return patterns;
+    /**
+     * 添加型態詳情到列表
+     */
+    private void addPatternDetail(List<TechnicalAnalysisResult.CandlestickPatternDetail> details,
+                                  CandlestickPattern pattern,
+                                  java.time.LocalDate date) {
+        details.add(TechnicalAnalysisResult.CandlestickPatternDetail.builder()
+                .name(pattern.getName())
+                .description(pattern.getDescription())
+                .reliability(pattern.getReliability().getLabel())
+                .bullish(pattern.getBullish())
+                .date(date)
+                .build());
     }
 
     /**
@@ -1535,7 +1568,7 @@ public class TechnicalAnalysisService {
      * 生成趨勢描述
      */
     private String generateTrendDescription(List<CandlestickData> data, int index,
-                                           TechnicalAnalysisResult.TechnicalIndicators indicators) {
+                                            TechnicalAnalysisResult.TechnicalIndicators indicators) {
         if (data.size() < 20) {
             return "數據不足，無法判斷趨勢";
         }

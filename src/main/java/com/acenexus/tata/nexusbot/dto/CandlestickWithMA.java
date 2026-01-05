@@ -52,16 +52,29 @@ public class CandlestickWithMA {
     @Schema(description = "漲跌幅 (%)", example = "0.55")
     private BigDecimal changePercent;
 
-    // 均線數據
-    @Schema(description = "5日均線", example = "551.20")
+    // SMA 均線數據
+    @Schema(description = "5日均線 (SMA)", example = "551.20")
     private BigDecimal ma5;
 
-    @Schema(description = "10日均線", example = "549.80")
+    @Schema(description = "10日均線 (SMA)", example = "549.80")
     private BigDecimal ma10;
 
-    @Schema(description = "20日均線", example = "545.50")
+    @Schema(description = "20日均線 (SMA)", example = "545.50")
     private BigDecimal ma20;
 
-    @Schema(description = "60日均線", example = "540.30")
+    @Schema(description = "60日均線 (SMA)", example = "540.30")
     private BigDecimal ma60;
+
+    // EMA 均線數據
+    @Schema(description = "5日指數移動平均線 (EMA)", example = "552.30")
+    private BigDecimal ema5;
+
+    @Schema(description = "10日指數移動平均線 (EMA)", example = "550.40")
+    private BigDecimal ema10;
+
+    @Schema(description = "20日指數移動平均線 (EMA)", example = "546.80")
+    private BigDecimal ema20;
+
+    @Schema(description = "60日指數移動平均線 (EMA)", example = "541.60")
+    private BigDecimal ema60;
 }

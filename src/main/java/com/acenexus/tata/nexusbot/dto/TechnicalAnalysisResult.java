@@ -50,8 +50,8 @@ public class TechnicalAnalysisResult {
     @Schema(description = "進出場時機分析")
     private EntryExitTiming entryExitTiming;
 
-    @Schema(description = "K線型態識別")
-    private List<String> candlestickPatterns;
+    @Schema(description = "K線型態詳情列表")
+    private List<CandlestickPatternDetail> candlestickPatternDetails;
 
     @Schema(description = "趨勢描述", example = "強勢上升趨勢")
     private String trendDescription;
@@ -111,6 +111,18 @@ public class TechnicalAnalysisResult {
 
         @Schema(description = "MA60", example = "570.00")
         private BigDecimal ma60;
+
+        @Schema(description = "Williams %R (14日)", example = "-35.50")
+        private BigDecimal williamsR14;
+
+        @Schema(description = "BIAS (6日)", example = "2.50")
+        private BigDecimal bias6;
+
+        @Schema(description = "BIAS (12日)", example = "1.80")
+        private BigDecimal bias12;
+
+        @Schema(description = "BIAS (24日)", example = "0.95")
+        private BigDecimal bias24;
     }
 
     /**
@@ -204,5 +216,29 @@ public class TechnicalAnalysisResult {
 
         @Schema(description = "建議部位大小 (%)", example = "30")
         private Integer positionSize;
+    }
+
+    /**
+     * K 線型態詳情
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CandlestickPatternDetail {
+        @Schema(description = "型態名稱", example = "看漲吞沒")
+        private String name;
+
+        @Schema(description = "詳細說明", example = "大陽線完全吞沒前一根陰線，表示多方力量強勢反攻...")
+        private String description;
+
+        @Schema(description = "可靠度", example = "高")
+        private String reliability;
+
+        @Schema(description = "看漲/看跌/中性", example = "true")
+        private Boolean bullish;
+
+        @Schema(description = "出現日期", example = "2024-12-30")
+        private LocalDate date;
     }
 }

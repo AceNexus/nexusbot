@@ -4,6 +4,7 @@ import com.acenexus.tata.nexusbot.dto.CandlestickData;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -63,5 +64,69 @@ public class MovingAverageCalculator {
      */
     public static BigDecimal calculateMA60(List<CandlestickData> data, int index) {
         return calculateMA(data, index, 60);
+    }
+
+    /**
+     * 計算指數移動平均線（EMA）
+     * EMA = Price(t) × α + EMA(t-1) × (1-α)
+     * 其中 α = 2 / (period + 1)
+     *
+     * @param data        K線數據列表
+     * @param index       當前索引
+     * @param period      週期（天數）
+     * @param previousEMA 前一個 EMA 值（首次計算傳入 null）
+     * @return EMA 值（數據不足時返回 null）
+     */
+    public static BigDecimal calculateEMA(List<CandlestickData> data, int index,
+                                          int period, BigDecimal previousEMA) {
+        if (index < 0) {
+            return null;
+        }
+
+        BigDecimal close = data.get(index).getClose();
+        if (close == null) {
+            return null;
+        }
+
+        // 首次計算使用 SMA 作為初始值
+        if (previousEMA == null) {
+            if (index < period - 1) {
+                return null;
+            }
+            return calculateMA(data, index, period);
+        }
+
+        // α = 2 / (period + 1)
+        BigDecimal alpha = new BigDecimal("2")
+                .divide(BigDecimal.valueOf(period + 1), 4, RoundingMode.HALF_UP);
+
+        // EMA = close × α + previousEMA × (1-α)
+        BigDecimal ema = close.multiply(alpha)
+                .add(previousEMA.multiply(BigDecimal.ONE.subtract(alpha)));
+
+        return ema.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 批量計算 EMA 序列
+     * 自動處理前值傳遞，返回完整的 EMA 序列
+     *
+     * @param data   K線數據列表
+     * @param period 週期（天數）
+     * @return EMA 序列（與輸入數據長度相同，數據不足部分為 null）
+     */
+    public static List<BigDecimal> calculateEMASeries(List<CandlestickData> data, int period) {
+        List<BigDecimal> results = new ArrayList<>();
+        BigDecimal previousEMA = null;
+
+        for (int i = 0; i < data.size(); i++) {
+            BigDecimal ema = calculateEMA(data, i, period, previousEMA);
+            results.add(ema);
+            if (ema != null) {
+                previousEMA = ema;
+            }
+        }
+
+        return results;
     }
 }

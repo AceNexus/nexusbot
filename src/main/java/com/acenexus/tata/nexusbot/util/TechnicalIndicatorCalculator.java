@@ -302,4 +302,75 @@ public class TechnicalIndicatorCalculator {
 
         return results;
     }
+
+    /**
+     * 計算威廉指標 (Williams %R)
+     * Williams %R = (最高價 - 收盤價) / (最高價 - 最低價) × (-100)
+     * 範圍: -100 到 0
+     * -20 以上為超買，-80 以下為超賣
+     *
+     * @param data   K線數據
+     * @param index  當前索引
+     * @param period 週期（通常為 14）
+     * @return Williams %R 值
+     */
+    public static BigDecimal calculateWilliamsR(List<CandlestickData> data, int index, int period) {
+        if (index < period - 1) {
+            return null;
+        }
+
+        // 計算期間內最高價和最低價
+        BigDecimal highest = data.get(index - period + 1).getHigh();
+        BigDecimal lowest = data.get(index - period + 1).getLow();
+
+        for (int i = index - period + 2; i <= index; i++) {
+            BigDecimal high = data.get(i).getHigh();
+            BigDecimal low = data.get(i).getLow();
+
+            if (high != null && high.compareTo(highest) > 0) {
+                highest = high;
+            }
+            if (low != null && low.compareTo(lowest) < 0) {
+                lowest = low;
+            }
+        }
+
+        BigDecimal close = data.get(index).getClose();
+        if (close == null || highest.compareTo(lowest) == 0) {
+            return null;
+        }
+
+        // Williams %R = (H - C) / (H - L) × (-100)
+        BigDecimal wr = highest.subtract(close)
+                .divide(highest.subtract(lowest), 4, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("-100"));
+
+        return wr.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 計算乖離率 (BIAS)
+     * BIAS = (收盤價 - MA) / MA × 100%
+     * 正值表示價格高於均線，負值表示低於均線
+     *
+     * @param data   K線數據
+     * @param index  當前索引
+     * @param period MA 週期（通常為 6, 12, 24）
+     * @return BIAS 值（百分比）
+     */
+    public static BigDecimal calculateBIAS(List<CandlestickData> data, int index, int period) {
+        BigDecimal close = data.get(index).getClose();
+        BigDecimal ma = MovingAverageCalculator.calculateMA(data, index, period);
+
+        if (close == null || ma == null || ma.compareTo(BigDecimal.ZERO) == 0) {
+            return null;
+        }
+
+        // BIAS = (C - MA) / MA × 100
+        BigDecimal bias = close.subtract(ma)
+                .divide(ma, 4, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("100"));
+
+        return bias.setScale(2, RoundingMode.HALF_UP);
+    }
 }

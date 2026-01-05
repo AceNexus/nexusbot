@@ -1283,92 +1283,37 @@
         }
 
         // 2. K線型態
-        if (analysis.candlestickPatterns && analysis.candlestickPatterns.length > 0) {
-            // 主要型態文字（加上說明）
-            const mainPattern = analysis.candlestickPatterns[0];
-            let mainPatternDesc = getPatternDescription(mainPattern);
-            patternSummaryText.textContent = mainPattern + (mainPatternDesc ? ' - ' + mainPatternDesc : '');
+        const patterns = analysis.candlestickPatternDetails || [];
+        if (patterns.length > 0) {
+            // 主要型態文字
+            const mainPattern = patterns[0];
+            patternSummaryText.textContent = `${mainPattern.name} [${mainPattern.reliability}] - ${mainPattern.description}`;
 
             // 型態標籤
             patternBadges.innerHTML = '';
-            analysis.candlestickPatterns.slice(0, 3).forEach(pattern => {
+            patterns.slice(0, 3).forEach(pattern => {
                 const badge = document.createElement('div');
                 badge.className = 'pattern-badge';
 
-                const patternText = pattern.toLowerCase();
-                if (patternText.includes('看漲') || patternText.includes('早晨') ||
-                    patternText.includes('錘子') || patternText.includes('倒錘') ||
-                    patternText.includes('反轉向上') || patternText.includes('陽') ||
-                    patternText.includes('長紅') || patternText.includes('下影')) {
+                // 根據 bullish 屬性設定樣式
+                if (pattern.bullish === true) {
                     badge.classList.add('bullish');
-                } else if (patternText.includes('看跌') || patternText.includes('黃昏') ||
-                           patternText.includes('流星') || patternText.includes('上吊') ||
-                           patternText.includes('上漲結束') || patternText.includes('陰') ||
-                           patternText.includes('長黑') || patternText.includes('上影')) {
+                } else if (pattern.bullish === false) {
                     badge.classList.add('bearish');
                 }
 
-                badge.textContent = pattern;
+                // 顯示型態名稱和可靠度
+                badge.innerHTML = `<span class="pattern-name">${pattern.name}</span> <span class="pattern-reliability">[${pattern.reliability}]</span>`;
+
+                // Tooltip 顯示詳細說明
+                badge.title = pattern.description;
+
                 patternBadges.appendChild(badge);
             });
             hasContent = true;
         } else {
             patternSummaryText.textContent = '無明顯型態';
             patternBadges.innerHTML = '';
-        }
-
-        // 型態說明函數（基於技術分析研究的詳細說明）
-        function getPatternDescription(pattern) {
-            const p = pattern.toLowerCase();
-
-            // 雙K組合型態（可靠度：較高）
-            if (p.includes('看漲吞沒')) return '大陽線完全吞沒前陰線，多方強力反攻';
-            if (p.includes('看跌吞沒')) return '大陰線完全吞沒前陽線，空方掌控局面';
-            if (p.includes('曙光初現')) return '陽線深入前陰線實體1/2以上，反彈訊號';
-            if (p.includes('烏雲蓋頂')) return '陰線深入前陽線實體1/2以下，回檔訊號';
-
-            // 三K組合型態（可靠度：中高）
-            if (p.includes('早晨之星')) return '下跌後出現跳空十字再拉陽，底部反轉';
-            if (p.includes('黃昏之星')) return '上漲後出現跳空十字再殺陰，頂部反轉';
-            if (p.includes('三連陽') || p.includes('紅三兵')) return '連三根陽線，多頭續強';
-            if (p.includes('三連陰') || p.includes('三隻烏鴉')) return '連三根陰線，空頭續弱';
-
-            // 單K型態 - 反轉型（可靠度：中等，需看位置）
-            if (p.includes('錘子線') || p.includes('錘形線')) return '長下影短實體，底部出現看漲';
-            if (p.includes('流星線') || p.includes('射擊之星')) return '長上影短實體，頂部出現看跌';
-            if (p.includes('上吊線')) return '錘形線出現在高檔，小心回檔';
-            if (p.includes('倒錘線') || p.includes('倒錘形線')) return '長上影短實體在底部，可能反彈';
-
-            // 十字星系列（可靠度：中等，需結合位置）
-            if (p.includes('十字星') || p.includes('十字線')) return '開收相同，多空勢均力敵，醞釀變盤';
-            if (p.includes('t字線') || p.includes('蜻蜓線')) return '長下影無上影，賣壓遇買盤支撐';
-            if (p.includes('倒t線') || p.includes('墓碑線')) return '長上影無下影，買氣遇賣壓壓制';
-            if (p.includes('長腳十字')) return '上下影線都長，多空激烈交戰';
-
-            // 實體K線（可靠度：中等，需配合量能）
-            if (p.includes('大紅k') || p.includes('長紅k')) return '實體長影線短，多方強勢主導';
-            if (p.includes('大黑k') || p.includes('長黑k')) return '實體長影線短，空方強勢主導';
-            if (p.includes('中紅k')) return '實體中等，買方略占上風';
-            if (p.includes('中黑k')) return '實體中等，賣方略占上風';
-            if (p.includes('小紅k') || p.includes('小陽線')) return '小幅上漲，多空力量平衡';
-            if (p.includes('小黑k') || p.includes('小陰線')) return '小幅下跌，多空力量平衡';
-
-            // 影線型態
-            if (p.includes('長上影線')) return '上影線長於實體1.5倍以上，上檔賣壓';
-            if (p.includes('長下影線')) return '下影線長於實體1.5倍以上，下檔支撐';
-            if (p.includes('紡錘')) return '上下影線相當，多空拉鋸';
-
-            // 光頭光腳系列
-            if (p.includes('光頭紅k')) return '無上影線，收盤即最高，強勢';
-            if (p.includes('光頭黑k')) return '無上影線，開盤即最高，弱勢';
-            if (p.includes('光腳紅k')) return '無下影線，開盤即最低，強勢';
-            if (p.includes('光腳黑k')) return '無下影線，收盤即最低，弱勢';
-
-            // 極端型態
-            if (p.includes('一字線')) return '開高低收相同，極端行情（漲跌停）';
-            if (p.includes('平盤')) return '收盤與開盤相同，盤勢平靜';
-
-            return '';
         }
 
         // 3. 量價關係
@@ -1400,29 +1345,25 @@
         const patternSection = document.getElementById('patternSection');
 
         // 顯示K線型態識別
-        if (analysis.candlestickPatterns && analysis.candlestickPatterns.length > 0) {
+        const patterns = analysis.candlestickPatternDetails || [];
+        if (patterns.length > 0) {
             const patternList = document.getElementById('patternList');
             patternList.innerHTML = '';
 
-            analysis.candlestickPatterns.forEach(pattern => {
+            patterns.forEach(pattern => {
                 const tag = document.createElement('div');
                 tag.className = 'pattern-tag';
 
-                // 根據型態類型添加樣式
-                const patternText = pattern.toLowerCase();
-                if (patternText.includes('看漲') || patternText.includes('早晨') ||
-                    patternText.includes('錘子') || patternText.includes('倒錘') ||
-                    patternText.includes('反轉向上') || patternText.includes('陽') ||
-                    patternText.includes('長紅') || patternText.includes('下影')) {
+                // 根據 bullish 屬性設定樣式
+                if (pattern.bullish === true) {
                     tag.classList.add('bullish');
-                } else if (patternText.includes('看跌') || patternText.includes('黃昏') ||
-                           patternText.includes('流星') || patternText.includes('上吊') ||
-                           patternText.includes('上漲結束') || patternText.includes('陰') ||
-                           patternText.includes('長黑') || patternText.includes('上影')) {
+                } else if (pattern.bullish === false) {
                     tag.classList.add('bearish');
                 }
 
-                tag.textContent = pattern;
+                // 顯示型態名稱、可靠度和說明
+                tag.innerHTML = `<strong>${pattern.name}</strong> [${pattern.reliability}]<br/><small>${pattern.description}</small>`;
+
                 patternList.appendChild(tag);
             });
 
@@ -1686,12 +1627,20 @@
             });
         });
 
-        // 直接從後端獲取的均線數據
+        // SMA 均線配置（實線）
         const maConfig = [
-            { name: 'MA5', color: '#FF1493' },
-            { name: 'MA10', color: '#00CED1' },
-            { name: 'MA20', color: '#FFD700' },
-            { name: 'MA60', color: '#9370DB' }
+            { name: 'MA5', color: '#FF1493', dashStyle: 'solid' },
+            { name: 'MA10', color: '#00CED1', dashStyle: 'solid' },
+            { name: 'MA20', color: '#FFD700', dashStyle: 'solid' },
+            { name: 'MA60', color: '#9370DB', dashStyle: 'solid' }
+        ];
+
+        // EMA 均線配置（虛線）
+        const emaConfig = [
+            { name: 'EMA5', color: '#FF69B4', dashStyle: 'dashed' },
+            { name: 'EMA10', color: '#00BFFF', dashStyle: 'dashed' },
+            { name: 'EMA20', color: '#FFD700', dashStyle: 'dashed' },
+            { name: 'EMA60', color: '#BA55D3', dashStyle: 'dashed' }
         ];
 
         // 提取均線數據（後端已計算好）
@@ -1700,6 +1649,14 @@
             'MA10': data.map(item => item.ma10),
             'MA20': data.map(item => item.ma20),
             'MA60': data.map(item => item.ma60)
+        };
+
+        // 提取 EMA 數據
+        const emaData = {
+            'EMA5': data.map(item => item.ema5),
+            'EMA10': data.map(item => item.ema10),
+            'EMA20': data.map(item => item.ema20),
+            'EMA60': data.map(item => item.ema60)
         };
 
         // 檢測稀疏數據區域（用於視覺標記）
@@ -1762,6 +1719,14 @@
                         }
                     });
 
+                    let emaInfo = '';
+                    emaConfig.forEach(config => {
+                        const emaValue = emaData[config.name][dataIndex];
+                        if (emaValue !== null && emaValue !== undefined) {
+                            emaInfo += `<span style="color: ${config.color}; font-weight: 600;">${config.name}: ${emaValue.toFixed(2)}</span><br/>`;
+                        }
+                    });
+
                     return `
                     <div style="padding: 10px;">
                         <strong>${item.date}</strong><br/>
@@ -1770,6 +1735,7 @@
                         最低: ${item.low.toFixed(2)}<br/>
                         收盤: ${item.close.toFixed(2)}<br/>
                         ${maInfo}
+                        ${emaInfo}
                         成交量: ${item.volume.toLocaleString()} 張<br/>
                         成交額: ${item.turnover.toLocaleString()} 千元<br/>
                         漲跌: <span style="color: ${item.change >= 0 ? '#ef5350' : '#26a69a'}">${item.change >= 0 ? '+' : ''}${item.change.toFixed(2)} (${item.changePercent >= 0 ? '+' : ''}${item.changePercent.toFixed(2)}%)</span>
@@ -1778,7 +1744,7 @@
                 }
             },
             legend: {
-                data: ['K線', ...maConfig.map(c => c.name), '成交量'],
+                data: ['K線', ...maConfig.map(c => c.name), ...emaConfig.map(c => c.name), '成交量'],
                 top: 40,
                 left: 'center'
             },
@@ -1906,7 +1872,7 @@
                         }
                     } : undefined
                 },
-                // 動態添加均線（後端已計算好）
+                // 動態添加 SMA 均線（實線）
                 ...maConfig.map(config => ({
                     name: config.name,
                     type: 'line',
@@ -1914,7 +1880,22 @@
                     smooth: false,
                     lineStyle: {
                         width: 2,
-                        color: config.color
+                        color: config.color,
+                        type: 'solid'
+                    },
+                    showSymbol: false,
+                    z: 1
+                })),
+                // 動態添加 EMA 均線（虛線）
+                ...emaConfig.map(config => ({
+                    name: config.name,
+                    type: 'line',
+                    data: emaData[config.name],
+                    smooth: false,
+                    lineStyle: {
+                        width: 2,
+                        color: config.color,
+                        type: 'dashed'
                     },
                     showSymbol: false,
                     z: 1

@@ -14,7 +14,6 @@ import com.acenexus.tata.nexusbot.util.MovingAverageCalculator;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -28,9 +27,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 
 @Slf4j
 @Tag(name = "Stock API", description = "股票資訊查詢接口")
@@ -119,7 +118,13 @@ public class StockController {
             // 2. 計算需要返回的數據起始索引（只返回最近 displayMonths 的數據）
             int startIndex = Math.max(0, fullData.size() - (displayMonths * 22)); // 假設每月約 22 個交易日
 
-            // 3. 計算均線並構建返回數據
+            // 3. 批量計算 EMA 序列（使用完整數據以確保準確性）
+            List<BigDecimal> ema5Series = MovingAverageCalculator.calculateEMASeries(fullData, 5);
+            List<BigDecimal> ema10Series = MovingAverageCalculator.calculateEMASeries(fullData, 10);
+            List<BigDecimal> ema20Series = MovingAverageCalculator.calculateEMASeries(fullData, 20);
+            List<BigDecimal> ema60Series = MovingAverageCalculator.calculateEMASeries(fullData, 60);
+
+            // 4. 計算均線並構建返回數據
             List<CandlestickWithMA> result = new java.util.ArrayList<>();
             for (int i = startIndex; i < fullData.size(); i++) {
                 CandlestickData candle = fullData.get(i);
@@ -139,6 +144,10 @@ public class StockController {
                         .ma10(MovingAverageCalculator.calculateMA10(fullData, i))
                         .ma20(MovingAverageCalculator.calculateMA20(fullData, i))
                         .ma60(MovingAverageCalculator.calculateMA60(fullData, i))
+                        .ema5(ema5Series.get(i))
+                        .ema10(ema10Series.get(i))
+                        .ema20(ema20Series.get(i))
+                        .ema60(ema60Series.get(i))
                         .build());
             }
 
