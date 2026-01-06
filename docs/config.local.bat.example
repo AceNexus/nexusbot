@@ -8,9 +8,33 @@ REM   2. 填入真實的憑證資訊
 REM   3. config.local.bat 不會被提交到 Git
 REM ========================================
 
+REM ==========================================
+REM Spring Boot 設定
+REM ==========================================
+
 REM Spring Boot Profile 設定
 REM 可選值: local, dev, test, prod
 set SPRING_PROFILES_ACTIVE=local
+
+REM 伺服器端口 (預設: 5001)
+set SERVER_PORT=5001
+
+REM ==========================================
+REM 啟動腳本路徑設定
+REM ==========================================
+
+REM ngrok 安裝目錄
+set NGROK_DIR=D:\ngrok
+
+REM Bot JAR 原始檔位置
+set BOT_SOURCE=D:\java\tata\nexusbot\build\libs\nexusbot.jar
+
+REM Bot 執行目錄
+set BOT_RUN_DIR=D:\java\tata\nexusbot\runtime
+
+REM ==========================================
+REM 第三方服務整合
+REM ==========================================
 
 REM LINE Bot 憑證 (從 LINE Developers Console 取得)
 REM https://developers.line.biz/console/

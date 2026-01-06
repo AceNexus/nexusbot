@@ -30,14 +30,8 @@ if exist "%SCRIPT_DIR%config.local.bat" (
   exit /b 1
 )
 
-REM 設定伺服器端口
-set SERVER_PORT=5002
-
 REM ====== 2. 檢查必要檔案 ======
 echo [2/7] Checking required files
-set NGROK_DIR=D:\ngrok
-set BOT_SOURCE=D:\java\tata\nexusbot\build\libs\nexusbot.jar
-set BOT_RUN_DIR=D:\java\tata\nexusbot\runtime
 set BOT_JAR=%BOT_RUN_DIR%\nexusbot.jar
 
 if not exist "%NGROK_DIR%\ngrok.exe" (
