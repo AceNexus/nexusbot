@@ -1,0 +1,35 @@
+@echo off
+REM ========================================
+REM  NexusBot 本地配置範例
+REM ========================================
+REM 使用方法:
+REM   1. 複製此檔案為 config.local.bat
+REM   2. 填入真實的憑證資訊
+REM   3. config.local.bat 不會被提交到 Git
+REM ========================================
+
+REM Spring Boot Profile 設定
+REM 可選值: local, dev, test, prod
+set SPRING_PROFILES_ACTIVE=local
+
+REM LINE Bot 憑證 (從 LINE Developers Console 取得)
+REM https://developers.line.biz/console/
+set LINE_CHANNEL_TOKEN=YOUR_LINE_CHANNEL_TOKEN_HERE
+set LINE_CHANNEL_SECRET=YOUR_LINE_CHANNEL_SECRET_HERE
+
+REM Groq AI API 金鑰 (從 https://console.groq.com 取得)
+set GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
+
+REM Gmail SMTP 設定
+REM 注意：需使用 Gmail 應用程式專用密碼，不是帳號密碼
+REM 設定方式: Google 帳戶 > 安全性 > 兩步驟驗證 > 應用程式密碼
+set EMAIL_USERNAME=your-email@gmail.com
+set EMAIL_PASSWORD=YOUR_GMAIL_APP_PASSWORD_HERE
+set EMAIL_FROM=your-email@gmail.com
+set EMAIL_FROM_NAME=NexusBot 提醒通知
+
+REM 管理員密碼種子 (任意 4 位數字)
+set ADMIN_PASSWORD_SEED=1234
+
+REM AI 對話歷史記錄限制 (預設: 20)
+set AI_HISTORY_LIMIT=20

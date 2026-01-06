@@ -119,3 +119,20 @@ logging:
     okhttp3: WARN
   pattern:
     console: "[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%level] [%thread] [%logger{36}] - %msg%n"
+
+# ==========================================
+# Spring Boot Actuator (健康檢查與監控)
+# ==========================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      enabled: true
+      show-details: when-authorized
+  health:
+    defaults:
+      enabled: true

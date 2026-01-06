@@ -39,3 +39,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Local Configuration ###
+config.local.bat
+*.local.bat
