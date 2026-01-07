@@ -16,6 +16,13 @@ REM Spring Boot Profile 設定
 REM 可選值: local, dev, test, prod
 set SPRING_PROFILES_ACTIVE=local
 
+REM ==========================================
+REM 應用程式基礎設定
+REM ==========================================
+
+REM NexusBot 基礎 URL
+set NEXUSBOT_BASE_URL=http://localhost:5001
+
 REM 伺服器端口 (預設: 5001)
 set SERVER_PORT=5001
 
@@ -37,23 +44,36 @@ REM 第三方服務整合
 REM ==========================================
 
 REM LINE Bot 憑證 (從 LINE Developers Console 取得)
-REM https://developers.line.biz/console/
+REM 取得位置: https://developers.line.biz/console/
+REM   1. 選擇您的 Provider
+REM   2. 選擇您的 Channel
+REM   3. Basic settings > Channel secret
+REM   4. Messaging API > Channel access token (long-lived)
 set LINE_CHANNEL_TOKEN=YOUR_LINE_CHANNEL_TOKEN_HERE
 set LINE_CHANNEL_SECRET=YOUR_LINE_CHANNEL_SECRET_HERE
 
 REM Groq AI API 金鑰 (從 https://console.groq.com 取得)
+REM 取得方式:
+REM   1. 登入 Groq Console
+REM   2. API Keys > Create API Key
 set GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
 
 REM Gmail SMTP 設定
-REM 注意：需使用 Gmail 應用程式專用密碼，不是帳號密碼
-REM 設定方式: Google 帳戶 > 安全性 > 兩步驟驗證 > 應用程式密碼
+REM 重要：需使用 Gmail 應用程式專用密碼，不是您的 Google 帳號密碼
+REM 設定方式:
+REM   1. 前往 Google 帳戶設定: https://myaccount.google.com/security
+REM   2. 啟用「兩步驟驗證」
+REM   3. 搜尋「應用程式密碼」> 選擇「郵件」
+REM   4. 產生的 16 位密碼填入下方 EMAIL_PASSWORD
 set EMAIL_USERNAME=your-email@gmail.com
 set EMAIL_PASSWORD=YOUR_GMAIL_APP_PASSWORD_HERE
 set EMAIL_FROM=your-email@gmail.com
 set EMAIL_FROM_NAME=NexusBot 提醒通知
 
 REM 管理員密碼種子 (任意 4 位數字)
+REM 用途：生成管理員驗證碼的基礎值
 set ADMIN_PASSWORD_SEED=1234
 
 REM AI 對話歷史記錄限制 (預設: 20)
+REM 說明：控制 AI 對話時保留的歷史訊息數量
 set AI_HISTORY_LIMIT=20
