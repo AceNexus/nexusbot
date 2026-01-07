@@ -218,12 +218,12 @@ public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
      * 台股分析選單
      */
     public Message stockAnalysisMenu() {
-        String stockChartUrl = baseUrl + "/stock-chart.html";
+        String stockUrl = baseUrl + "/stock.html";
         return createCard(
                 "台股技術分析",
                 "歡迎使用台股技術分析工具！",
                 Arrays.asList(
-                        createPrimaryUriButton("前往台股分析", stockChartUrl),
+                        createPrimaryUriButton("前往台股分析", stockUrl),
                         createNavigateButton("返回主選單", MAIN_MENU)
                 )
         );

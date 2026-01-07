@@ -23,7 +23,7 @@ public class StockCommandEventHandler implements LineBotEventHandler {
         }
 
         String normalizedText = event.getNormalizedText();
-        return normalizedText != null && normalizedText.equals("stock");
+        return normalizedText != null && normalizedText.equals("/stock");
     }
 
     @Override
