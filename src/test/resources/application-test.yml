@@ -1,3 +1,9 @@
+nexusbot:
+  base-url: http://localhost:5001
+
+server:
+  port: 5001
+
 spring:
   datasource:
     url: jdbc:h2:mem:testdb
@@ -14,6 +20,9 @@ spring:
   h2:
     console:
       enabled: false
+  cloud:
+    config:
+      enabled: false
 
 line:
   bot:
@@ -28,9 +37,29 @@ email:
   port: 587
   username: test@example.com
   password: test-password
+  from: test@example.com
+  from-name: NexusBot Test
   auth: true
   starttls: true
   debug: false
+
+ai:
+  conversation:
+    history-limit: 15
+
+admin:
+  password-seed: 1103
+
+yahoo:
+  finance:
+    quote-summary-url: https://query1.finance.yahoo.com/v10/finance/quoteSummary
+    chart-url: https://query1.finance.yahoo.com/v8/finance/chart
+    timeout-seconds: 10
+    user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+
+eureka:
+  client:
+    enabled: false
 
 osm:
   overpass-base-url: ${OSM_OVERPASS_BASE_URL:https://overpass-api.de/api/interpreter}
