@@ -147,7 +147,7 @@ if %errorlevel% neq 0 (
 )
 
 cd /d "%BOT_RUN_DIR%"
-start "NexusBot [Port:%SERVER_PORT%]" cmd /k "set NEXUSBOT_BASE_URL=%URL% && set WEBHOOK_URL=%WEBHOOK_URL% && set CONFIRMATION_BASE_URL=%URL% && set SERVER_PORT=%SERVER_PORT% && java -jar nexusbot.jar"
+start "NexusBot [Port:%SERVER_PORT%]" cmd /k "java -Dnexusbot.base-url=%URL% -Dserver.port=%SERVER_PORT% -jar nexusbot.jar"
 if %errorlevel% neq 0 (
   echo ERROR: Failed to start NexusBot
   call :cleanup
