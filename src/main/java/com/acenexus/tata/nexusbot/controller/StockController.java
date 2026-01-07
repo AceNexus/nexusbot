@@ -3,6 +3,7 @@ package com.acenexus.tata.nexusbot.controller;
 import com.acenexus.tata.nexusbot.client.FinMindApiClient;
 import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.CandlestickWithMA;
+import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
 import com.acenexus.tata.nexusbot.dto.StockInfo;
 import com.acenexus.tata.nexusbot.dto.StockSymbolDto;
 import com.acenexus.tata.nexusbot.dto.TechnicalAnalysisResult;
@@ -273,6 +274,63 @@ public class StockController {
 
         log.info("Returning {} stocks", stocks.size());
         return ResponseEntity.ok(stocks);
+    }
+
+    @Operation(summary = "查詢法人進出", description = """
+            查詢台股三大法人（外資、投信、自營商）買賣超數據。
+
+            **支援輸入格式**:
+            - 股票代號（如 "2330"）
+            - 股票中文名稱（如 "台積電"）
+            - 股票英文名稱（如 "TSMC"）
+
+            **參數說明**:
+            - days: 查詢最近幾天的數據（預設 30 天，最多 90 天）
+
+            **注意事項**:
+            - 數據單位為「張」（1 張 = 1000 股）
+            - 正值表示買超，負值表示賣超
+            - 數據來源：FinMind 台灣金融資料庫
+            """)
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "查詢成功", content = @Content(mediaType = "application/json", schema = @Schema(implementation = InstitutionalInvestorsData.class))),
+            @ApiResponse(responseCode = "400", description = "參數錯誤", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "404", description = "查無此股票代號或無數據", content = @Content(mediaType = "application/json"))
+    })
+    @GetMapping("/{symbol}/institutional-investors")
+    public ResponseEntity<List<InstitutionalInvestorsData>> getInstitutionalInvestors(
+            @Parameter(description = "台股代號或名稱（代號如2330或名稱如台積電）", example = "2330") @PathVariable String symbol,
+            @Parameter(description = "查詢天數（1-90天，預設30天）", example = "30") @RequestParam(defaultValue = "30") int days) {
+
+        log.info("Institutional investors query - input={}, days={}", symbol, days);
+
+        // 解析輸入：可能是股票代號或名稱
+        String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+        log.debug("Resolved symbol - input={}, resolved={}", symbol, resolvedSymbol);
+
+        // 參數驗證
+        if (days < 1 || days > 90) {
+            log.warn("Invalid days parameter - input={}, days={}", symbol, days);
+            return ResponseEntity.badRequest().build();
+        }
+
+        try {
+            List<InstitutionalInvestorsData> data = finMindApiClient.getRecentDaysInstitutionalInvestors(
+                    resolvedSymbol, days);
+
+            if (data.isEmpty()) {
+                log.warn("No institutional investors data found - symbol={}", symbol);
+                return ResponseEntity.notFound().build();
+            }
+
+            log.info("Institutional investors data retrieved - symbol={}, count={}", symbol, data.size());
+            return ResponseEntity.ok(data);
+
+        } catch (Exception ex) {
+            log.error("Institutional investors query error - symbol={}, days={}, error={}",
+                    symbol, days, ex.getMessage(), ex);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
 }

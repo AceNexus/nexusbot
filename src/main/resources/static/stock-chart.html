@@ -1320,6 +1320,193 @@
             color: #c62828;
         }
 
+        /* 法人進出面板樣式 */
+        .institutional-investors-panel {
+            padding: 24px;
+            background: white;
+            border-top: 1px solid #e8eaed;
+            margin-bottom: 20px;
+            animation: fadeInSlide 0.6s ease-out;
+        }
+
+        .ii-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+            border-bottom: 3px solid #e8eaed;
+        }
+
+        .ii-title {
+            font-size: 1.35em;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0;
+        }
+
+        .ii-period-selector {
+            display: flex;
+            gap: 8px;
+        }
+
+        .ii-period-btn {
+            padding: 6px 14px;
+            background: white;
+            color: #5f6368;
+            border: 2px solid #dadce0;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ii-period-btn:hover {
+            background: #f1f3f4;
+            border-color: #667eea;
+            color: #667eea;
+        }
+
+        .ii-period-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .ii-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .ii-summary-card {
+            background: white;
+            border: 2px solid #e8eaed;
+            border-radius: 12px;
+            padding: 18px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+        }
+
+        .ii-summary-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+        }
+
+        .ii-summary-card.foreign {
+            border-left: 5px solid #ff6b6b;
+        }
+
+        .ii-summary-card.trust {
+            border-left: 5px solid #4ecdc4;
+        }
+
+        .ii-summary-card.dealer {
+            border-left: 5px solid #ffd93d;
+        }
+
+        .ii-summary-card.total {
+            border-left: 5px solid #667eea;
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        }
+
+        .ii-card-label {
+            font-size: 0.9em;
+            color: #5f6368;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ii-card-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .ii-card-value.positive {
+            color: #ef5350;
+        }
+
+        .ii-card-value.negative {
+            color: #26a69a;
+        }
+
+        .ii-card-trend {
+            font-size: 0.85em;
+            color: #5f6368;
+        }
+
+        .ii-chart-container {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        #institutionalInvestorsChart {
+            width: 100%;
+            height: 400px;
+        }
+
+        .ii-table-container {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid #e8eaed;
+        }
+
+        .ii-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        .ii-table th {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            color: #3c4043;
+            font-weight: 600;
+            text-align: right;
+            padding: 12px 16px;
+            border-bottom: 2px solid #e8eaed;
+            font-size: 0.9em;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ii-table th:first-child {
+            text-align: left;
+        }
+
+        .ii-table td {
+            padding: 12px 16px;
+            text-align: right;
+            border-bottom: 1px solid #f1f3f4;
+            font-size: 0.95em;
+        }
+
+        .ii-table td:first-child {
+            text-align: left;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .ii-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .ii-value-positive {
+            color: #ef5350;
+            font-weight: 600;
+        }
+
+        .ii-value-negative {
+            color: #26a69a;
+            font-weight: 600;
+        }
+
         /* Desktop Layout (≥1024px) */
         @media (min-width: 1024px) {
             /* Expand container for desktop */
@@ -1702,6 +1889,67 @@
             </div>
         </div>
 
+        <!-- 法人進出面板 -->
+        <div class="institutional-investors-panel" id="institutionalInvestorsPanel" style="display: none;">
+            <div class="ii-header">
+                <h4 class="ii-title">三大法人買賣超</h4>
+                <div class="ii-period-selector">
+                    <button class="ii-period-btn" data-days="10">10天</button>
+                    <button class="ii-period-btn active" data-days="30">30天</button>
+                    <button class="ii-period-btn" data-days="60">60天</button>
+                </div>
+            </div>
+
+            <!-- 摘要卡片 -->
+            <div class="ii-summary">
+                <div class="ii-summary-card foreign">
+                    <div class="ii-card-label">外資</div>
+                    <div class="ii-card-value" id="iiLatestForeign">-</div>
+                    <div class="ii-card-trend" id="iiTrendForeign">累計：-</div>
+                </div>
+                <div class="ii-summary-card trust">
+                    <div class="ii-card-label">投信</div>
+                    <div class="ii-card-value" id="iiLatestTrust">-</div>
+                    <div class="ii-card-trend" id="iiTrendTrust">累計：-</div>
+                </div>
+                <div class="ii-summary-card dealer">
+                    <div class="ii-card-label">自營商</div>
+                    <div class="ii-card-value" id="iiLatestDealer">-</div>
+                    <div class="ii-card-trend" id="iiTrendDealer">累計：-</div>
+                </div>
+                <div class="ii-summary-card total">
+                    <div class="ii-card-label">三大法人合計</div>
+                    <div class="ii-card-value" id="iiLatestTotal">-</div>
+                    <div class="ii-card-trend" id="iiTrendTotal">累計：-</div>
+                </div>
+            </div>
+
+            <!-- 趨勢圖表 -->
+            <div class="ii-chart-container">
+                <div id="institutionalInvestorsChart"></div>
+            </div>
+
+            <!-- 明細表格 -->
+            <div class="ii-table-container">
+                <table class="ii-table" id="iiTable">
+                    <thead>
+                        <tr>
+                            <th>日期</th>
+                            <th>外資</th>
+                            <th>投信</th>
+                            <th>自營商</th>
+                            <th>合計</th>
+                        </tr>
+                    </thead>
+                    <tbody id="iiTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #5f6368;">載入中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
     <!-- End of Main Content Wrapper -->
 
@@ -1907,6 +2155,9 @@
 
             // 查詢技術分析
             fetchTechnicalAnalysis(symbol);
+
+            // 查詢法人進出數據（預設 30 天）
+            fetchInstitutionalInvestors(symbol, 30);
 
         } catch (error) {
             console.error('Error:', error);
@@ -2171,6 +2422,428 @@
         } else {
             document.getElementById('support2Level').style.display = 'none';
         }
+    }
+
+    // 全域變數：當前查詢的股票代號和法人進出天數
+    let currentStockSymbol = null;
+    let currentIIDays = 30;
+
+    // 查詢法人進出數據
+    async function fetchInstitutionalInvestors(symbol, days = 30) {
+        console.log(`========== 查詢法人進出 ==========`);
+        console.log(`股票代號: ${symbol}, 天數: ${days}`);
+
+        try {
+            currentStockSymbol = symbol;
+            currentIIDays = days;
+
+            const url = `${API_BASE}/api/stock/${symbol}/institutional-investors?days=${days}`;
+            console.log(`API URL: ${url}`);
+
+            const response = await fetch(url);
+            console.log(`HTTP Status: ${response.status}`);
+
+            if (!response.ok) {
+                console.warn('法人進出查詢失敗:', response.status, response.statusText);
+                showInstitutionalInvestorsError(`查詢失敗 (HTTP ${response.status})`);
+                return;
+            }
+
+            const data = await response.json();
+            console.log(`取得法人進出資料:`, data.length, '筆');
+
+            if (data && data.length > 0) {
+                console.log('最新一天資料:', data[0]);
+                displayInstitutionalInvestors(data);
+            } else {
+                console.warn('查無法人進出數據');
+                showInstitutionalInvestorsError('查無此股票的法人進出數據');
+            }
+
+        } catch (error) {
+            console.error('法人進出查詢錯誤:', error);
+            showInstitutionalInvestorsError(`查詢錯誤: ${error.message}`);
+        }
+    }
+
+    // 顯示法人進出錯誤訊息
+    function showInstitutionalInvestorsError(message) {
+        const panel = document.getElementById('institutionalInvestorsPanel');
+        panel.style.display = 'block';
+        panel.innerHTML = `
+            <div class="ii-header">
+                <h4 class="ii-title">三大法人買賣超</h4>
+            </div>
+            <div style="padding: 40px; text-align: center; color: #999;">
+                ${message}
+            </div>
+        `;
+    }
+
+    // 顯示法人進出數據
+    function displayInstitutionalInvestors(data) {
+        console.log('========== 顯示法人進出數據 ==========');
+        console.log('資料筆數:', data.length);
+
+        const panel = document.getElementById('institutionalInvestorsPanel');
+
+        if (!panel) {
+            console.error('找不到 institutionalInvestorsPanel 元素！');
+            return;
+        }
+
+        // 重置面板內容（清除可能的錯誤訊息）
+        // 根據當前選擇的天數設置 active 狀態
+        const activeClass10 = currentIIDays === 10 ? ' active' : '';
+        const activeClass30 = currentIIDays === 30 ? ' active' : '';
+        const activeClass60 = currentIIDays === 60 ? ' active' : '';
+
+        panel.innerHTML = `
+            <div class="ii-header">
+                <h4 class="ii-title">三大法人買賣超</h4>
+                <div class="ii-period-selector">
+                    <button class="ii-period-btn${activeClass10}" data-days="10">10天</button>
+                    <button class="ii-period-btn${activeClass30}" data-days="30">30天</button>
+                    <button class="ii-period-btn${activeClass60}" data-days="60">60天</button>
+                </div>
+            </div>
+
+            <!-- 摘要卡片 -->
+            <div class="ii-summary">
+                <div class="ii-summary-card foreign">
+                    <div class="ii-card-label">外資</div>
+                    <div class="ii-card-value" id="iiLatestForeign">-</div>
+                    <div class="ii-card-trend" id="iiTrendForeign">累計：-</div>
+                </div>
+                <div class="ii-summary-card trust">
+                    <div class="ii-card-label">投信</div>
+                    <div class="ii-card-value" id="iiLatestTrust">-</div>
+                    <div class="ii-card-trend" id="iiTrendTrust">累計：-</div>
+                </div>
+                <div class="ii-summary-card dealer">
+                    <div class="ii-card-label">自營商</div>
+                    <div class="ii-card-value" id="iiLatestDealer">-</div>
+                    <div class="ii-card-trend" id="iiTrendDealer">累計：-</div>
+                </div>
+                <div class="ii-summary-card total">
+                    <div class="ii-card-label">三大法人合計</div>
+                    <div class="ii-card-value" id="iiLatestTotal">-</div>
+                    <div class="ii-card-trend" id="iiTrendTotal">累計：-</div>
+                </div>
+            </div>
+
+            <!-- 趨勢圖表 -->
+            <div class="ii-chart-container">
+                <div id="institutionalInvestorsChart"></div>
+            </div>
+
+            <!-- 明細表格 -->
+            <div class="ii-table-container">
+                <table class="ii-table" id="iiTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">日期</th>
+                            <th colspan="3">外資</th>
+                            <th colspan="3">投信</th>
+                            <th colspan="3">自營商</th>
+                            <th colspan="3">三大法人合計</th>
+                        </tr>
+                        <tr>
+                            <th>買進</th>
+                            <th>賣出</th>
+                            <th>買賣超</th>
+                            <th>買進</th>
+                            <th>賣出</th>
+                            <th>買賣超</th>
+                            <th>買進</th>
+                            <th>賣出</th>
+                            <th>買賣超</th>
+                            <th>買進</th>
+                            <th>賣出</th>
+                            <th>買賣超</th>
+                        </tr>
+                    </thead>
+                    <tbody id="iiTableBody">
+                        <tr>
+                            <td colspan="13" style="text-align: center; color: #5f6368;">載入中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        panel.style.display = 'block';
+        console.log('法人進出面板已設置為顯示');
+
+        // 最新一天的數據
+        const latest = data[0];
+
+        // 計算累計值（所有天數的總和）
+        const accumulated = {
+            foreign: data.reduce((sum, item) => sum + (item.foreignInvestorBuySell || 0), 0),
+            trust: data.reduce((sum, item) => sum + (item.investmentTrustBuySell || 0), 0),
+            dealer: data.reduce((sum, item) => sum + (item.dealerBuySell || 0), 0),
+            total: data.reduce((sum, item) => sum + (item.totalBuySell || 0), 0)
+        };
+
+        // 更新外資卡片
+        const latestForeign = document.getElementById('iiLatestForeign');
+        latestForeign.textContent = formatNumber(latest.foreignInvestorBuySell || 0);
+        latestForeign.className = 'ii-card-value ' + (latest.foreignInvestorBuySell > 0 ? 'positive' : 'negative');
+        document.getElementById('iiTrendForeign').textContent = `累計：${formatNumber(accumulated.foreign)} 張`;
+
+        // 更新投信卡片
+        const latestTrust = document.getElementById('iiLatestTrust');
+        latestTrust.textContent = formatNumber(latest.investmentTrustBuySell || 0);
+        latestTrust.className = 'ii-card-value ' + (latest.investmentTrustBuySell > 0 ? 'positive' : 'negative');
+        document.getElementById('iiTrendTrust').textContent = `累計：${formatNumber(accumulated.trust)} 張`;
+
+        // 更新自營商卡片
+        const latestDealer = document.getElementById('iiLatestDealer');
+        latestDealer.textContent = formatNumber(latest.dealerBuySell || 0);
+        latestDealer.className = 'ii-card-value ' + (latest.dealerBuySell > 0 ? 'positive' : 'negative');
+        document.getElementById('iiTrendDealer').textContent = `累計：${formatNumber(accumulated.dealer)} 張`;
+
+        // 更新合計卡片
+        const latestTotal = document.getElementById('iiLatestTotal');
+        latestTotal.textContent = formatNumber(latest.totalBuySell || 0);
+        latestTotal.className = 'ii-card-value ' + (latest.totalBuySell > 0 ? 'positive' : 'negative');
+        document.getElementById('iiTrendTotal').textContent = `累計：${formatNumber(accumulated.total)} 張`;
+
+        // 渲染圖表和表格
+        renderInstitutionalInvestorsChart(data);
+        renderInstitutionalInvestorsTable(data);
+
+        console.log('法人進出數據顯示完成，currentStockSymbol =', currentStockSymbol, ', currentIIDays =', currentIIDays);
+    }
+
+    // 渲染法人進出圖表
+    function renderInstitutionalInvestorsChart(data) {
+        const chartDom = document.getElementById('institutionalInvestorsChart');
+        const myChart = echarts.init(chartDom);
+
+        // 反轉數據（從舊到新）
+        const reversedData = [...data].reverse();
+
+        const dates = reversedData.map(item => item.date);
+        const foreign = reversedData.map(item => item.foreignInvestorBuySell || 0);
+        const trust = reversedData.map(item => item.investmentTrustBuySell || 0);
+        const dealer = reversedData.map(item => item.dealerBuySell || 0);
+        const total = reversedData.map(item => item.totalBuySell || 0);
+
+        const option = {
+            title: {
+                text: '三大法人買賣超趨勢',
+                left: 'center',
+                textStyle: {
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    color: '#1a1a1a'
+                }
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                },
+                formatter: function(params) {
+                    let result = params[0].name + '<br/>';
+                    params.forEach(param => {
+                        const value = param.value;
+                        const color = value > 0 ? '#ef5350' : '#26a69a';
+                        result += `<span style="color:${color};">${param.marker}${param.seriesName}: ${formatNumber(value)} 張</span><br/>`;
+                    });
+                    return result;
+                }
+            },
+            legend: {
+                data: ['外資', '投信', '自營商', '合計'],
+                top: 30,
+                textStyle: {
+                    fontSize: 12
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '3%',
+                top: 70,
+                containLabel: true
+            },
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: dates,
+                axisLabel: {
+                    rotate: 45,
+                    fontSize: 11
+                }
+            },
+            yAxis: {
+                type: 'value',
+                name: '張數',
+                axisLabel: {
+                    formatter: function(value) {
+                        return formatNumber(value);
+                    }
+                },
+                splitLine: {
+                    lineStyle: {
+                        type: 'dashed',
+                        color: '#e8eaed'
+                    }
+                }
+            },
+            series: [
+                {
+                    name: '外資',
+                    type: 'bar',
+                    data: foreign,
+                    itemStyle: {
+                        color: function(params) {
+                            return params.value > 0 ? '#ef5350' : '#26a69a';
+                        }
+                    }
+                },
+                {
+                    name: '投信',
+                    type: 'bar',
+                    data: trust,
+                    itemStyle: {
+                        color: function(params) {
+                            return params.value > 0 ? '#ff9800' : '#4caf50';
+                        }
+                    }
+                },
+                {
+                    name: '自營商',
+                    type: 'bar',
+                    data: dealer,
+                    itemStyle: {
+                        color: function(params) {
+                            return params.value > 0 ? '#ffc107' : '#8bc34a';
+                        }
+                    }
+                },
+                {
+                    name: '合計',
+                    type: 'line',
+                    data: total,
+                    lineStyle: {
+                        width: 3,
+                        color: '#667eea'
+                    },
+                    itemStyle: {
+                        color: '#667eea'
+                    },
+                    symbol: 'circle',
+                    symbolSize: 6
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+
+        // 響應式調整
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+    }
+
+    // 渲染法人進出表格
+    function renderInstitutionalInvestorsTable(data) {
+        const tbody = document.getElementById('iiTableBody');
+        tbody.innerHTML = '';
+
+        data.forEach(item => {
+            const row = document.createElement('tr');
+
+            // 日期
+            const dateCell = document.createElement('td');
+            dateCell.textContent = item.date;
+            row.appendChild(dateCell);
+
+            // 外資 - 買進
+            const foreignBuyCell = document.createElement('td');
+            foreignBuyCell.textContent = formatNumber(item.foreignInvestorBuy || 0);
+            foreignBuyCell.style.color = '#5f6368';
+            row.appendChild(foreignBuyCell);
+
+            // 外資 - 賣出
+            const foreignSellCell = document.createElement('td');
+            foreignSellCell.textContent = formatNumber(item.foreignInvestorSell || 0);
+            foreignSellCell.style.color = '#5f6368';
+            row.appendChild(foreignSellCell);
+
+            // 外資 - 買賣超
+            const foreignNetCell = document.createElement('td');
+            foreignNetCell.textContent = formatNumber(item.foreignInvestorBuySell || 0);
+            foreignNetCell.className = item.foreignInvestorBuySell > 0 ? 'ii-value-positive' : 'ii-value-negative';
+            row.appendChild(foreignNetCell);
+
+            // 投信 - 買進
+            const trustBuyCell = document.createElement('td');
+            trustBuyCell.textContent = formatNumber(item.investmentTrustBuy || 0);
+            trustBuyCell.style.color = '#5f6368';
+            row.appendChild(trustBuyCell);
+
+            // 投信 - 賣出
+            const trustSellCell = document.createElement('td');
+            trustSellCell.textContent = formatNumber(item.investmentTrustSell || 0);
+            trustSellCell.style.color = '#5f6368';
+            row.appendChild(trustSellCell);
+
+            // 投信 - 買賣超
+            const trustNetCell = document.createElement('td');
+            trustNetCell.textContent = formatNumber(item.investmentTrustBuySell || 0);
+            trustNetCell.className = item.investmentTrustBuySell > 0 ? 'ii-value-positive' : 'ii-value-negative';
+            row.appendChild(trustNetCell);
+
+            // 自營商 - 買進
+            const dealerBuyCell = document.createElement('td');
+            dealerBuyCell.textContent = formatNumber(item.dealerBuy || 0);
+            dealerBuyCell.style.color = '#5f6368';
+            row.appendChild(dealerBuyCell);
+
+            // 自營商 - 賣出
+            const dealerSellCell = document.createElement('td');
+            dealerSellCell.textContent = formatNumber(item.dealerSell || 0);
+            dealerSellCell.style.color = '#5f6368';
+            row.appendChild(dealerSellCell);
+
+            // 自營商 - 買賣超
+            const dealerNetCell = document.createElement('td');
+            dealerNetCell.textContent = formatNumber(item.dealerBuySell || 0);
+            dealerNetCell.className = item.dealerBuySell > 0 ? 'ii-value-positive' : 'ii-value-negative';
+            row.appendChild(dealerNetCell);
+
+            // 三大法人合計 - 買進
+            const totalBuyCell = document.createElement('td');
+            totalBuyCell.textContent = formatNumber(item.totalBuy || 0);
+            totalBuyCell.style.color = '#5f6368';
+            row.appendChild(totalBuyCell);
+
+            // 三大法人合計 - 賣出
+            const totalSellCell = document.createElement('td');
+            totalSellCell.textContent = formatNumber(item.totalSell || 0);
+            totalSellCell.style.color = '#5f6368';
+            row.appendChild(totalSellCell);
+
+            // 三大法人合計 - 買賣超
+            const totalNetCell = document.createElement('td');
+            totalNetCell.textContent = formatNumber(item.totalBuySell || 0);
+            totalNetCell.className = item.totalBuySell > 0 ? 'ii-value-positive' : 'ii-value-negative';
+            row.appendChild(totalNetCell);
+
+            tbody.appendChild(row);
+        });
+    }
+
+    // 格式化數字（加千分位）
+    function formatNumber(num) {
+        if (num === null || num === undefined) return '-';
+        const formatted = Math.abs(num).toLocaleString();
+        return num < 0 ? `-${formatted}` : formatted;
     }
 
     // 顯示K線型態與趨勢總結（新增）
@@ -2929,6 +3602,37 @@
     window.addEventListener('resize', () => {
         if (chart) {
             chart.resize();
+        }
+    });
+
+    // 使用事件委派處理期間選擇器按鈕點擊（綁定到 document，避免 DOM 重建問題）
+    document.addEventListener('click', function(event) {
+        // 檢查點擊的是否為期間選擇按鈕
+        if (event.target.classList.contains('ii-period-btn')) {
+            event.preventDefault();
+
+            const button = event.target;
+            const days = parseInt(button.getAttribute('data-days'));
+
+            console.log(`========== 期間選擇器被點擊 ==========`);
+            console.log(`選擇天數: ${days}`);
+            console.log(`當前股票: ${currentStockSymbol}`);
+            console.log(`當前天數: ${currentIIDays}`);
+
+            // 移除所有 active 狀態
+            document.querySelectorAll('.ii-period-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // 設置當前按鈕為 active
+            button.classList.add('active');
+
+            if (currentStockSymbol) {
+                console.log(`準備查詢 ${currentStockSymbol} 的 ${days} 天法人進出資料`);
+                fetchInstitutionalInvestors(currentStockSymbol, days);
+            } else {
+                console.warn('currentStockSymbol 為 null，無法查詢');
+            }
         }
     });
 

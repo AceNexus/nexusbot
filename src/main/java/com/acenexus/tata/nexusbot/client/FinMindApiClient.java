@@ -1,7 +1,9 @@
 package com.acenexus.tata.nexusbot.client;
 
 import com.acenexus.tata.nexusbot.dto.CandlestickData;
+import com.acenexus.tata.nexusbot.dto.FinMindInstitutionalInvestorsResponse;
 import com.acenexus.tata.nexusbot.dto.FinMindStockPriceResponse;
+import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
 import com.acenexus.tata.nexusbot.dto.TaiwanStockInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -239,5 +241,230 @@ public class FinMindApiClient {
             log.error("FinMind TaiwanStockInfo parse error - error={}", e.getMessage(), e);
             return Map.of();
         }
+    }
+
+    /**
+     * 取得法人進出數據
+     * API 文件：https://finmind.github.io/tutor/TaiwanMarket/Institutional/#taiwanstockinstitutionalinvestorsbuysell
+     *
+     * @param stockId   股票代號
+     * @param startDate 開始日期 (YYYY-MM-DD)
+     * @param endDate   結束日期 (YYYY-MM-DD)
+     * @return 法人進出數據列表
+     */
+    @Cacheable(value = "stockFinancialData", key = "#stockId + '_institutional_' + #startDate + '_' + #endDate")
+    public List<InstitutionalInvestorsData> getInstitutionalInvestors(String stockId, String startDate, String endDate) {
+        try {
+            String url = String.format("%s?dataset=TaiwanStockInstitutionalInvestorsBuySell&data_id=%s&start_date=%s",
+                    BASE_URL, stockId, startDate);
+
+            if (endDate != null && !endDate.isEmpty()) {
+                url += "&end_date=" + endDate;
+            }
+
+            log.debug("FinMind Institutional Investors query - stockId={}, startDate={}, endDate={}",
+                    stockId, startDate, endDate);
+
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.warn("FinMind Institutional Investors query failed - stockId={}, status={}",
+                        stockId, response.getStatusCode());
+                return List.of();
+            }
+
+            FinMindInstitutionalInvestorsResponse apiResponse = objectMapper.readValue(
+                    response.getBody(), FinMindInstitutionalInvestorsResponse.class
+            );
+
+            if (apiResponse.getStatus() != 200 || apiResponse.getData() == null) {
+                log.warn("FinMind Institutional Investors API error - stockId={}, message={}",
+                        stockId, apiResponse.getMessage());
+                return List.of();
+            }
+
+            List<InstitutionalInvestorsData> result = convertToInstitutionalInvestorsData(apiResponse.getData());
+            log.info("FinMind Institutional Investors data retrieved - stockId={}, count={}",
+                    stockId, result.size());
+
+            return result;
+
+        } catch (RestClientException e) {
+            log.error("FinMind Institutional Investors network error - stockId={}, error={}",
+                    stockId, e.getMessage());
+            return List.of();
+        } catch (Exception e) {
+            log.error("FinMind Institutional Investors parse error - stockId={}, error={}",
+                    stockId, e.getMessage(), e);
+            return List.of();
+        }
+    }
+
+    /**
+     * 取得最近 N 天的法人進出數據
+     *
+     * @param stockId 股票代號
+     * @param days    天數
+     * @return 法人進出數據列表
+     */
+    public List<InstitutionalInvestorsData> getRecentDaysInstitutionalInvestors(String stockId, int days) {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(days);
+
+        return getInstitutionalInvestors(
+                stockId,
+                startDate.format(DATE_FORMATTER),
+                endDate.format(DATE_FORMATTER)
+        );
+    }
+
+    /**
+     * 轉換 FinMind 法人進出數據為內部格式
+     * <p>
+     * FinMind 的資料格式：每天會有多筆記錄，每筆記錄代表不同的法人類型
+     * 我們需要將同一天的記錄合併成單筆記錄
+     */
+    private List<InstitutionalInvestorsData> convertToInstitutionalInvestorsData(
+            List<FinMindInstitutionalInvestorsResponse.InstitutionalInvestorData> data) {
+
+        // 按日期分組
+        Map<String, List<FinMindInstitutionalInvestorsResponse.InstitutionalInvestorData>> groupedByDate =
+                data.stream().collect(Collectors.groupingBy(
+                        FinMindInstitutionalInvestorsResponse.InstitutionalInvestorData::getDate
+                ));
+
+        // 處理每個日期的資料
+        return groupedByDate.entrySet().stream()
+                .map(entry -> {
+                    String date = entry.getKey();
+                    List<FinMindInstitutionalInvestorsResponse.InstitutionalInvestorData> dayData = entry.getValue();
+
+                    // 初始化各法人的買進、賣出、買賣超
+                    Long foreignBuy = null;
+                    Long foreignSell = null;
+                    Long trustBuy = null;
+                    Long trustSell = null;
+                    Long dealerSelfBuy = null;
+                    Long dealerSelfSell = null;
+                    Long dealerHedgingBuy = null;
+                    Long dealerHedgingSell = null;
+                    String stockId = null;
+
+                    // 遍歷每筆記錄，根據 name 分類
+                    for (FinMindInstitutionalInvestorsResponse.InstitutionalInvestorData item : dayData) {
+                        if (stockId == null) {
+                            stockId = item.getStockId();
+                        }
+
+                        String name = item.getName();
+                        Long buy = parseLong(item.getBuy());
+                        Long sell = parseLong(item.getSell());
+
+                        switch (name) {
+                            case "Foreign_Investor":
+                                foreignBuy = buy != null ? buy / 1000 : null;
+                                foreignSell = sell != null ? sell / 1000 : null;
+                                break;
+                            case "Investment_Trust":
+                                trustBuy = buy != null ? buy / 1000 : null;
+                                trustSell = sell != null ? sell / 1000 : null;
+                                break;
+                            case "Dealer_self":
+                                dealerSelfBuy = buy != null ? buy / 1000 : null;
+                                dealerSelfSell = sell != null ? sell / 1000 : null;
+                                break;
+                            case "Dealer_Hedging":
+                                dealerHedgingBuy = buy != null ? buy / 1000 : null;
+                                dealerHedgingSell = sell != null ? sell / 1000 : null;
+                                break;
+                        }
+                    }
+
+                    // 計算外資買賣超
+                    Long foreignBuySell = null;
+                    if (foreignBuy != null && foreignSell != null) {
+                        foreignBuySell = foreignBuy - foreignSell;
+                    }
+
+                    // 計算投信買賣超
+                    Long trustBuySell = null;
+                    if (trustBuy != null && trustSell != null) {
+                        trustBuySell = trustBuy - trustSell;
+                    }
+
+                    // 合併自營商自營與避險
+                    Long dealerBuy = null;
+                    if (dealerSelfBuy != null && dealerHedgingBuy != null) {
+                        dealerBuy = dealerSelfBuy + dealerHedgingBuy;
+                    } else if (dealerSelfBuy != null) {
+                        dealerBuy = dealerSelfBuy;
+                    } else if (dealerHedgingBuy != null) {
+                        dealerBuy = dealerHedgingBuy;
+                    }
+
+                    Long dealerSell = null;
+                    if (dealerSelfSell != null && dealerHedgingSell != null) {
+                        dealerSell = dealerSelfSell + dealerHedgingSell;
+                    } else if (dealerSelfSell != null) {
+                        dealerSell = dealerSelfSell;
+                    } else if (dealerHedgingSell != null) {
+                        dealerSell = dealerHedgingSell;
+                    }
+
+                    Long dealerBuySell = null;
+                    if (dealerBuy != null && dealerSell != null) {
+                        dealerBuySell = dealerBuy - dealerSell;
+                    }
+
+                    // 計算三大法人合計
+                    Long totalBuy = null;
+                    if (foreignBuy != null || trustBuy != null || dealerBuy != null) {
+                        totalBuy = (foreignBuy != null ? foreignBuy : 0L) +
+                                (trustBuy != null ? trustBuy : 0L) +
+                                (dealerBuy != null ? dealerBuy : 0L);
+                    }
+
+                    Long totalSell = null;
+                    if (foreignSell != null || trustSell != null || dealerSell != null) {
+                        totalSell = (foreignSell != null ? foreignSell : 0L) +
+                                (trustSell != null ? trustSell : 0L) +
+                                (dealerSell != null ? dealerSell : 0L);
+                    }
+
+                    Long totalBuySell = null;
+                    if (totalBuy != null && totalSell != null) {
+                        totalBuySell = totalBuy - totalSell;
+                    }
+
+                    return InstitutionalInvestorsData.builder()
+                            .symbol(stockId)
+                            .date(LocalDate.parse(date, DATE_FORMATTER))
+                            .foreignInvestorBuy(foreignBuy)
+                            .foreignInvestorSell(foreignSell)
+                            .foreignInvestorBuySell(foreignBuySell)
+                            .investmentTrustBuy(trustBuy)
+                            .investmentTrustSell(trustSell)
+                            .investmentTrustBuySell(trustBuySell)
+                            .dealerBuy(dealerBuy)
+                            .dealerSell(dealerSell)
+                            .dealerBuySell(dealerBuySell)
+                            .totalBuy(totalBuy)
+                            .totalSell(totalSell)
+                            .totalBuySell(totalBuySell)
+                            .build();
+                })
+                .sorted((a, b) -> b.getDate().compareTo(a.getDate()))  // 按日期排序（從新到舊）
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 解析 Long 並轉換為張數（除以 1000）
+     */
+    private Long parseLongAndConvertToLots(String value) {
+        Long parsed = parseLong(value);
+        if (parsed != null) {
+            return parsed / 1000;  // 轉換為張數
+        }
+        return null;
     }
 }
