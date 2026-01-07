@@ -1,4 +1,10 @@
 # ==========================================
+# 應用程式基礎設定
+# ==========================================
+nexusbot:
+  base-url: ${NEXUSBOT_BASE_URL:http://localhost:5001}
+
+# ==========================================
 # 伺服器設定
 # ==========================================
 server:
@@ -9,7 +15,7 @@ server:
 # ==========================================
 spring:
   datasource:
-    url: jdbc:h2:mem:testdb # 注意：這裡的 URL 是 mem:testdb，請確認是否為期望值
+    url: jdbc:h2:file:./data/testdb;DB_CLOSE_ON_EXIT=TRUE;AUTO_RECONNECT=TRUE
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -63,7 +69,6 @@ email:
   auth: true
   starttls: true
   debug: false
-  confirmation-base-url: ${nexusbot.base-url} # 引用 nexusbot.base-url
 
 # ==========================================
 # 業務邏輯設定 - AI 對話

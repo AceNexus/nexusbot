@@ -2,6 +2,7 @@ package com.acenexus.tata.nexusbot.template;
 
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TextMessage;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -22,6 +23,9 @@ import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
  */
 @Component
 public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
+
+    @Value("${nexusbot.base-url:http://localhost:5001}")
+    private String baseUrl;
 
     /**
      * 歡迎訊息
@@ -208,5 +212,20 @@ public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
      */
     public String memberJoinedMessage(int memberCount) {
         return "Welcome new members!\n" + memberCount + " new friends joined the group!";
+    }
+
+    /**
+     * 台股分析選單
+     */
+    public Message stockAnalysisMenu() {
+        String stockChartUrl = baseUrl + "/stock-chart.html";
+        return createCard(
+                "台股技術分析",
+                "歡迎使用台股技術分析工具！",
+                Arrays.asList(
+                        createPrimaryUriButton("前往台股分析", stockChartUrl),
+                        createNavigateButton("返回主選單", MAIN_MENU)
+                )
+        );
     }
 }

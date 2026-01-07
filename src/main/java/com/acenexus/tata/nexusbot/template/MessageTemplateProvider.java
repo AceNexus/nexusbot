@@ -105,4 +105,6 @@ public interface MessageTemplateProvider {
     Message emailAddSuccess(String email);
 
     Message emailInvalidFormat();
+
+    Message stockAnalysisMenu();
 }

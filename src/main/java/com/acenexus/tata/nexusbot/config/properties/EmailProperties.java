@@ -60,11 +60,4 @@ public class EmailProperties {
      * 預設: false
      */
     private Boolean debug = false;
-
-    /**
-     * 提醒確認連結的基礎 URL
-     * 例如: https://your-domain.com
-     * 完整確認連結格式: {confirmationBaseUrl}/reminder/confirm/{token}
-     */
-    private String confirmationBaseUrl;
 }

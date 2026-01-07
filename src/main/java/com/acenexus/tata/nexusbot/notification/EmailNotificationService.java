@@ -10,6 +10,7 @@ import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,9 @@ public class EmailNotificationService {
     private final ReminderLogRepository reminderLogRepository;
     private final TemplateEngine templateEngine;
 
+    @Value("${nexusbot.base-url}")
+    private String baseUrl;
+
     /**
      * 發送提醒 Email
      *
@@ -48,7 +52,7 @@ public class EmailNotificationService {
         try {
             // 生成唯一確認 Token
             String confirmationToken = UUID.randomUUID().toString();
-            String confirmationUrl = emailProperties.getConfirmationBaseUrl() + "/reminder/confirm/" + confirmationToken;
+            String confirmationUrl = baseUrl + "/reminder/confirm/" + confirmationToken;
 
             // 創建 Email 內容
             MimeMessage message = mailSender.createMimeMessage();

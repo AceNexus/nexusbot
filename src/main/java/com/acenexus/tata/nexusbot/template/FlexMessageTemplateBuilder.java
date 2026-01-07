@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.template;
 
 import com.linecorp.bot.model.action.PostbackAction;
+import com.linecorp.bot.model.action.URIAction;
 import com.linecorp.bot.model.message.FlexMessage;
 import com.linecorp.bot.model.message.flex.component.Box;
 import com.linecorp.bot.model.message.flex.component.Button;
@@ -13,6 +14,7 @@ import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
 import com.linecorp.bot.model.message.flex.unit.FlexPaddingSize;
 
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -325,6 +327,40 @@ public abstract class FlexMessageTemplateBuilder {
      */
     protected Button createWarningButton(String label, String action) {
         return createButton(label, action, ButtonType.WARNING);
+    }
+
+    /**
+     * 建立 URI 按鈕（用於開啟網頁連結）
+     */
+    protected Button createUriButton(String label, String uriString, ButtonType type) {
+        var buttonStyle = getButtonStyle(type);
+        var buttonColor = getButtonColor(type);
+
+        try {
+            URI uri = URI.create(uriString);
+            return Button.builder()
+                    .style(buttonStyle)
+                    .color(buttonColor)
+                    .action(new URIAction(label, uri, null))
+                    .build();
+        } catch (IllegalArgumentException e) {
+            return Button.builder()
+                    .style(buttonStyle)
+                    .color(buttonColor)
+                    .action(PostbackAction.builder()
+                            .label(label)
+                            .data("invalid_uri")
+                            .displayText("無效的連結")
+                            .build())
+                    .build();
+        }
+    }
+
+    /**
+     * 建立主要 URI 按鈕
+     */
+    protected Button createPrimaryUriButton(String label, String uri) {
+        return createUriButton(label, uri, ButtonType.PRIMARY);
     }
 
     // ==================== 樣式工具方法 ====================

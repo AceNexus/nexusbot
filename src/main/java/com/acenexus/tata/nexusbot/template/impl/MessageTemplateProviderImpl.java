@@ -262,6 +262,13 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
         return emailBuilder.emailInvalidFormat();
     }
 
+    // ==================== 台股分析範本 ====================
+
+    @Override
+    public Message stockAnalysisMenu() {
+        return navigationBuilder.stockAnalysisMenu();
+    }
+
     // ==================== 位置搜尋範本 ====================
 
     @Override
