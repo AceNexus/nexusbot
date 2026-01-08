@@ -16,6 +16,14 @@ echo [1/7] Loading local configuration
 set SCRIPT_DIR=%~dp0
 if exist "%SCRIPT_DIR%config.local.bat" (
   call "%SCRIPT_DIR%config.local.bat"
+  if %errorlevel% neq 0 (
+    echo.
+    echo ERROR: Failed to load config.local.bat
+    echo Please check the configuration file for syntax errors
+    echo.
+    pause
+    exit /b 1
+  )
   echo Configuration loaded successfully
 ) else (
   echo.
@@ -29,6 +37,43 @@ if exist "%SCRIPT_DIR%config.local.bat" (
   pause
   exit /b 1
 )
+
+REM 驗證必要的配置變數
+echo Validating configuration...
+set CONFIG_ERROR=0
+
+if "%SERVER_PORT%"=="" (
+  echo ERROR: SERVER_PORT not set in config.local.bat
+  set CONFIG_ERROR=1
+)
+if "%NGROK_DIR%"=="" (
+  echo ERROR: NGROK_DIR not set in config.local.bat
+  set CONFIG_ERROR=1
+)
+if "%BOT_SOURCE%"=="" (
+  echo ERROR: BOT_SOURCE not set in config.local.bat
+  set CONFIG_ERROR=1
+)
+if "%BOT_RUN_DIR%"=="" (
+  echo ERROR: BOT_RUN_DIR not set in config.local.bat
+  set CONFIG_ERROR=1
+)
+if "%DATA_DIR%"=="" (
+  echo ERROR: DATA_DIR not set in config.local.bat
+  set CONFIG_ERROR=1
+)
+if "%LINE_CHANNEL_TOKEN%"=="" (
+  echo ERROR: LINE_CHANNEL_TOKEN not set in config.local.bat
+  set CONFIG_ERROR=1
+)
+
+if %CONFIG_ERROR% neq 0 (
+  echo.
+  echo Configuration validation failed. Please check your config.local.bat file.
+  pause
+  exit /b 1
+)
+echo Configuration validated successfully
 
 REM ====== 2. 檢查必要檔案 ======
 echo [2/7] Checking required files

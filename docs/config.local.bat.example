@@ -1,98 +1,85 @@
 @echo off
 REM ========================================
-REM  NexusBot 配置使用範例
-REM   1. 複製此檔案為 config.local.bat
-REM   2. 填入真實的憑證資訊
-REM   3. config.local.bat 不會被提交到 Git
+REM  NexusBot Configuration Example
+REM  1. Copy this file as config.local.bat
+REM  2. Fill in your actual credentials
+REM  3. config.local.bat will not be committed to Git
 REM ========================================
 
-REM ==========================================
-REM Spring Boot Profile 設定
-REM 可選值: local, dev, test, prod
-REM ==========================================
-
+REM ========================================
+REM Spring Boot Profile (local, dev, test, prod)
+REM ========================================
 set SPRING_PROFILES_ACTIVE=local
 
-REM ==========================================
-REM NexusBot 基礎 URL
-REM ==========================================
-
+REM ========================================
+REM NexusBot Base URL
+REM ========================================
 set NEXUSBOT_BASE_URL=http://localhost:5001
 
-REM ==========================================
-REM 伺服器端口 (預設: 5001)
-REM ==========================================
-
+REM ========================================
+REM Server Port (default: 5001)
+REM ========================================
 set SERVER_PORT=5001
 
-REM ==========================================
-REM ngrok 安裝目錄
-REM ==========================================
-
+REM ========================================
+REM ngrok Installation Directory
+REM ========================================
 set NGROK_DIR=D:\ngrok
 
-REM ==========================================
-REM Bot JAR 原始檔位置
-REM ==========================================
-
+REM ========================================
+REM Bot JAR Source File Location
+REM ========================================
 set BOT_SOURCE=D:\java\tata\nexusbot\build\libs\nexusbot.jar
 
-REM ==========================================
-REM Bot 執行目錄 (存放執行檔案和臨時檔案，可隨時刪除重建)
-REM ==========================================
-
+REM ========================================
+REM Bot Runtime Directory (temporary files, can be deleted)
+REM ========================================
 set BOT_RUN_DIR=D:\AceNexusBot\runtime
 
-REM ==========================================
-REM 資料庫目錄 (存放 H2 資料庫檔案，重要資料，不可刪除)
-REM ==========================================
-
+REM ========================================
+REM Database Directory (H2 database files, important data, do not delete)
+REM ========================================
 set DATA_DIR=D:\AceNexusBot\data
 
-REM ==========================================
-REM LINE Bot 憑證 (從 LINE Developers Console 取得)
-REM 取得位置: https://developers.line.biz/console/
-REM   1. 選擇您的 Provider
-REM   2. 選擇您的 Channel
+REM ========================================
+REM LINE Bot Credentials
+REM Get from: https://developers.line.biz/console/
+REM   1. Select your Provider
+REM   2. Select your Channel
 REM   3. Basic settings > Channel secret
 REM   4. Messaging API > Channel access token (long-lived)
-REM ==========================================
-
+REM ========================================
 set LINE_CHANNEL_TOKEN=YOUR_LINE_CHANNEL_TOKEN_HERE
 set LINE_CHANNEL_SECRET=YOUR_LINE_CHANNEL_SECRET_HERE
 
-REM ==========================================
-REM Groq AI API 金鑰 (從 https://console.groq.com 取得)
-REM 取得方式:
-REM   1. 登入 Groq Console
+REM ========================================
+REM Groq AI API Key
+REM Get from: https://console.groq.com
+REM   1. Login to Groq Console
 REM   2. API Keys > Create API Key
-REM ==========================================
-
+REM ========================================
 set GROQ_API_KEY=YOUR_GROQ_API_KEY_HERE
 
-REM ==========================================
-REM Gmail SMTP 設定
-REM 重要：需使用 Gmail 應用程式專用密碼，不是您的 Google 帳號密碼
-REM 設定方式:
-REM   1. 前往 Google 帳戶設定: https://myaccount.google.com/security
-REM   2. 啟用「兩步驟驗證」
-REM   3. 搜尋「應用程式密碼」> 選擇「郵件」
-REM   4. 產生的 16 位密碼填入下方 EMAIL_PASSWORD
-REM ==========================================
+REM ========================================
+REM AI Chat History Message Limit (default: 20)
+REM ========================================
+set AI_HISTORY_LIMIT=20
 
+REM ========================================
+REM Gmail SMTP Settings
+REM Use Gmail App Password (not your Google account password)
+REM Setup:
+REM   1. Go to: https://myaccount.google.com/security
+REM   2. Enable "2-Step Verification"
+REM   3. Search for "App passwords" > Select "Mail"
+REM   4. Enter the generated 16-digit password below
+REM ========================================
 set EMAIL_USERNAME=your-email@gmail.com
 set EMAIL_PASSWORD=YOUR_GMAIL_APP_PASSWORD_HERE
 set EMAIL_FROM=your-email@gmail.com
-set EMAIL_FROM_NAME=NexusBot 提醒通知
+set EMAIL_FROM_NAME=NexusBot
 
-REM ==========================================
-REM 管理員密碼種子 (任意 4 位數字)
-REM ==========================================
-
+REM ========================================
+REM Admin Password Seed (any 4 digits)
+REM ========================================
 set ADMIN_PASSWORD_SEED=1234
-
-REM ==========================================
-REM AI 對話時保留的歷史訊息數量 (預設: 20)
-REM ==========================================
-
-set AI_HISTORY_LIMIT=20
