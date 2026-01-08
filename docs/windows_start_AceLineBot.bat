@@ -60,6 +60,18 @@ if not exist "%BOT_RUN_DIR%" (
   )
 )
 
+REM 建立資料庫目錄
+if not exist "%DATA_DIR%" (
+  echo Creating data directory...
+  mkdir "%DATA_DIR%"
+  if %errorlevel% neq 0 (
+    echo ERROR: Failed to create data directory
+    call :cleanup
+    pause >nul
+    exit /b 1
+  )
+)
+
 echo Copying JAR to runtime directory...
 copy /Y "%BOT_SOURCE%" "%BOT_JAR%" >nul
 if %errorlevel% neq 0 (
@@ -147,7 +159,7 @@ if %errorlevel% neq 0 (
 )
 
 cd /d "%BOT_RUN_DIR%"
-start "NexusBot [Port:%SERVER_PORT%]" cmd /k "java -Dnexusbot.base-url=%URL% -Dserver.port=%SERVER_PORT% -jar nexusbot.jar"
+start "NexusBot [Port:%SERVER_PORT%]" cmd /k "java -Dnexusbot.base-url=%URL% -Dserver.port=%SERVER_PORT% -Dspring.datasource.url=jdbc:h2:file:%DATA_DIR%/testdb;DB_CLOSE_ON_EXIT=TRUE;AUTO_RECONNECT=TRUE -jar nexusbot.jar"
 if %errorlevel% neq 0 (
   echo ERROR: Failed to start NexusBot
   call :cleanup
@@ -300,6 +312,7 @@ echo.
 echo Important URLs:
 echo   - LINE Developers: https://developers.line.biz/console/
 echo   - Bot Runtime Dir: %BOT_RUN_DIR%
+echo   - Database Dir   : %DATA_DIR%
 echo.
 echo Next Steps:
 echo   1. Check bot logs in the "NexusBot [Port:%SERVER_PORT%]" window

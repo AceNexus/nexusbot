@@ -36,8 +36,11 @@ set NGROK_DIR=D:\ngrok
 REM Bot JAR 原始檔位置
 set BOT_SOURCE=D:\java\tata\nexusbot\build\libs\nexusbot.jar
 
-REM Bot 執行目錄
-set BOT_RUN_DIR=D:\java\tata\nexusbot\runtime
+REM Bot 執行目錄 (存放執行檔案和臨時檔案，可隨時刪除重建)
+set BOT_RUN_DIR=D:\AceNexusBot\runtime
+
+REM 資料庫目錄 (存放 H2 資料庫檔案，重要資料，不可刪除)
+set DATA_DIR=D:\AceNexusBot\data
 
 REM ==========================================
 REM 第三方服務整合
