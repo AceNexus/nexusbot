@@ -1,6 +1,6 @@
 package com.acenexus.tata.nexusbot.service;
 
-import com.acenexus.tata.nexusbot.client.FinMindApiClient;
+import com.acenexus.tata.nexusbot.client.TwseApiClient;
 import com.acenexus.tata.nexusbot.dto.StockSymbolDto;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -17,14 +17,14 @@ import java.util.concurrent.TimeUnit;
 /**
  * 股票代號服務
  * 使用 Caffeine 記憶體快取股票名稱與代號的映射
- * 快取策略：第一次查詢時從 FinMind API 載入，快取 1 天後過期
+ * 快取策略：第一次查詢時從 TWSE API 載入，快取 1 天後過期
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class StockSymbolService {
 
-    private final FinMindApiClient finMindApiClient;
+    private final TwseApiClient twseApiClient;
 
     /**
      * 台股名稱 -> 代號快取
@@ -45,7 +45,7 @@ public class StockSymbolService {
      * - 股票代號（如 "2330"）
      * - 股票中文名稱（如 "台積電"）
      * 快取策略：
-     * - 第一次查詢時從 FinMind API 載入所有台股資料並快取到記憶體
+     * - 第一次查詢時從 TWSE API 載入所有台股資料並快取到記憶體
      * - 快取 1 天後自動過期並重新載入
      *
      * @param input  使用者輸入的股票代號或名稱
@@ -101,7 +101,7 @@ public class StockSymbolService {
     }
 
     /**
-     * 從 FinMind API 載入台股資料到快取
+     * 從 TWSE API 載入台股資料到快取
      */
     private synchronized void loadTaiwanStockCache() {
         // 再次檢查，避免重複載入
@@ -110,11 +110,11 @@ public class StockSymbolService {
             return;
         }
 
-        log.info("Loading Taiwan stock data from FinMind API...");
-        Map<String, String> nameToSymbolMap = finMindApiClient.getTaiwanStockNameToSymbolMap();
+        log.info("Loading Taiwan stock data from TWSE API...");
+        Map<String, String> nameToSymbolMap = twseApiClient.getTaiwanStockNameToSymbolMap();
 
         if (nameToSymbolMap.isEmpty()) {
-            log.warn("Failed to load Taiwan stock data from FinMind API");
+            log.warn("Failed to load Taiwan stock data from TWSE API");
             return;
         }
 

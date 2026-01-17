@@ -1,7 +1,9 @@
 package com.acenexus.tata.nexusbot.template;
 
+import com.acenexus.tata.nexusbot.config.LiffConfig;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.TextMessage;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -22,10 +24,13 @@ import static com.acenexus.tata.nexusbot.template.UIConstants.Colors;
  * 包含歡迎訊息、主選單、說明頁面、系統狀態等通用範本
  */
 @Component
+@RequiredArgsConstructor
 public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
 
     @Value("${nexusbot.base-url:http://localhost:5001}")
     private String baseUrl;
+
+    private final LiffConfig liffConfig;
 
     /**
      * 歡迎訊息
@@ -218,12 +223,24 @@ public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
      * 台股分析選單
      */
     public Message stockAnalysisMenu() {
-        String stockUrl = baseUrl + "/stock.html";
+        // 檢查 LIFF 是否已配置
+        if (!liffConfig.isConfigured()) {
+            return createCard(
+                    "台股技術分析",
+                    "LIFF 功能尚未配置\n\n請聯繫管理員設定 LINE LIFF ID。\n\n配置步驟請參考：\n1. 前往 LINE Developers Console\n2. 建立 LIFF 應用\n3. 設定環境變數 LINE_LIFF_STOCK_ANALYSIS_ID",
+                    Arrays.asList(
+                            createNavigateButton("返回主選單", MAIN_MENU)
+                    )
+            );
+        }
+
+        // 使用 LIFF URL
+        String liffUrl = liffConfig.getStockAnalysisUrl();
         return createCard(
                 "台股技術分析",
-                "歡迎使用台股技術分析工具！",
+                "歡迎使用台股技術分析工具！\n\n點擊下方按鈕開啟 LIFF 應用。\n系統將自動識別您的身份。",
                 Arrays.asList(
-                        createPrimaryUriButton("前往台股分析", stockUrl),
+                        createPrimaryUriButton("開啟台股分析", liffUrl),
                         createNavigateButton("返回主選單", MAIN_MENU)
                 )
         );

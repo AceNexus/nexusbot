@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台股籌碼監控看板 (NexusBot)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        .text-up { color: #ef4444; } /* 紅色 - 上漲/買超 */
+        .text-down { color: #22c55e; } /* 綠色 - 下跌/賣超 */
+        .text-neutral { color: #9ca3af; } /* 灰色 - 持平 */
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* 自定義捲軸 */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
+
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect, useMemo, useCallback } = React;
+
+    // API Base URL (相對路徑，因為與後端同域)
+    const API_BASE = "/api/stock";
+
+    const StockMonitor = () => {
+        const [allStocks, setAllStocks] = useState([]); // 所有股票清單 (Symbol, Name)
+        const [selectedCodes, setSelectedCodes] = useState(new Set()); // 已選擇的股票代號
+        const [monitorData, setMonitorData] = useState([]); // 監控中的股票詳細數據 (含籌碼)
+        const [searchTerm, setSearchTerm] = useState("");
+        const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+        const [isLoadingList, setIsLoadingList] = useState(false);
+        const [isRefreshing, setIsRefreshing] = useState(false);
+
+        // 初始化：獲取所有股票清單
+        useEffect(() => {
+            const fetchStockList = async () => {
+                setIsLoadingList(true);
+                try {
+                    const res = await fetch(`${API_BASE}/list`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        setAllStocks(data);
+                    }
+                } catch (err) {
+                    console.error("無法獲取股票清單", err);
+                } finally {
+                    setIsLoadingList(false);
+                }
+            };
+            fetchStockList();
+        }, []);
+
+        // 定時刷新監控數據
+        const fetchMonitorData = useCallback(async () => {
+            if (selectedCodes.size === 0) {
+                setMonitorData([]);
+                return;
+            }
+            setIsRefreshing(true);
+            try {
+                const symbols = Array.from(selectedCodes).join(",");
+                const res = await fetch(`${API_BASE}/monitor?symbols=${symbols}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setMonitorData(data);
+                }
+            } catch (err) {
+                console.error("無法刷新監控數據", err);
+            } finally {
+                setIsRefreshing(false);
+            }
+        }, [selectedCodes]);
+
+        // 當選擇的股票變更時，自動載入一次數據（不自動定時刷新，避免 API 限制）
+        useEffect(() => {
+            fetchMonitorData();
+        }, [fetchMonitorData]);
+
+        // 處理選擇
+        const toggleSelect = (code) => {
+            const newSelected = new Set(selectedCodes);
+            if (newSelected.has(code)) {
+                newSelected.delete(code);
+            } else {
+                newSelected.add(code);
+            }
+            setSelectedCodes(newSelected);
+        };
+
+        const handleSelectAll = (filteredStocks) => {
+            const newSelected = new Set(selectedCodes);
+            const isAllCurrentSelected = filteredStocks.every(s => selectedCodes.has(s.symbol));
+
+            filteredStocks.forEach(s => {
+                if (isAllCurrentSelected) {
+                    newSelected.delete(s.symbol);
+                } else {
+                    newSelected.add(s.symbol);
+                }
+            });
+            setSelectedCodes(newSelected);
+        };
+
+        // 排序
+        const handleSort = (key) => {
+            let direction = 'desc';
+            if (sortConfig.key === key && sortConfig.direction === 'desc') {
+                direction = 'asc';
+            }
+            setSortConfig({ key, direction });
+        };
+
+        const getColorClass = (val) => {
+            const num = parseFloat(val);
+            if (isNaN(num) || num === 0) return 'text-neutral';
+            return num > 0 ? 'text-up' : 'text-down';
+        };
+
+        // 過濾邏輯
+        const filteredStocks = useMemo(() => {
+            if (!searchTerm) return allStocks.slice(0, 50); // 預設只顯示前 50 檔避免卡頓
+            return allStocks.filter(s => 
+                s.symbol.includes(searchTerm) || s.name.includes(searchTerm)
+            ).slice(0, 50);
+        }, [allStocks, searchTerm]);
+
+        // 排序後的監控數據
+        const sortedMonitorData = useMemo(() => {
+            let data = [...monitorData];
+            if (sortConfig.key) {
+                data.sort((a, b) => {
+                    const aVal = a[sortConfig.key] || 0;
+                    const bVal = b[sortConfig.key] || 0;
+                    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+                    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+                    return 0;
+                });
+            }
+            return data;
+        }, [monitorData, sortConfig]);
+
+        const isAllFilteredSelected = filteredStocks.length > 0 && filteredStocks.every(s => selectedCodes.has(s.symbol));
+
+        return (
+            <div className="max-w-7xl mx-auto p-4 space-y-6">
+                
+                {/* Header */}
+                <header className="flex flex-col md:flex-row justify-between items-center bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+                    <div className="flex items-center space-x-3 mb-4 md:mb-0">
+                        <div className="bg-blue-600 text-white p-2 rounded-lg">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">台股籌碼戰情室</h1>
+                    </div>
+                    {isRefreshing && (
+                        <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm transition-colors duration-300">
+                            數據更新中...
+                        </span>
+                    )}
+                </header>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    
+                    {/* 左側：股票選擇器 */}
+                    <section className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[600px]">
+                        <div className="p-4 border-b border-gray-100">
+                            <h2 className="text-lg font-semibold mb-3 flex items-center">
+                                <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                股票篩選
+                            </h2>
+                            <input 
+                                type="text" 
+                                placeholder="輸入代號或名稱 (例如: 2330)" 
+                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 focus:bg-white"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar">
+                            {isLoadingList ? (
+                                <div className="flex justify-center items-center h-full text-gray-400">載入中...</div>
+                            ) : (
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                        <tr>
+                                            <th className="px-4 py-3 w-12">
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={isAllFilteredSelected}
+                                                    onChange={() => handleSelectAll(filteredStocks)}
+                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                />
+                                            </th>
+                                            <th className="px-4 py-3">代號</th>
+                                            <th className="px-4 py-3">名稱</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredStocks.map(stock => (
+                                            <tr key={stock.symbol} className="hover:bg-blue-50 transition-colors duration-150 group">
+                                                <td className="px-4 py-3">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={selectedCodes.has(stock.symbol)}
+                                                        onChange={() => toggleSelect(stock.symbol)}
+                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 font-mono text-gray-600 group-hover:text-blue-700">{stock.symbol}</td>
+                                                <td className="px-4 py-3 font-medium text-gray-900">{stock.name}</td>
+                                            </tr>
+                                        ))}
+                                        {filteredStocks.length === 0 && (
+                                            <tr>
+                                                <td colSpan="3" className="p-8 text-center text-gray-400">
+                                                    無符合股票
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                        <div className="p-3 bg-gray-50 text-xs text-center text-gray-400 border-t border-gray-100">
+                            僅顯示前 50 筆結果，請使用搜尋過濾
+                        </div>
+                    </section>
+
+                    {/* 右側：監控看板 */}
+                    <section className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[600px]">
+                        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
+                            <h2 className="text-lg font-semibold flex items-center">
+                                <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                籌碼看板
+                            </h2>
+                            <button onClick={fetchMonitorData} className="text-sm text-blue-600 hover:text-blue-800 font-medium px-3 py-1 rounded hover:bg-blue-50 transition-colors">
+                                立即刷新
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-auto custom-scrollbar relative">
+                            {selectedCodes.size === 0 ? (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 space-y-4">
+                                    <svg className="w-16 h-16 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                                    <p>請從左側勾選股票加入監控</p>
+                                </div>
+                            ) : (
+                                <table className="w-full text-right text-sm">
+                                    <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            <th className="px-4 py-3 text-left w-24">股票</th>
+                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('price')}>
+                                                現價 {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            </th>
+                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('foreignBuy')}>
+                                                外資 {sortConfig.key === 'foreignBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            </th>
+                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('investmentTrustBuy')}>
+                                                投信 {sortConfig.key === 'investmentTrustBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            </th>
+                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('dealerBuy')}>
+                                                自營 {sortConfig.key === 'dealerBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 bg-white">
+                                        {sortedMonitorData.map(stock => (
+                                            <tr key={stock.code} className="hover:bg-gray-50 transition-colors animate-fade-in group">
+                                                <td className="px-4 py-3 text-left">
+                                                    <div className="font-bold text-gray-900">{stock.name}</div>
+                                                    <div className="text-xs text-gray-400 group-hover:text-blue-500 font-mono">{stock.code}</div>
+                                                </td>
+                                                <td className="px-4 py-3 font-mono text-base font-bold text-gray-800">
+                                                    {stock.price ? stock.price : '--'}
+                                                </td>
+                                                <td className={`px-4 py-3 font-mono font-medium ${getColorClass(stock.foreignBuy)}`}>
+                                                    {stock.foreignBuy > 0 ? '+' : ''}{stock.foreignBuy}
+                                                </td>
+                                                <td className={`px-4 py-3 font-mono font-medium ${getColorClass(stock.investmentTrustBuy)}`}>
+                                                    {stock.investmentTrustBuy > 0 ? '+' : ''}{stock.investmentTrustBuy}
+                                                </td>
+                                                <td className={`px-4 py-3 font-mono font-medium ${getColorClass(stock.dealerBuy)}`}>
+                                                    {stock.dealerBuy > 0 ? '+' : ''}{stock.dealerBuy}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </section>
+                </div>
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<StockMonitor />);
+</script>
+
+</body>
+</html>

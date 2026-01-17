@@ -4,7 +4,6 @@ import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.FinMindInstitutionalInvestorsResponse;
 import com.acenexus.tata.nexusbot.dto.FinMindStockPriceResponse;
 import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
-import com.acenexus.tata.nexusbot.dto.TaiwanStockInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -19,7 +18,6 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -39,6 +37,9 @@ public class FinMindApiClient {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+
+    @org.springframework.beans.factory.annotation.Value("${finmind.api-token:}")
+    private String apiToken;
 
     public FinMindApiClient(RestTemplateBuilder restTemplateBuilder, ObjectMapper objectMapper) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
@@ -98,24 +99,6 @@ public class FinMindApiClient {
             log.error("FinMind K-line parse error - stockId={}, error={}", stockId, e.getMessage(), e);
             return List.of();
         }
-    }
-
-    /**
-     * 取得最近 N 個月的K線數據
-     *
-     * @param stockId 股票代號
-     * @param months  月數
-     * @return K線數據列表
-     */
-    public List<CandlestickData> getRecentMonthsKLine(String stockId, int months) {
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusMonths(months);
-
-        return getStockPriceHistory(
-                stockId,
-                startDate.format(DATE_FORMATTER),
-                endDate.format(DATE_FORMATTER)
-        );
     }
 
     /**
@@ -195,51 +178,6 @@ public class FinMindApiClient {
         } catch (NumberFormatException e) {
             log.warn("Failed to parse long: {}", value);
             return null;
-        }
-    }
-
-    /**
-     * 取得台灣股票代號與名稱映射
-     * 使用 FinMind TaiwanStockInfo API 取得所有台股代號與名稱映射
-     * API 文件：https://finmind.github.io/tutor/TaiwanMarket/Technical/#taiwanstockinfo
-     *
-     * @return Map<股票名稱, 股票代號>
-     */
-    public Map<String, String> getTaiwanStockNameToSymbolMap() {
-        try {
-            String url = BASE_URL + "?dataset=TaiwanStockInfo";
-
-            log.debug("FinMind TaiwanStockInfo query - url={}", url);
-
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
-
-            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
-                log.warn("FinMind TaiwanStockInfo query failed - status={}", response.getStatusCode());
-                return Map.of();
-            }
-
-            TaiwanStockInfo apiResponse = objectMapper.readValue(response.getBody(), TaiwanStockInfo.class);
-
-            if (apiResponse.getStatus() != 200 || apiResponse.getData() == null) {
-                log.warn("FinMind TaiwanStockInfo API error - message={}", apiResponse.getMessage());
-                return Map.of();
-            }
-
-            // 建立名稱 -> 代號的映射
-            Map<String, String> nameToSymbolMap = new HashMap<>();
-            for (TaiwanStockInfo.StockData stock : apiResponse.getData()) {
-                nameToSymbolMap.put(stock.getStockName(), stock.getStockId());
-            }
-
-            log.info("FinMind TaiwanStockInfo data retrieved - count={}", nameToSymbolMap.size());
-            return nameToSymbolMap;
-
-        } catch (RestClientException e) {
-            log.error("FinMind TaiwanStockInfo network error - error={}", e.getMessage());
-            return Map.of();
-        } catch (Exception e) {
-            log.error("FinMind TaiwanStockInfo parse error - error={}", e.getMessage(), e);
-            return Map.of();
         }
     }
 
@@ -457,14 +395,4 @@ public class FinMindApiClient {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 解析 Long 並轉換為張數（除以 1000）
-     */
-    private Long parseLongAndConvertToLots(String value) {
-        Long parsed = parseLong(value);
-        if (parsed != null) {
-            return parsed / 1000;  // 轉換為張數
-        }
-        return null;
-    }
 }

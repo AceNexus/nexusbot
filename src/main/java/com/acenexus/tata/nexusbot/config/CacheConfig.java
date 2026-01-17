@@ -21,7 +21,9 @@ public class CacheConfig {
     /**
      * 配置 Caffeine 快取管理器
      * 快取策略：
-     * - stockFinancialData: 財務數據快取（FinMind K線數據），1天過期，最多10000筆
+     * - twseStockList: TWSE 股票清單，1天過期
+     * - twseInstitutional: TWSE 法人進出數據，1天過期
+     * - stockFinancialData: 財務數據快取，1天過期
      *
      * @return CacheManager
      */
@@ -34,8 +36,12 @@ public class CacheConfig {
                 .expireAfterWrite(1, TimeUnit.DAYS)
                 .maximumSize(10000));
 
-        // 註冊快取名稱
-        cacheManager.setCacheNames(List.of("stockFinancialData"));
+        // 註冊快取名稱 (含 TWSE 快取)
+        cacheManager.setCacheNames(List.of(
+                "stockFinancialData",
+                "twseStockList",
+                "twseInstitutional"
+        ));
 
         return cacheManager;
     }
