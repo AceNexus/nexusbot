@@ -129,17 +129,20 @@
             return num > 0 ? 'text-up' : 'text-down';
         };
 
-        // 過濾邏輯
+        // 過濾邏輯（需輸入搜尋條件才顯示）
         const filteredStocks = useMemo(() => {
-            if (!searchTerm) return allStocks.slice(0, 50); // 預設只顯示前 50 檔避免卡頓
-            return allStocks.filter(s => 
+            if (!searchTerm) return []; // 未輸入搜尋條件時不顯示
+            return allStocks.filter(s =>
                 s.symbol.includes(searchTerm) || s.name.includes(searchTerm)
             ).slice(0, 50);
         }, [allStocks, searchTerm]);
 
-        // 排序後的監控數據
+        // 排序後的監控數據（含三大法人合計）
         const sortedMonitorData = useMemo(() => {
-            let data = [...monitorData];
+            let data = monitorData.map(stock => ({
+                ...stock,
+                totalBuy: (stock.foreignBuy || 0) + (stock.investmentTrustBuy || 0) + (stock.dealerBuy || 0)
+            }));
             if (sortConfig.key) {
                 data.sort((a, b) => {
                     const aVal = a[sortConfig.key] || 0;
@@ -227,7 +230,7 @@
                                         {filteredStocks.length === 0 && (
                                             <tr>
                                                 <td colSpan="3" className="p-8 text-center text-gray-400">
-                                                    無符合股票
+                                                    {searchTerm ? '無符合股票' : '請輸入代號或名稱搜尋'}
                                                 </td>
                                             </tr>
                                         )}
@@ -236,7 +239,7 @@
                             )}
                         </div>
                         <div className="p-3 bg-gray-50 text-xs text-center text-gray-400 border-t border-gray-100">
-                            僅顯示前 50 筆結果，請使用搜尋過濾
+                            請輸入股票代號或名稱搜尋
                         </div>
                     </section>
 
@@ -275,6 +278,9 @@
                                             <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('dealerBuy')}>
                                                 自營 {sortConfig.key === 'dealerBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
                                             </th>
+                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors bg-blue-50" onClick={() => handleSort('totalBuy')}>
+                                                合計 {sortConfig.key === 'totalBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 bg-white">
@@ -295,6 +301,9 @@
                                                 </td>
                                                 <td className={`px-4 py-3 font-mono font-medium ${getColorClass(stock.dealerBuy)}`}>
                                                     {stock.dealerBuy > 0 ? '+' : ''}{stock.dealerBuy}
+                                                </td>
+                                                <td className={`px-4 py-3 font-mono font-bold bg-blue-50 ${getColorClass(stock.totalBuy)}`}>
+                                                    {stock.totalBuy > 0 ? '+' : ''}{stock.totalBuy}
                                                 </td>
                                             </tr>
                                         ))}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusBot | 台股大數據智慧平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        .glass { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.2); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .feature-card:hover { transform: translateY(-10px); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-6">
+
+    <div class="max-w-5xl w-full">
+        <!-- Header -->
+        <div class="text-center mb-16 animate__animated animate__fadeIn">
+            <div class="inline-block px-4 py-1 rounded-full bg-indigo-100 text-indigo-600 font-bold text-sm mb-4 uppercase tracking-widest">
+                NexusBot Intelligence
+            </div>
+            <h1 class="text-6xl font-black text-slate-800 mb-6 tracking-tight">
+                台股 <span class="gradient-text">AI 大數據</span> 平台
+            </h1>
+            <p class="text-slate-500 text-xl max-w-2xl mx-auto">
+                整合技術指標、法人籌碼、財報洞察與頂尖 AI 語言模型，為您的投資決策提供最強大的支援。
+            </p>
+        </div>
+
+        <!-- Grid Container -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            
+            <!-- Link to stock.html -->
+            <a href="stock.html" class="feature-card animate__animated animate__fadeInLeft">
+                <div class="glass p-10 rounded-[40px] shadow-2xl shadow-indigo-200/50 relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-40 h-40 bg-indigo-500/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+                    <div class="text-5xl mb-6">🧠</div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-4">全能深度分析大師</h2>
+                    <p class="text-slate-500 mb-8 text-lg">
+                        針對個股進行 360 度體檢：AI 操盤手計畫、專業四層技術圖表、基本面評分雷達圖。
+                    </p>
+                    <div class="flex items-center text-indigo-600 font-bold gap-2 group-hover:gap-4 transition-all">
+                        立即進入 <span class="text-2xl">→</span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Link to stock-comparison.html -->
+            <a href="stock-comparison.html" class="feature-card animate__animated animate__fadeInRight">
+                <div class="glass p-10 rounded-[40px] shadow-2xl shadow-slate-200/50 relative overflow-hidden group">
+                    <div class="absolute -right-10 -top-10 w-40 h-40 bg-emerald-500/10 rounded-full group-hover:scale-150 transition-transform duration-700"></div>
+                    <div class="text-5xl mb-6">👬</div>
+                    <h2 class="text-3xl font-bold text-slate-800 mb-4">多選籌碼監控看板</h2>
+                    <p class="text-slate-500 mb-8 text-lg">
+                        批次掃描自選股籌碼動向：三大法人買賣超對比、即時排行與合計力道統計。
+                    </p>
+                    <div class="flex items-center text-emerald-600 font-bold gap-2 group-hover:gap-4 transition-all">
+                        立即進入 <span class="text-2xl">→</span>
+                    </div>
+                </div>
+            </a>
+
+        </div>
+
+        <!-- Footer Info -->
+        <div class="mt-20 text-center text-slate-400 font-medium">
+            <p>Powered by DeepSeek & NexusBot Core Engine</p>
+            <div class="flex justify-center gap-6 mt-4">
+                <span class="flex items-center gap-1">🟢 伺服器狀態：正常</span>
+                <span class="flex items-center gap-1">🤖 AI 模型：llama-3.3-70b</span>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
