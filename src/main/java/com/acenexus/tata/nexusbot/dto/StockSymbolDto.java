@@ -12,4 +12,11 @@ import lombok.NoArgsConstructor;
 public class StockSymbolDto {
     private String symbol;
     private String name;
+    private String market;  // "上市" or "上櫃"
+
+    public StockSymbolDto(String symbol, String name) {
+        this.symbol = symbol;
+        this.name = name;
+        this.market = null;
+    }
 }

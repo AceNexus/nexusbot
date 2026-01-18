@@ -32,14 +32,38 @@ public class StockController {
 
     @GetMapping("/list")
     public ResponseEntity<List<StockSymbolDto>> getStockList() {
-        // 從穩定、免 Token 的 TWSE 獲取
+        List<StockSymbolDto> result = new java.util.ArrayList<>();
+
+        // 上市股票（TWSE）
         Map<String, String> twseMap = twseApiClient.getTaiwanStockNameToSymbolMap();
-        if (!twseMap.isEmpty()) {
-            return ResponseEntity.ok(twseMap.entrySet().stream()
-                    .map(e -> new StockSymbolDto(e.getValue(), e.getKey())) // Map is <Name, Symbol>, DTO is (symbol, name)
-                    .collect(Collectors.toList()));
+        twseMap.forEach((name, symbol) ->
+            result.add(StockSymbolDto.builder()
+                .symbol(symbol)
+                .name(name)
+                .market("上市")
+                .build()));
+
+        // 上櫃股票（TPEx）
+        Map<String, String> tpexMap = twseApiClient.getTpexStockNameToSymbolMap();
+        tpexMap.forEach((name, symbol) ->
+            result.add(StockSymbolDto.builder()
+                .symbol(symbol)
+                .name(name)
+                .market("上櫃")
+                .build()));
+
+        // 如果都沒資料，fallback 到 stockSymbolService
+        if (result.isEmpty()) {
+            return ResponseEntity.ok(stockSymbolService.getAllStocks());
         }
-        return ResponseEntity.ok(stockSymbolService.getAllStocks());
+
+        // 依代號排序
+        result.sort((a, b) -> a.getSymbol().compareTo(b.getSymbol()));
+
+        log.info("Stock list loaded - 上市: {}, 上櫃: {}, total: {}",
+                twseMap.size(), tpexMap.size(), result.size());
+
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{symbol}/institutional-investors")
@@ -72,8 +96,14 @@ public class StockController {
         List<Map<String, Object>> resultList = new java.util.ArrayList<>();
 
         if (days == 1) {
-            // 單日查詢：使用批次方法優化（一次 API 請求）
-            Map<String, InstitutionalInvestorsData> batchData = twseApiClient.getBatchInstitutionalInvestors(symbolList);
+            // 單日查詢：使用批次方法優化（上市 + 上櫃）
+            Map<String, InstitutionalInvestorsData> twseData = twseApiClient.getBatchInstitutionalInvestors(symbolList);
+            Map<String, InstitutionalInvestorsData> tpexData = twseApiClient.getBatchTpexInstitutionalInvestors(symbolList);
+            // 合併
+            Map<String, InstitutionalInvestorsData> batchData = new java.util.HashMap<>();
+            batchData.putAll(twseData);
+            batchData.putAll(tpexData);
+
             for (String symbol : symbolList) {
                 InstitutionalInvestorsData data = batchData.get(symbol);
                 if (data != null) {
@@ -124,11 +154,20 @@ public class StockController {
             return ResponseEntity.ok(emptyResult);
         }
 
-        // 批次查詢優化：即時報價 + 法人進出各一次 API 請求
+        // 批次查詢優化：即時報價 + 法人進出
+        // 上市報價
         Map<String, com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData> batchQuotes =
                 twseApiClient.getBatchStockQuotes(symbolList);
-        Map<String, InstitutionalInvestorsData> batchChipsData =
+        // 上市法人進出
+        Map<String, InstitutionalInvestorsData> twseChipsData =
                 twseApiClient.getBatchInstitutionalInvestors(symbolList);
+        // 上櫃法人進出
+        Map<String, InstitutionalInvestorsData> tpexChipsData =
+                twseApiClient.getBatchTpexInstitutionalInvestors(symbolList);
+        // 合併法人進出數據（上市 + 上櫃）
+        Map<String, InstitutionalInvestorsData> batchChipsData = new java.util.HashMap<>();
+        batchChipsData.putAll(twseChipsData);
+        batchChipsData.putAll(tpexChipsData);
 
         List<Map<String, Object>> resultList = new java.util.ArrayList<>();
         java.time.LocalDate dataDate = null;
@@ -164,6 +203,10 @@ public class StockController {
                     foreign = chipsData.getForeignInvestorBuySell() != null ? chipsData.getForeignInvestorBuySell() : 0;
                     trust = chipsData.getInvestmentTrustBuySell() != null ? chipsData.getInvestmentTrustBuySell() : 0;
                     dealer = chipsData.getDealerBuySell() != null ? chipsData.getDealerBuySell() : 0;
+                    // 如果報價沒有名稱，從籌碼數據取得（上櫃股票）
+                    if (name.equals(cleanSymbol) && chipsData.getName() != null && !chipsData.getName().isEmpty()) {
+                        name = chipsData.getName();
+                    }
                     // 取得資料日期（取第一筆有日期的資料）
                     if (dataDate == null && chipsData.getDate() != null) {
                         dataDate = chipsData.getDate();

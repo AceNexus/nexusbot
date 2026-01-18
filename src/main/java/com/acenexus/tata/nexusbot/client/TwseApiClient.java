@@ -1,6 +1,5 @@
 package com.acenexus.tata.nexusbot.client;
 
-import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
 import com.acenexus.tata.nexusbot.dto.TwseApiResponse;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -15,7 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -172,86 +170,46 @@ public class TwseApiClient {
     }
 
     /**
-     * 取得個股月 K 線數據
-     * API: https://www.twse.com.tw/exchangeReport/STOCK_DAY
+     * 取得上櫃股票清單（從櫃買中心 OpenAPI）
+     * API: https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes
      */
-    public List<CandlestickData> getStockMonthlyKLine(String stockId, int year, int month) {
+    @Cacheable(value = "tpexStockList", key = "'all'")
+    public Map<String, String> getTpexStockNameToSymbolMap() {
         try {
-            String date = String.format("%d%02d01", year, month);
-            String url = String.format("%s/exchangeReport/STOCK_DAY?response=json&date=%s&stockNo=%s",
-                    TWSE_BASE_URL, date, stockId);
+            String url = "https://www.tpex.org.tw/openapi/v1/tpex_mainboard_quotes";
 
-            log.debug("TWSE K-line request - stockId={}, date={}", stockId, date);
+            log.info("TPEx stock list request (OpenAPI)");
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
-                return List.of();
+                return Map.of();
             }
 
             JsonNode root = objectMapper.readTree(response.getBody());
-            if (!"OK".equals(root.path("stat").asText())) {
-                return List.of();
+
+            if (!root.isArray()) {
+                log.warn("TPEx stock list API - unexpected format");
+                return Map.of();
             }
 
-            // 從 title 提取股票名稱
-            String title = root.path("title").asText();
-            String stockName = extractStockName(title);
-
-            List<CandlestickData> result = new ArrayList<>();
-            JsonNode dataArray = root.path("data");
-
-            for (JsonNode row : dataArray) {
-                try {
-                    // 格式: ["114/01/02","45,045,125","47,883,206,644","1,070.00","1,075.00","1,055.00","1,065.00","-10.00","74,997",""]
-                    String rocDateStr = row.get(0).asText(); // 114/01/02
-                    LocalDate localDate = parseRocDate(rocDateStr);
-
-                    CandlestickData candle = CandlestickData.builder()
-                            .symbol(stockId)
-                            .name(stockName)
-                            .date(localDate)
-                            .volume(parseLong(row.get(1).asText()) / 1000) // 股數轉張數
-                            .turnover(parseBigDecimal(row.get(2).asText()))
-                            .open(parseBigDecimal(row.get(3).asText()))
-                            .high(parseBigDecimal(row.get(4).asText()))
-                            .low(parseBigDecimal(row.get(5).asText()))
-                            .close(parseBigDecimal(row.get(6).asText()))
-                            .change(parseBigDecimal(row.get(7).asText()))
-                            .build();
-
-                    // 計算漲跌幅
-                    if (candle.getClose() != null && candle.getChange() != null) {
-                        BigDecimal prevClose = candle.getClose().subtract(candle.getChange());
-                        if (prevClose.compareTo(BigDecimal.ZERO) != 0) {
-                            BigDecimal changePercent = candle.getChange()
-                                    .divide(prevClose, 4, RoundingMode.HALF_UP)
-                                    .multiply(BigDecimal.valueOf(100))
-                                    .setScale(2, RoundingMode.HALF_UP);
-                            candle.setChangePercent(changePercent);
-                        }
-                    }
-
-                    result.add(candle);
-                } catch (Exception e) {
-                    log.warn("Failed to parse K-line row: {}", e.getMessage());
+            Map<String, String> nameToSymbolMap = new HashMap<>();
+            for (JsonNode row : root) {
+                // 格式: {"SecuritiesCompanyCode": "8042", "CompanyName": "金山電", ...}
+                String symbol = row.path("SecuritiesCompanyCode").asText().trim();
+                String name = row.path("CompanyName").asText().trim();
+                // 過濾：只取 4-6 位數字的股票代號（排除 ETF、權證等）
+                if (symbol.matches("\\d{4,6}") && !symbol.startsWith("00")) {
+                    nameToSymbolMap.put(name, symbol);
                 }
             }
 
-            return result;
+            log.info("TPEx stock list loaded - count={}", nameToSymbolMap.size());
+            return nameToSymbolMap;
 
         } catch (Exception e) {
-            log.error("TWSE K-line error - stockId={}, error={}", stockId, e.getMessage());
-            return List.of();
+            log.error("TPEx stock list error - error={}", e.getMessage());
+            return Map.of();
         }
-    }
-
-    /**
-     * 取得單一股票三大法人買賣超
-     * 委派給 getAllInstitutionalInvestorsByDate 以利用全市場快取
-     */
-    public Optional<InstitutionalInvestorsData> getInstitutionalInvestors(String stockId, LocalDate date) {
-        Map<String, InstitutionalInvestorsData> allData = getAllInstitutionalInvestorsByDate(date);
-        return Optional.ofNullable(allData.get(stockId));
     }
 
     /**
@@ -397,6 +355,97 @@ public class TwseApiClient {
                     }
                 }
                 break; // 找到資料就結束
+            }
+        }
+
+        return result;
+    }
+
+    // === TPEx (上櫃) 法人進出 ===
+
+    /**
+     * 取得上櫃股票全市場法人進出
+     * API: https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php
+     */
+    @Cacheable(value = "tpexInstitutionalAll", key = "'latest'")
+    public Map<String, InstitutionalInvestorsData> getTpexAllInstitutionalInvestors() {
+        Map<String, InstitutionalInvestorsData> resultMap = new HashMap<>();
+
+        try {
+            String url = "https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=AL&t=D";
+
+            log.info("TPEx institutional ALL request");
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.warn("TPEx institutional API returned non-OK status");
+                return resultMap;
+            }
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            JsonNode tables = root.path("tables");
+            if (!tables.isArray() || tables.isEmpty()) {
+                log.warn("TPEx institutional API - no tables found");
+                return resultMap;
+            }
+
+            JsonNode dataArray = tables.get(0).path("data");
+            String dateStr = tables.get(0).path("date").asText(); // "115/01/16"
+            LocalDate dataDate = null;
+            if (dateStr != null && dateStr.contains("/")) {
+                dataDate = parseRocDate(dateStr);
+            }
+
+            for (JsonNode row : dataArray) {
+                try {
+                    String symbol = row.get(0).asText().trim();
+                    String name = row.get(1).asText().trim();
+
+                    // 欄位說明 (單位: 股)
+                    // 2-4: 外資(不含自營), 5-7: 外資自營, 8-10: 外資合計
+                    // 11-13: 投信, 14-16: 自營商避險, 17-19: 自營商, 20-22: 自營商合計
+                    // 23: 三大法人合計
+                    Long foreignNet = parseLong(row.get(4).asText()) / 1000;  // 外資買賣超 -> 張
+                    Long trustNet = parseLong(row.get(13).asText()) / 1000;   // 投信買賣超 -> 張
+                    Long dealerNet = parseLong(row.get(22).asText()) / 1000;  // 自營商合計買賣超 -> 張
+                    Long totalNet = parseLong(row.get(23).asText()) / 1000;   // 三大法人合計 -> 張
+
+                    InstitutionalInvestorsData data = InstitutionalInvestorsData.builder()
+                            .symbol(symbol)
+                            .name(name)
+                            .date(dataDate)
+                            .foreignInvestorBuySell(foreignNet)
+                            .investmentTrustBuySell(trustNet)
+                            .dealerBuySell(dealerNet)
+                            .totalBuySell(totalNet)
+                            .build();
+
+                    resultMap.put(symbol, data);
+                } catch (Exception e) {
+                    log.warn("Failed to parse TPEx row: {}", e.getMessage());
+                }
+            }
+
+            log.info("TPEx institutional ALL loaded - count={}", resultMap.size());
+
+        } catch (Exception e) {
+            log.error("TPEx institutional ALL error - error={}", e.getMessage());
+        }
+
+        return resultMap;
+    }
+
+    /**
+     * 批次取得上櫃股票法人進出
+     */
+    public Map<String, InstitutionalInvestorsData> getBatchTpexInstitutionalInvestors(List<String> symbols) {
+        Map<String, InstitutionalInvestorsData> result = new HashMap<>();
+        Map<String, InstitutionalInvestorsData> allData = getTpexAllInstitutionalInvestors();
+
+        for (String symbol : symbols) {
+            InstitutionalInvestorsData data = allData.get(symbol);
+            if (data != null) {
+                result.put(symbol, data);
             }
         }
 

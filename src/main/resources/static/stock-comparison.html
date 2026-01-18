@@ -127,8 +127,8 @@
 
     // 快取設定
     const CACHE_CONFIG = {
-        MONITOR_KEY: 'nexusbot_monitor_cache',    // 籌碼數據快取 key
-        STOCK_LIST_KEY: 'nexusbot_stock_list',    // 股票清單快取 key
+        MONITOR_KEY: 'nexusbot_monitor_v2',       // 籌碼數據快取 key (v2: 含上櫃)
+        STOCK_LIST_KEY: 'nexusbot_stock_list_v2', // 股票清單快取 key (v2: 含上櫃)
         EXPIRY_MINUTES: 30,                        // 快取有效期 (分鐘)
         MAX_ENTRIES: 100                           // 最大快取筆數
     };
@@ -884,6 +884,15 @@
                                                         {stock.symbol}
                                                     </span>
                                                     <span className="text-sm text-gray-700">{stock.name}</span>
+                                                    {stock.market && (
+                                                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                                            stock.market === '上市'
+                                                                ? 'bg-red-50 text-red-600'
+                                                                : 'bg-purple-50 text-purple-600'
+                                                        }`}>
+                                                            {stock.market}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 {selectedCodes.has(stock.symbol) ? (
                                                     <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">已加入</span>
