@@ -49,6 +49,12 @@ public class StockGroupItem {
     private String stockName;
 
     /**
+     * 市場類型 (上市/上櫃)
+     */
+    @Column(name = "market", length = 10)
+    private String market;
+
+    /**
      * 顯示順序
      */
     @Column(name = "display_order", nullable = false)

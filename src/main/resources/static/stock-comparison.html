@@ -932,6 +932,15 @@
                                                 <div className="flex items-center space-x-2">
                                                     <span className="font-mono text-xs text-gray-500">{stock.stockSymbol}</span>
                                                     <span className="text-sm text-gray-700">{stock.stockName}</span>
+                                                    {stock.market && (
+                                                        <span className={`text-[10px] px-1 py-0 rounded ${
+                                                            stock.market === '上市'
+                                                                ? 'bg-red-50 text-red-600'
+                                                                : 'bg-purple-50 text-purple-600'
+                                                        }`}>
+                                                            {stock.market}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <button
                                                     onClick={() => handleRemoveStock(stock.stockSymbol)}
@@ -1036,7 +1045,18 @@
                                                 style={{ animationDelay: `${index * 30}ms` }}
                                             >
                                                 <td className="px-4 py-3.5 text-left">
-                                                    <div className="font-semibold text-gray-900">{stock.name}</div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <div className="font-semibold text-gray-900">{stock.name}</div>
+                                                        {stock.market && (
+                                                            <span className={`text-[10px] px-1 py-0 rounded ${
+                                                                stock.market === '上市'
+                                                                    ? 'bg-red-50 text-red-600'
+                                                                    : 'bg-purple-50 text-purple-600'
+                                                            }`}>
+                                                                {stock.market}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="text-xs text-gray-400 font-mono group-hover:text-blue-500 transition-colors">
                                                         {stock.code}
                                                     </div>

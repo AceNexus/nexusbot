@@ -13,5 +13,6 @@ public class StockGroupItemDto {
     private Long id;
     private String stockSymbol;
     private String stockName;
+    private String market;
     private Integer displayOrder;
 }

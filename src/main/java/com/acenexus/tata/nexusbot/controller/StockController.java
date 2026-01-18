@@ -220,6 +220,7 @@ public class StockController {
                 map.put("foreignBuy", foreign);
                 map.put("investmentTrustBuy", trust);
                 map.put("dealerBuy", dealer);
+                map.put("market", stockSymbolService.getMarketBySymbol(cleanSymbol));
 
                 resultList.add(map);
             } catch (Exception e) {

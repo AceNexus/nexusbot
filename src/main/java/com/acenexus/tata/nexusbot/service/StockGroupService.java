@@ -28,6 +28,7 @@ public class StockGroupService {
 
     private final StockGroupRepository stockGroupRepository;
     private final StockGroupItemRepository stockGroupItemRepository;
+    private final StockSymbolService stockSymbolService;
 
     /**
      * 取得使用者的所有群組（含股票列表）
@@ -146,15 +147,19 @@ public class StockGroupService {
 
         Integer maxOrder = stockGroupItemRepository.findMaxDisplayOrderByGroupId(groupId);
 
+        // 取得市場資訊
+        String market = stockSymbolService.getMarketBySymbol(stockSymbol);
+
         StockGroupItem item = StockGroupItem.builder()
                 .groupId(groupId)
                 .stockSymbol(stockSymbol)
                 .stockName(stockName)
+                .market(market)
                 .displayOrder(maxOrder + 1)
                 .build();
 
         StockGroupItem saved = stockGroupItemRepository.save(item);
-        log.info("Added stock to group - groupId={}, symbol={}, name={}", groupId, stockSymbol, stockName);
+        log.info("Added stock to group - groupId={}, symbol={}, name={}, market={}", groupId, stockSymbol, stockName, market);
 
         return Optional.of(toItemDto(saved));
     }
@@ -191,10 +196,16 @@ public class StockGroupService {
     }
 
     private StockGroupItemDto toItemDto(StockGroupItem item) {
+        String market = item.getMarket();
+        if (market == null || market.isEmpty()) {
+            market = stockSymbolService.getMarketBySymbol(item.getStockSymbol());
+        }
+        
         return StockGroupItemDto.builder()
                 .id(item.getId())
                 .stockSymbol(item.getStockSymbol())
                 .stockName(item.getStockName())
+                .market(market)
                 .displayOrder(item.getDisplayOrder())
                 .build();
     }

@@ -28,13 +28,16 @@ public class StockSymbolService {
 
     /**
      * 台股名稱 -> 代號快取
-     * Key: 股票名稱 (e.g., "台積電")
-     * Value: 股票代號 (e.g., "2330")
-     * 快取設定：
-     * - 1 天後過期 (自動刷新)
-     * - 最多 10000 筆記錄
      */
     private final Cache<String, String> taiwanStockCache = Caffeine.newBuilder()
+            .expireAfterWrite(1, TimeUnit.DAYS)
+            .maximumSize(10000)
+            .build();
+
+    /**
+     * 台股代號 -> 市場快取 (上市/上櫃)
+     */
+    private final Cache<String, String> symbolToMarketCache = Caffeine.newBuilder()
             .expireAfterWrite(1, TimeUnit.DAYS)
             .maximumSize(10000)
             .build();
@@ -105,23 +108,39 @@ public class StockSymbolService {
      */
     private synchronized void loadTaiwanStockCache() {
         // 再次檢查，避免重複載入
-        if (taiwanStockCache.estimatedSize() > 0) {
+        if (taiwanStockCache.estimatedSize() > 0 && symbolToMarketCache.estimatedSize() > 0) {
             log.debug("Taiwan stock cache already loaded, skipping");
             return;
         }
 
         log.info("Loading Taiwan stock data from TWSE API...");
-        Map<String, String> nameToSymbolMap = twseApiClient.getTaiwanStockNameToSymbolMap();
-
-        if (nameToSymbolMap.isEmpty()) {
-            log.warn("Failed to load Taiwan stock data from TWSE API");
-            return;
+        
+        // 載入上市股票
+        Map<String, String> twseMap = twseApiClient.getTaiwanStockNameToSymbolMap();
+        if (!twseMap.isEmpty()) {
+            taiwanStockCache.putAll(twseMap);
+            twseMap.values().forEach(symbol -> symbolToMarketCache.put(symbol, "上市"));
         }
 
-        // 批次寫入快取
-        taiwanStockCache.putAll(nameToSymbolMap);
+        // 載入上櫃股票
+        Map<String, String> tpexMap = twseApiClient.getTpexStockNameToSymbolMap();
+        if (!tpexMap.isEmpty()) {
+            taiwanStockCache.putAll(tpexMap);
+            tpexMap.values().forEach(symbol -> symbolToMarketCache.put(symbol, "上櫃"));
+        }
 
-        log.info("Taiwan stock cache loaded successfully - count={}", taiwanStockCache.estimatedSize());
+        log.info("Taiwan stock cache loaded successfully - total count={}, market count={}", 
+                taiwanStockCache.estimatedSize(), symbolToMarketCache.estimatedSize());
+    }
+
+    /**
+     * 根據代號取得市場類型
+     */
+    public String getMarketBySymbol(String symbol) {
+        if (symbolToMarketCache.estimatedSize() == 0) {
+            loadTaiwanStockCache();
+        }
+        return symbolToMarketCache.getIfPresent(symbol);
     }
 
     /**
@@ -129,6 +148,7 @@ public class StockSymbolService {
      */
     public void clearCache() {
         taiwanStockCache.invalidateAll();
+        symbolToMarketCache.invalidateAll();
         log.info("Taiwan stock cache cleared");
     }
 
@@ -152,12 +172,20 @@ public class StockSymbolService {
         }
 
         List<StockSymbolDto> result = new ArrayList<>();
-        for (Map.Entry<String, String> entry : taiwanStockCache.asMap().entrySet()) {
-            result.add(StockSymbolDto.builder()
-                    .name(entry.getKey())
-                    .symbol(entry.getValue())
-                    .build());
-        }
+        // 為了確保不重複且包含市場資訊，從 symbolToMarketCache 遍歷
+        Map<String, String> symbolToNameMap = new java.util.HashMap<>();
+        taiwanStockCache.asMap().forEach((name, symbol) -> symbolToNameMap.put(symbol, name));
+
+        symbolToMarketCache.asMap().forEach((symbol, market) -> {
+            String name = symbolToNameMap.get(symbol);
+            if (name != null) {
+                result.add(StockSymbolDto.builder()
+                        .name(name)
+                        .symbol(symbol)
+                        .market(market)
+                        .build());
+            }
+        });
 
         // 根據代號排序，方便前端顯示
         result.sort((a, b) -> a.getSymbol().compareTo(b.getSymbol()));
