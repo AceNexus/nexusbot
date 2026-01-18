@@ -49,6 +49,8 @@ line:
   bot:
     channel-token: ${LINE_CHANNEL_TOKEN:default-token}
     channel-secret: ${LINE_CHANNEL_SECRET:default-secret}
+  liff:
+    id: ${LINE_LIFF_ID:}
 
 # ==========================================
 # 第三方服務整合 - Groq AI
@@ -96,6 +98,12 @@ osm:
     - shop=convenience         # 便利商店
     - shop=supermarket         # 超市
     - amenity=fuel             # 加油站
+
+# ==========================================
+# 第三方服務整合 - FinMind API (台灣金融數據)
+# ==========================================
+finmind:
+  api-token: ${FINMIND_API_TOKEN:}
 
 # ==========================================
 # 第三方服務整合 - Yahoo Finance API

@@ -21,6 +21,9 @@ public class InstitutionalInvestorsData {
     @Schema(description = "股票代號", example = "2330")
     private String symbol;
 
+    @Schema(description = "股票名稱", example = "台積電")
+    private String name;
+
     @Schema(description = "日期", example = "2024-12-30")
     private LocalDate date;
 

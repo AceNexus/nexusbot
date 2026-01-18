@@ -9,7 +9,11 @@ import com.acenexus.tata.nexusbot.service.StockSymbolService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -32,8 +36,8 @@ public class StockController {
         Map<String, String> twseMap = twseApiClient.getTaiwanStockNameToSymbolMap();
         if (!twseMap.isEmpty()) {
             return ResponseEntity.ok(twseMap.entrySet().stream()
-                .map(e -> new StockSymbolDto(e.getValue(), e.getKey())) // Map is <Name, Symbol>, DTO is (symbol, name)
-                .collect(Collectors.toList()));
+                    .map(e -> new StockSymbolDto(e.getValue(), e.getKey())) // Map is <Name, Symbol>, DTO is (symbol, name)
+                    .collect(Collectors.toList()));
         }
         return ResponseEntity.ok(stockSymbolService.getAllStocks());
     }
@@ -54,87 +58,135 @@ public class StockController {
     }
 
     @GetMapping("/batch-institutional-investors")
-    public ResponseEntity<List<Map<String, Object>>> getBatchInstitutionalInvestors(
-            @RequestParam String symbols, @RequestParam(defaultValue = "1") int days) {
-        String[] symbolArray = symbols.split(",");
+    public ResponseEntity<List<Map<String, Object>>> getBatchInstitutionalInvestors(@RequestParam String symbols,
+                                                                                    @RequestParam(defaultValue = "1") int days) {
+        List<String> symbolList = java.util.Arrays.stream(symbols.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+
+        if (symbolList.isEmpty()) {
+            return ResponseEntity.ok(List.of());
+        }
+
         List<Map<String, Object>> resultList = new java.util.ArrayList<>();
-        for (String symbol : symbolArray) {
-            String cleanSymbol = symbol.trim();
-            try {
-                List<InstitutionalInvestorsData> data = twseApiClient.getRecentDaysInstitutionalInvestors(cleanSymbol, days);
-                if (data.isEmpty()) data = finMindApiClient.getRecentDaysInstitutionalInvestors(cleanSymbol, days);
-                if (!data.isEmpty()) {
-                    long total = data.stream().mapToLong(d -> d.getTotalBuySell() != null ? d.getTotalBuySell() : 0).sum();
+
+        if (days == 1) {
+            // 單日查詢：使用批次方法優化（一次 API 請求）
+            Map<String, InstitutionalInvestorsData> batchData = twseApiClient.getBatchInstitutionalInvestors(symbolList);
+            for (String symbol : symbolList) {
+                InstitutionalInvestorsData data = batchData.get(symbol);
+                if (data != null) {
                     Map<String, Object> map = new java.util.HashMap<>();
-                    map.put("symbol", cleanSymbol);
-                    map.put("total", total);
-                    map.put("foreign", data.get(0).getForeignInvestorBuySell());
-                    map.put("trust", data.get(0).getInvestmentTrustBuySell());
-                    map.put("dealer", data.get(0).getDealerBuySell());
+                    map.put("symbol", symbol);
+                    map.put("total", data.getTotalBuySell() != null ? data.getTotalBuySell() : 0);
+                    map.put("foreign", data.getForeignInvestorBuySell());
+                    map.put("trust", data.getInvestmentTrustBuySell());
+                    map.put("dealer", data.getDealerBuySell());
                     resultList.add(map);
                 }
-            } catch (Exception e) {}
+            }
+        } else {
+            // 多日查詢：逐一查詢並累加
+            for (String symbol : symbolList) {
+                try {
+                    List<InstitutionalInvestorsData> data = twseApiClient.getRecentDaysInstitutionalInvestors(symbol, days);
+                    if (data.isEmpty()) data = finMindApiClient.getRecentDaysInstitutionalInvestors(symbol, days);
+                    if (!data.isEmpty()) {
+                        long total = data.stream().mapToLong(d -> d.getTotalBuySell() != null ? d.getTotalBuySell() : 0).sum();
+                        Map<String, Object> map = new java.util.HashMap<>();
+                        map.put("symbol", symbol);
+                        map.put("total", total);
+                        map.put("foreign", data.get(0).getForeignInvestorBuySell());
+                        map.put("trust", data.get(0).getInvestmentTrustBuySell());
+                        map.put("dealer", data.get(0).getDealerBuySell());
+                        resultList.add(map);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to get institutional data for {}: {}", symbol, e.getMessage());
+                }
+            }
         }
         return ResponseEntity.ok(resultList);
     }
 
     @GetMapping("/monitor")
-    public ResponseEntity<List<Map<String, Object>>> getStockMonitorData(@RequestParam String symbols) {
-        String[] symbolArray = symbols.split(",");
-        List<Map<String, Object>> resultList = java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+    public ResponseEntity<Map<String, Object>> getStockMonitorData(@RequestParam String symbols) {
+        List<String> symbolList = java.util.Arrays.stream(symbols.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
 
-        java.util.Arrays.stream(symbolArray).parallel().forEach(symbol -> {
-             String cleanSymbol = symbol.trim();
-             if (cleanSymbol.isEmpty()) return;
+        if (symbolList.isEmpty()) {
+            Map<String, Object> emptyResult = new java.util.HashMap<>();
+            emptyResult.put("dataDate", null);
+            emptyResult.put("stocks", List.of());
+            return ResponseEntity.ok(emptyResult);
+        }
 
-             try {
-                 String name = "";
-                 BigDecimal price = null;
-                 java.util.Optional<com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData> quoteOpt = twseApiClient.getStockQuote(cleanSymbol);
+        // 批次查詢優化：即時報價 + 法人進出各一次 API 請求
+        Map<String, com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData> batchQuotes =
+                twseApiClient.getBatchStockQuotes(symbolList);
+        Map<String, InstitutionalInvestorsData> batchChipsData =
+                twseApiClient.getBatchInstitutionalInvestors(symbolList);
 
-                 if (quoteOpt.isPresent()) {
-                     com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData quote = quoteOpt.get();
-                     name = quote.getName();
-                     try {
+        List<Map<String, Object>> resultList = new java.util.ArrayList<>();
+        java.time.LocalDate dataDate = null;
+
+        for (String cleanSymbol : symbolList) {
+            try {
+                String name = cleanSymbol;
+                BigDecimal price = null;
+
+                // 從批次報價結果取得
+                com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData quote = batchQuotes.get(cleanSymbol);
+                if (quote != null) {
+                    if (quote.getName() != null && !quote.getName().isEmpty()) {
+                        name = quote.getName();
+                    }
+                    try {
                         String z = quote.getCurrentPrice();
                         if (z != null && !z.equals("-")) {
-                             price = new BigDecimal(z.replace(",", ""));
+                            price = new BigDecimal(z.replace(",", ""));
                         }
-                     } catch (Exception e) {}
-                 }
+                    } catch (Exception e) {
+                        // ignore parse error
+                    }
+                }
 
-                 if (name == null || name.isEmpty()) {
-                      name = cleanSymbol;
-                 }
+                // 從批次法人資料結果取得
+                long foreign = 0;
+                long trust = 0;
+                long dealer = 0;
 
-                 List<InstitutionalInvestorsData> chips = twseApiClient.getRecentDaysInstitutionalInvestors(cleanSymbol, 1);
-                 if (chips.isEmpty()) chips = finMindApiClient.getRecentDaysInstitutionalInvestors(cleanSymbol, 1);
+                InstitutionalInvestorsData chipsData = batchChipsData.get(cleanSymbol);
+                if (chipsData != null) {
+                    foreign = chipsData.getForeignInvestorBuySell() != null ? chipsData.getForeignInvestorBuySell() : 0;
+                    trust = chipsData.getInvestmentTrustBuySell() != null ? chipsData.getInvestmentTrustBuySell() : 0;
+                    dealer = chipsData.getDealerBuySell() != null ? chipsData.getDealerBuySell() : 0;
+                    // 取得資料日期（取第一筆有日期的資料）
+                    if (dataDate == null && chipsData.getDate() != null) {
+                        dataDate = chipsData.getDate();
+                    }
+                }
 
-                 long foreign = 0;
-                 long trust = 0;
-                 long dealer = 0;
+                Map<String, Object> map = new java.util.HashMap<>();
+                map.put("code", cleanSymbol);
+                map.put("name", name);
+                map.put("price", price);
+                map.put("foreignBuy", foreign);
+                map.put("investmentTrustBuy", trust);
+                map.put("dealerBuy", dealer);
 
-                 if (!chips.isEmpty()) {
-                     InstitutionalInvestorsData dayData = chips.get(0);
-                     foreign = dayData.getForeignInvestorBuySell() != null ? dayData.getForeignInvestorBuySell() : 0;
-                     trust = dayData.getInvestmentTrustBuySell() != null ? dayData.getInvestmentTrustBuySell() : 0;
-                     dealer = dayData.getDealerBuySell() != null ? dayData.getDealerBuySell() : 0;
-                 }
+                resultList.add(map);
+            } catch (Exception e) {
+                log.error("Error processing monitor data for {}", cleanSymbol, e);
+            }
+        }
 
-                 Map<String, Object> map = new java.util.HashMap<>();
-                 map.put("code", cleanSymbol);
-                 map.put("name", name);
-                 map.put("price", price);
-                 map.put("foreignBuy", foreign);
-                 map.put("investmentTrustBuy", trust);
-                 map.put("dealerBuy", dealer);
-
-                 resultList.add(map);
-             } catch (Exception e) {
-                 log.error("Error fetching monitor data for {}", cleanSymbol, e);
-             }
-        });
-
-        return ResponseEntity.ok(resultList);
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("dataDate", dataDate);
+        response.put("stocks", resultList);
+        return ResponseEntity.ok(response);
     }
 }

@@ -58,7 +58,7 @@ public class TwseApiClient {
     }
 
     /**
-     * 查詢台股即時報價
+     * 查詢台股即時報價（單一股票）
      */
     public Optional<TwseApiResponse.TwseStockData> getStockQuote(String symbol) {
         try {
@@ -80,6 +80,55 @@ public class TwseApiClient {
             log.error("TWSE realtime API error - symbol={}, error={}", symbol, e.getMessage());
             return Optional.empty();
         }
+    }
+
+    /**
+     * 批次查詢台股即時報價（多檔股票一次請求）
+     * TWSE API 支援用 | 分隔多個股票代號
+     */
+    public Map<String, TwseApiResponse.TwseStockData> getBatchStockQuotes(List<String> symbols) {
+        Map<String, TwseApiResponse.TwseStockData> resultMap = new HashMap<>();
+
+        if (symbols == null || symbols.isEmpty()) {
+            return resultMap;
+        }
+
+        try {
+            // 組合批次查詢參數：tse_2330.tw|tse_3037.tw|tse_8021.tw
+            String exCh = symbols.stream()
+                    .map(s -> "tse_" + s.trim() + ".tw")
+                    .reduce((a, b) -> a + "|" + b)
+                    .orElse("");
+
+            String url = String.format("%s?ex_ch=%s", TWSE_REALTIME_URL, exCh);
+            log.info("TWSE realtime batch request - symbols={}", symbols.size());
+
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            if (response.getStatusCode() != HttpStatus.OK) {
+                log.warn("TWSE batch quote API returned non-OK status");
+                return resultMap;
+            }
+
+            TwseApiResponse apiResponse = objectMapper.readValue(response.getBody(), TwseApiResponse.class);
+            if (!apiResponse.isSuccess()) {
+                log.warn("TWSE batch quote API response not successful");
+                return resultMap;
+            }
+
+            // 將結果轉為 Map<symbol, data>
+            for (TwseApiResponse.TwseStockData stockData : apiResponse.getStockDataList()) {
+                if (stockData.getSymbol() != null) {
+                    resultMap.put(stockData.getSymbol(), stockData);
+                }
+            }
+
+            log.info("TWSE realtime batch loaded - count={}", resultMap.size());
+
+        } catch (Exception e) {
+            log.error("TWSE realtime batch API error - error={}", e.getMessage());
+        }
+
+        return resultMap;
     }
 
     /**
@@ -197,32 +246,50 @@ public class TwseApiClient {
     }
 
     /**
-     * 取得三大法人買賣超
-     * API: https://www.twse.com.tw/fund/T86
+     * 取得單一股票三大法人買賣超
+     * 委派給 getAllInstitutionalInvestorsByDate 以利用全市場快取
      */
-    @Cacheable(value = "twseInstitutional", key = "#stockId + '_' + #date")
     public Optional<InstitutionalInvestorsData> getInstitutionalInvestors(String stockId, LocalDate date) {
+        Map<String, InstitutionalInvestorsData> allData = getAllInstitutionalInvestorsByDate(date);
+        return Optional.ofNullable(allData.get(stockId));
+    }
+
+    /**
+     * 取得指定日期「全市場」三大法人買賣超
+     * 一次 API 請求取得所有股票，快取後供多次查詢使用
+     */
+    @Cacheable(value = "twseInstitutionalAll", key = "#date.toString()")
+    public Map<String, InstitutionalInvestorsData> getAllInstitutionalInvestorsByDate(LocalDate date) {
+        Map<String, InstitutionalInvestorsData> resultMap = new HashMap<>();
+
         try {
             String dateStr = date.format(DATE_FORMATTER);
             String url = String.format("%s/fund/T86?response=json&date=%s&selectType=ALL", TWSE_BASE_URL, dateStr);
 
-            log.debug("TWSE institutional request - date={}", dateStr);
+            log.info("TWSE institutional ALL request - date={}", dateStr);
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
 
             if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
-                return Optional.empty();
+                log.warn("TWSE API returned non-OK status for date={}", dateStr);
+                return resultMap;
             }
 
             JsonNode root = objectMapper.readTree(response.getBody());
-            if (!"OK".equals(root.path("stat").asText())) {
-                return Optional.empty();
+            String stat = root.path("stat").asText();
+
+            // 處理非交易日情況
+            if (!"OK".equals(stat)) {
+                log.info("No trading data for date={}, stat={}", dateStr, stat);
+                return resultMap;
             }
 
             JsonNode dataArray = root.path("data");
             for (JsonNode row : dataArray) {
-                String symbol = row.get(0).asText().trim();
-                if (symbol.equals(stockId)) {
-                    // 欄位: 證券代號,證券名稱,外陸資買進,外陸資賣出,外陸資買賣超,...,三大法人買賣超
+                try {
+                    String symbol = row.get(0).asText().trim();
+                    String name = row.get(1).asText().trim();
+
+                    // 解析欄位（單位：股 → 張，除以 1000）
                     Long foreignBuy = parseLong(row.get(2).asText()) / 1000;
                     Long foreignSell = parseLong(row.get(3).asText()) / 1000;
                     Long foreignNet = parseLong(row.get(4).asText()) / 1000;
@@ -232,8 +299,9 @@ public class TwseApiClient {
                     Long dealerNet = parseLong(row.get(11).asText()) / 1000;
                     Long totalNet = parseLong(row.get(18).asText()) / 1000;
 
-                    return Optional.of(InstitutionalInvestorsData.builder()
-                            .symbol(stockId)
+                    InstitutionalInvestorsData data = InstitutionalInvestorsData.builder()
+                            .symbol(symbol)
+                            .name(name)
                             .date(date)
                             .foreignInvestorBuy(foreignBuy)
                             .foreignInvestorSell(foreignSell)
@@ -243,40 +311,92 @@ public class TwseApiClient {
                             .investmentTrustBuySell(trustNet)
                             .dealerBuySell(dealerNet)
                             .totalBuySell(totalNet)
-                            .build());
+                            .build();
+
+                    resultMap.put(symbol, data);
+                } catch (Exception e) {
+                    log.warn("Failed to parse row: {}", e.getMessage());
                 }
             }
 
-            return Optional.empty();
+            log.info("TWSE institutional ALL loaded - date={}, count={}", dateStr, resultMap.size());
 
         } catch (Exception e) {
-            log.error("TWSE institutional error - stockId={}, error={}", stockId, e.getMessage());
-            return Optional.empty();
+            log.error("TWSE institutional ALL error - date={}, error={}", date, e.getMessage());
         }
+
+        return resultMap;
     }
 
     /**
-     * 取得最近 N 天的法人進出
+     * 取得最近 N 天的法人進出（優化版）
+     * 使用全市場快取，避免重複 API 請求
      */
     public List<InstitutionalInvestorsData> getRecentDaysInstitutionalInvestors(String stockId, int days) {
         List<InstitutionalInvestorsData> result = new ArrayList<>();
         LocalDate now = LocalDate.now();
 
-        for (int i = 0; i < days && result.size() < days; i++) {
+        // 修復：增加搜尋範圍，確保能跨越週末找到足夠的交易日
+        // 最多往前找 days + 10 天（含週末和可能的假日）
+        int maxSearchDays = days + 10;
+        int tradingDaysFound = 0;
+
+        for (int i = 0; i < maxSearchDays && tradingDaysFound < days; i++) {
             LocalDate targetDate = now.minusDays(i);
-            // 跳過週末
-            if (targetDate.getDayOfWeek().getValue() >= 6) continue;
 
-            Optional<InstitutionalInvestorsData> data = getInstitutionalInvestors(stockId, targetDate);
-            data.ifPresent(result::add);
+            // 跳過週末（週六=6, 週日=7）
+            int dayOfWeek = targetDate.getDayOfWeek().getValue();
+            if (dayOfWeek >= 6) {
+                continue;
+            }
 
-            // 避免請求過快
-            if (i < days - 1) {
-                try {
-                    Thread.sleep(200);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+            // 使用全市場快取查詢（效能優化）
+            Map<String, InstitutionalInvestorsData> allData = getAllInstitutionalInvestorsByDate(targetDate);
+
+            if (allData.isEmpty()) {
+                // 該日無資料（可能是假日），繼續往前找
+                log.debug("No data for date={}, skipping", targetDate);
+                continue;
+            }
+
+            // 從快取中取得指定股票
+            InstitutionalInvestorsData stockData = allData.get(stockId);
+            if (stockData != null) {
+                result.add(stockData);
+                tradingDaysFound++;
+            }
+        }
+
+        return result;
+    }
+
+    /**
+     * 批次取得多檔股票的最新法人進出（用於籌碼看板）
+     * 一次 API 取得全市場，再篩選需要的股票
+     */
+    public Map<String, InstitutionalInvestorsData> getBatchInstitutionalInvestors(List<String> symbols) {
+        Map<String, InstitutionalInvestorsData> result = new HashMap<>();
+        LocalDate now = LocalDate.now();
+
+        // 往前找最近的交易日
+        for (int i = 0; i < 10; i++) {
+            LocalDate targetDate = now.minusDays(i);
+
+            if (targetDate.getDayOfWeek().getValue() >= 6) {
+                continue;
+            }
+
+            Map<String, InstitutionalInvestorsData> allData = getAllInstitutionalInvestorsByDate(targetDate);
+
+            if (!allData.isEmpty()) {
+                // 找到交易日，篩選需要的股票
+                for (String symbol : symbols) {
+                    InstitutionalInvestorsData data = allData.get(symbol);
+                    if (data != null) {
+                        result.put(symbol, data);
+                    }
                 }
+                break; // 找到資料就結束
             }
         }
 

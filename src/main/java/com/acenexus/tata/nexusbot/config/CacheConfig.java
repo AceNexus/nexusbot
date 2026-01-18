@@ -40,7 +40,8 @@ public class CacheConfig {
         cacheManager.setCacheNames(List.of(
                 "stockFinancialData",
                 "twseStockList",
-                "twseInstitutional"
+                "twseInstitutional",
+                "twseInstitutionalAll"  // 全市場法人進出快取
         ));
 
         return cacheManager;

@@ -4,55 +4,447 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>台股籌碼監控看板 (NexusBot)</title>
-    <!-- Tailwind CSS -->
+
+    <!-- ========================================
+         外部依賴庫
+         ======================================== -->
+    <!-- Tailwind CSS - 現代化 CSS 框架 -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- React & ReactDOM -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <!-- Babel for JSX -->
+    <!-- React 18 - UI 框架 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel - JSX 編譯器 -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
+
+    <!-- ========================================
+         自定義樣式
+         ======================================== -->
     <style>
-        .text-up { color: #ef4444; } /* 紅色 - 上漲/買超 */
-        .text-down { color: #22c55e; } /* 綠色 - 下跌/賣超 */
-        .text-neutral { color: #9ca3af; } /* 灰色 - 持平 */
-        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        /* 自定義捲軸 */
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* === 基礎色彩系統 === */
+        :root {
+            --color-up: #dc2626;      /* 紅色 - 買超/上漲 (台股慣例) */
+            --color-down: #16a34a;    /* 綠色 - 賣超/下跌 */
+            --color-neutral: #9ca3af; /* 灰色 - 持平 */
+        }
+
+        /* === 籌碼數值色彩標示 === */
+        .text-up { color: var(--color-up); }
+        .text-down { color: var(--color-down); }
+        .text-neutral { color: var(--color-neutral); }
+
+        /* === 背景色彩標示 (用於數值區塊) === */
+        .bg-up-light { background-color: rgba(220, 38, 38, 0.08); }
+        .bg-down-light { background-color: rgba(22, 163, 74, 0.08); }
+
+        /* === 動畫效果 === */
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Loading 旋轉動畫 */
+        .animate-spin-slow {
+            animation: spin 1.2s linear infinite;
+        }
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 脈衝動畫 (用於載入狀態) */
+        .animate-pulse-subtle {
+            animation: pulse-subtle 2s ease-in-out infinite;
+        }
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        /* === 表格斑馬紋 === */
+        .table-striped tbody tr:nth-child(even) {
+            background-color: #f9fafb;
+        }
+        .table-striped tbody tr:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        /* === 自定義捲軸 === */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* === Modal 背景遮罩 === */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+
+        /* === 卡片陰影效果 === */
+        .card-shadow {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+        }
+        .card-shadow-hover:hover {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
+        }
+
+        /* === RWD 斷點調整 === */
+        @media (max-width: 768px) {
+            .mobile-text-sm { font-size: 0.875rem; }
+            .mobile-px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen text-gray-800 font-sans">
 
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen text-gray-800 font-sans">
 <div id="root"></div>
 
 <script type="text/babel">
-    const { useState, useEffect, useMemo, useCallback } = React;
+    /* ========================================
+       React Hooks 引入
+       ======================================== */
+    const { useState, useEffect, useMemo, useCallback, useRef } = React;
 
-    // API Base URL (相對路徑，因為與後端同域)
+    /* ========================================
+       常數定義
+       ======================================== */
     const API_BASE = "/api/stock";
+    const GROUP_API_BASE = "/api/stock-groups";
 
+    // 快取設定
+    const CACHE_CONFIG = {
+        MONITOR_KEY: 'nexusbot_monitor_cache',    // 籌碼數據快取 key
+        STOCK_LIST_KEY: 'nexusbot_stock_list',    // 股票清單快取 key
+        EXPIRY_MINUTES: 30,                        // 快取有效期 (分鐘)
+        MAX_ENTRIES: 100                           // 最大快取筆數
+    };
+
+    /* ========================================
+       工具函數 - 快取管理
+       ======================================== */
+
+    /**
+     * 快取管理器
+     * 使用 localStorage 儲存籌碼數據，減少 API 重複請求
+     */
+    const CacheManager = {
+        /**
+         * 取得快取數據
+         * @param {string} key - 快取鍵值
+         * @returns {object|null} - 快取數據或 null
+         */
+        get(key) {
+            try {
+                const cached = localStorage.getItem(key);
+                if (!cached) return null;
+
+                const { data, timestamp, date } = JSON.parse(cached);
+                const now = Date.now();
+                const today = new Date().toDateString();
+
+                // 檢查是否為當日數據且未過期 (30 分鐘內)
+                const isExpired = (now - timestamp) > (CACHE_CONFIG.EXPIRY_MINUTES * 60 * 1000);
+                const isSameDay = date === today;
+
+                // 盤後數據當日有效，盤中數據 30 分鐘過期
+                if (!isSameDay || isExpired) {
+                    this.remove(key);
+                    return null;
+                }
+
+                return data;
+            } catch (e) {
+                console.warn('快取讀取失敗:', e);
+                return null;
+            }
+        },
+
+        /**
+         * 設定快取數據
+         * @param {string} key - 快取鍵值
+         * @param {any} data - 要快取的數據
+         */
+        set(key, data) {
+            try {
+                const cacheEntry = {
+                    data,
+                    timestamp: Date.now(),
+                    date: new Date().toDateString()
+                };
+                localStorage.setItem(key, JSON.stringify(cacheEntry));
+            } catch (e) {
+                console.warn('快取寫入失敗:', e);
+                // 空間不足時清理舊快取
+                this.clearOld();
+            }
+        },
+
+        /**
+         * 移除指定快取
+         */
+        remove(key) {
+            localStorage.removeItem(key);
+        },
+
+        /**
+         * 清理過期快取
+         */
+        clearOld() {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith('nexusbot_')) {
+                    keysToRemove.push(key);
+                }
+            }
+            // 保留最新的，刪除舊的
+            keysToRemove.slice(0, -CACHE_CONFIG.MAX_ENTRIES).forEach(k => {
+                localStorage.removeItem(k);
+            });
+        },
+
+        /**
+         * 產生籌碼數據的快取 key
+         * @param {string[]} symbols - 股票代號陣列
+         */
+        getMonitorKey(symbols) {
+            const sorted = [...symbols].sort().join(',');
+            return `${CACHE_CONFIG.MONITOR_KEY}_${sorted}`;
+        }
+    };
+
+    /**
+     * 生成或取得使用者 ID
+     * - LINE 登入用戶：Uxxxxxxxx（由 LINE 提供）
+     * - 網頁匿名用戶：anon_xxxxxxxx（本地生成）
+     */
+    const getOrCreateUserId = () => {
+        const STORAGE_KEY = 'nexusbot_user_id';
+        let userId = localStorage.getItem(STORAGE_KEY);
+        if (!userId) {
+            userId = 'anon_' + crypto.randomUUID();
+            localStorage.setItem(STORAGE_KEY, userId);
+        }
+        return userId;
+    };
+
+    /* ========================================
+       UI 元件 - Loading Spinner
+       ======================================== */
+    const LoadingSpinner = ({ size = 'md', text = '' }) => {
+        const sizeClasses = {
+            sm: 'w-4 h-4',
+            md: 'w-8 h-8',
+            lg: 'w-12 h-12'
+        };
+
+        return (
+            <div className="flex flex-col items-center justify-center space-y-2">
+                <svg
+                    className={`${sizeClasses[size]} animate-spin-slow text-blue-500`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle
+                        className="opacity-25"
+                        cx="12" cy="12" r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                    />
+                    <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                </svg>
+                {text && <span className="text-sm text-gray-500">{text}</span>}
+            </div>
+        );
+    };
+
+    /* ========================================
+       UI 元件 - Modal 對話框
+       ======================================== */
+    const Modal = ({ isOpen, onClose, title, children }) => {
+        // ESC 鍵關閉
+        useEffect(() => {
+            const handleEsc = (e) => e.key === 'Escape' && onClose();
+            if (isOpen) {
+                document.addEventListener('keydown', handleEsc);
+                document.body.style.overflow = 'hidden'; // 防止背景滾動
+            }
+            return () => {
+                document.removeEventListener('keydown', handleEsc);
+                document.body.style.overflow = '';
+            };
+        }, [isOpen, onClose]);
+
+        if (!isOpen) return null;
+
+        return (
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
+                onClick={onClose}
+            >
+                <div
+                    className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-fade-in"
+                    onClick={e => e.stopPropagation()}
+                >
+                    <div className="flex justify-between items-center p-5 border-b border-gray-100">
+                        <h3 className="text-lg font-bold text-gray-800">{title}</h3>
+                        <button
+                            onClick={onClose}
+                            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div className="p-5">{children}</div>
+                </div>
+            </div>
+        );
+    };
+
+    /* ========================================
+       UI 元件 - 快取狀態指示器
+       ======================================== */
+    const CacheIndicator = ({ fromCache, lastUpdate }) => {
+        if (!lastUpdate) return null;
+
+        const timeAgo = Math.round((Date.now() - lastUpdate) / 1000 / 60);
+        const text = timeAgo < 1 ? '剛剛更新' : `${timeAgo} 分鐘前`;
+
+        return (
+            <div className="flex items-center space-x-2 text-xs">
+                {fromCache && (
+                    <span className="px-2 py-0.5 bg-amber-50 text-amber-600 rounded-full flex items-center">
+                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/>
+                            <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/>
+                            <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/>
+                        </svg>
+                        快取
+                    </span>
+                )}
+                <span className="text-gray-400">{text}</span>
+            </div>
+        );
+    };
+
+    /* ========================================
+       主要元件 - StockMonitor
+       ======================================== */
     const StockMonitor = () => {
-        const [allStocks, setAllStocks] = useState([]); // 所有股票清單 (Symbol, Name)
-        const [selectedCodes, setSelectedCodes] = useState(new Set()); // 已選擇的股票代號
-        const [monitorData, setMonitorData] = useState([]); // 監控中的股票詳細數據 (含籌碼)
+        // === 使用者狀態 ===
+        const [userId, setUserId] = useState(null);
+
+        // === 群組狀態 ===
+        const [groups, setGroups] = useState([]);
+        const [selectedGroupId, setSelectedGroupId] = useState(null);
+        const [isLoadingGroups, setIsLoadingGroups] = useState(false);
+
+        // === 股票列表狀態 ===
+        const [allStocks, setAllStocks] = useState([]);
+        const [monitorData, setMonitorData] = useState([]);
         const [searchTerm, setSearchTerm] = useState("");
-        const [sortConfig, setSortConfig] = useState({ key: null, direction: 'desc' });
+        const [sortConfig, setSortConfig] = useState({ key: 'totalBuy', direction: 'desc' });
         const [isLoadingList, setIsLoadingList] = useState(false);
         const [isRefreshing, setIsRefreshing] = useState(false);
 
-        // 初始化：獲取所有股票清單
+        // === 快取狀態 ===
+        const [cacheInfo, setCacheInfo] = useState({ fromCache: false, lastUpdate: null });
+
+        // === 資料日期 ===
+        const [dataDate, setDataDate] = useState(null);
+
+        // === Modal 狀態 ===
+        const [showCreateModal, setShowCreateModal] = useState(false);
+        const [showRenameModal, setShowRenameModal] = useState(false);
+        const [showDeleteModal, setShowDeleteModal] = useState(false);
+        const [newGroupName, setNewGroupName] = useState("");
+
+        // === 搜尋輸入框參考 ===
+        const searchInputRef = useRef(null);
+
+        // === 計算屬性 ===
+        const selectedGroup = useMemo(() => {
+            return groups.find(g => g.id === selectedGroupId);
+        }, [groups, selectedGroupId]);
+
+        const selectedCodes = useMemo(() => {
+            if (!selectedGroup) return new Set();
+            return new Set(selectedGroup.stocks.map(s => s.stockSymbol));
+        }, [selectedGroup]);
+
+        // === 初始化使用者 ID ===
+        useEffect(() => {
+            const uid = getOrCreateUserId();
+            setUserId(uid);
+        }, []);
+
+        // === 載入群組 ===
+        const fetchGroups = useCallback(async () => {
+            if (!userId) return;
+            setIsLoadingGroups(true);
+            try {
+                const res = await fetch(GROUP_API_BASE, {
+                    headers: { 'X-User-Id': userId }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    setGroups(data);
+                    const selected = data.find(g => g.isSelected);
+                    if (selected) {
+                        setSelectedGroupId(selected.id);
+                    } else if (data.length > 0) {
+                        setSelectedGroupId(data[0].id);
+                    }
+                }
+            } catch (err) {
+                console.error("無法載入群組", err);
+            } finally {
+                setIsLoadingGroups(false);
+            }
+        }, [userId]);
+
+        useEffect(() => {
+            fetchGroups();
+        }, [fetchGroups]);
+
+        // === 載入股票清單 (含快取) ===
         useEffect(() => {
             const fetchStockList = async () => {
+                // 先檢查快取
+                const cached = CacheManager.get(CACHE_CONFIG.STOCK_LIST_KEY);
+                if (cached) {
+                    setAllStocks(cached);
+                    return;
+                }
+
                 setIsLoadingList(true);
                 try {
                     const res = await fetch(`${API_BASE}/list`);
                     if (res.ok) {
                         const data = await res.json();
                         setAllStocks(data);
+                        // 寫入快取
+                        CacheManager.set(CACHE_CONFIG.STOCK_LIST_KEY, data);
                     }
                 } catch (err) {
                     console.error("無法獲取股票清單", err);
@@ -63,19 +455,45 @@
             fetchStockList();
         }, []);
 
-        // 定時刷新監控數據
-        const fetchMonitorData = useCallback(async () => {
+        // === 刷新監控數據 (含快取邏輯) ===
+        const fetchMonitorData = useCallback(async (forceRefresh = false) => {
             if (selectedCodes.size === 0) {
                 setMonitorData([]);
+                setDataDate(null);
+                setCacheInfo({ fromCache: false, lastUpdate: null });
                 return;
             }
+
+            const symbols = Array.from(selectedCodes);
+            const cacheKey = CacheManager.getMonitorKey(symbols);
+
+            // 非強制刷新時，先檢查快取
+            if (!forceRefresh) {
+                const cached = CacheManager.get(cacheKey);
+                if (cached) {
+                    setMonitorData(cached.stocks || cached.data || []);
+                    setDataDate(cached.dataDate || null);
+                    setCacheInfo({ fromCache: true, lastUpdate: cached.timestamp });
+                    return;
+                }
+            }
+
             setIsRefreshing(true);
             try {
-                const symbols = Array.from(selectedCodes).join(",");
-                const res = await fetch(`${API_BASE}/monitor?symbols=${symbols}`);
+                const res = await fetch(`${API_BASE}/monitor?symbols=${symbols.join(",")}`);
                 if (res.ok) {
-                    const data = await res.json();
-                    setMonitorData(data);
+                    const response = await res.json();
+                    // 新格式: { dataDate, stocks } 或舊格式: [...]
+                    const stocks = response.stocks || response;
+                    const apiDataDate = response.dataDate || null;
+
+                    setMonitorData(stocks);
+                    setDataDate(apiDataDate);
+
+                    // 寫入快取
+                    const timestamp = Date.now();
+                    CacheManager.set(cacheKey, { stocks, dataDate: apiDataDate, timestamp });
+                    setCacheInfo({ fromCache: false, lastUpdate: timestamp });
                 }
             } catch (err) {
                 console.error("無法刷新監控數據", err);
@@ -84,226 +502,550 @@
             }
         }, [selectedCodes]);
 
-        // 當選擇的股票變更時，自動載入一次數據（不自動定時刷新，避免 API 限制）
+        // 當選中群組變更時載入數據
         useEffect(() => {
             fetchMonitorData();
         }, [fetchMonitorData]);
 
-        // 處理選擇
-        const toggleSelect = (code) => {
-            const newSelected = new Set(selectedCodes);
-            if (newSelected.has(code)) {
-                newSelected.delete(code);
-            } else {
-                newSelected.add(code);
-            }
-            setSelectedCodes(newSelected);
-        };
-
-        const handleSelectAll = (filteredStocks) => {
-            const newSelected = new Set(selectedCodes);
-            const isAllCurrentSelected = filteredStocks.every(s => selectedCodes.has(s.symbol));
-
-            filteredStocks.forEach(s => {
-                if (isAllCurrentSelected) {
-                    newSelected.delete(s.symbol);
-                } else {
-                    newSelected.add(s.symbol);
+        // === 群組操作函數 ===
+        const handleCreateGroup = async () => {
+            if (!newGroupName.trim() || !userId) return;
+            try {
+                const res = await fetch(GROUP_API_BASE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+                    body: JSON.stringify({ name: newGroupName.trim() })
+                });
+                if (res.ok) {
+                    const newGroup = await res.json();
+                    setGroups([...groups, newGroup]);
+                    setSelectedGroupId(newGroup.id);
+                    setShowCreateModal(false);
+                    setNewGroupName("");
                 }
-            });
-            setSelectedCodes(newSelected);
-        };
-
-        // 排序
-        const handleSort = (key) => {
-            let direction = 'desc';
-            if (sortConfig.key === key && sortConfig.direction === 'desc') {
-                direction = 'asc';
+            } catch (err) {
+                console.error("無法建立群組", err);
             }
-            setSortConfig({ key, direction });
         };
 
+        const handleRenameGroup = async () => {
+            if (!newGroupName.trim() || !selectedGroupId || !userId) return;
+            try {
+                const res = await fetch(`${GROUP_API_BASE}/${selectedGroupId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+                    body: JSON.stringify({ name: newGroupName.trim() })
+                });
+                if (res.ok) {
+                    const updatedGroup = await res.json();
+                    setGroups(groups.map(g => g.id === selectedGroupId ? updatedGroup : g));
+                    setShowRenameModal(false);
+                    setNewGroupName("");
+                }
+            } catch (err) {
+                console.error("無法重新命名群組", err);
+            }
+        };
+
+        const handleDeleteGroup = async () => {
+            if (!selectedGroupId || !userId) return;
+            try {
+                const res = await fetch(`${GROUP_API_BASE}/${selectedGroupId}`, {
+                    method: 'DELETE',
+                    headers: { 'X-User-Id': userId }
+                });
+                if (res.ok) {
+                    const remaining = groups.filter(g => g.id !== selectedGroupId);
+                    setGroups(remaining);
+                    setSelectedGroupId(remaining.length > 0 ? remaining[0].id : null);
+                    setShowDeleteModal(false);
+                }
+            } catch (err) {
+                console.error("無法刪除群組", err);
+            }
+        };
+
+        const handleSelectGroup = async (groupId) => {
+            if (!userId || groupId === selectedGroupId) return;
+            setSelectedGroupId(groupId);
+            try {
+                await fetch(`${GROUP_API_BASE}/${groupId}/select`, {
+                    method: 'POST',
+                    headers: { 'X-User-Id': userId }
+                });
+            } catch (err) {
+                console.error("無法選取群組", err);
+            }
+        };
+
+        // === 股票操作函數 ===
+        const handleAddStock = async (symbol, name) => {
+            if (!selectedGroupId || !userId) return;
+            try {
+                const res = await fetch(`${GROUP_API_BASE}/${selectedGroupId}/stocks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-User-Id': userId },
+                    body: JSON.stringify({ symbol, name })
+                });
+                if (res.ok) {
+                    const newItem = await res.json();
+                    setGroups(groups.map(g => {
+                        if (g.id === selectedGroupId) {
+                            return { ...g, stocks: [...g.stocks, newItem] };
+                        }
+                        return g;
+                    }));
+                    setSearchTerm(""); // 清空搜尋
+                }
+            } catch (err) {
+                console.error("無法新增股票", err);
+            }
+        };
+
+        const handleRemoveStock = async (symbol) => {
+            if (!selectedGroupId || !userId) return;
+            try {
+                const res = await fetch(`${GROUP_API_BASE}/${selectedGroupId}/stocks/${symbol}`, {
+                    method: 'DELETE',
+                    headers: { 'X-User-Id': userId }
+                });
+                if (res.ok) {
+                    setGroups(groups.map(g => {
+                        if (g.id === selectedGroupId) {
+                            return { ...g, stocks: g.stocks.filter(s => s.stockSymbol !== symbol) };
+                        }
+                        return g;
+                    }));
+                }
+            } catch (err) {
+                console.error("無法移除股票", err);
+            }
+        };
+
+        // === 排序處理 ===
+        const handleSort = (key) => {
+            setSortConfig(prev => ({
+                key,
+                direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+            }));
+        };
+
+        // === 數值顏色判斷 ===
         const getColorClass = (val) => {
             const num = parseFloat(val);
             if (isNaN(num) || num === 0) return 'text-neutral';
             return num > 0 ? 'text-up' : 'text-down';
         };
 
-        // 過濾邏輯（需輸入搜尋條件才顯示）
+        const getBgColorClass = (val) => {
+            const num = parseFloat(val);
+            if (isNaN(num) || num === 0) return '';
+            return num > 0 ? 'bg-up-light' : 'bg-down-light';
+        };
+
+        // === 格式化數值 (加上正負號與千分位) ===
+        const formatNumber = (val) => {
+            const num = parseFloat(val);
+            if (isNaN(num)) return '--';
+            const formatted = Math.abs(num).toLocaleString();
+            if (num > 0) return `+${formatted}`;
+            if (num < 0) return `-${formatted}`;
+            return formatted;
+        };
+
+        // === 搜尋過濾 ===
         const filteredStocks = useMemo(() => {
-            if (!searchTerm) return []; // 未輸入搜尋條件時不顯示
+            if (!searchTerm) return [];
+            const term = searchTerm.toLowerCase();
             return allStocks.filter(s =>
-                s.symbol.includes(searchTerm) || s.name.includes(searchTerm)
+                s.symbol.toLowerCase().includes(term) ||
+                s.name.toLowerCase().includes(term)
             ).slice(0, 50);
         }, [allStocks, searchTerm]);
 
-        // 排序後的監控數據（含三大法人合計）
+        // === 排序後的監控數據 ===
         const sortedMonitorData = useMemo(() => {
             let data = monitorData.map(stock => ({
                 ...stock,
                 totalBuy: (stock.foreignBuy || 0) + (stock.investmentTrustBuy || 0) + (stock.dealerBuy || 0)
             }));
+
             if (sortConfig.key) {
                 data.sort((a, b) => {
                     const aVal = a[sortConfig.key] || 0;
                     const bVal = b[sortConfig.key] || 0;
-                    if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
-                    if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
-                    return 0;
+                    return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
                 });
             }
             return data;
         }, [monitorData, sortConfig]);
 
-        const isAllFilteredSelected = filteredStocks.length > 0 && filteredStocks.every(s => selectedCodes.has(s.symbol));
+        // === 排序指示器 ===
+        const SortIndicator = ({ columnKey }) => {
+            if (sortConfig.key !== columnKey) {
+                return <span className="ml-1 text-gray-300">⇅</span>;
+            }
+            return <span className="ml-1">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>;
+        };
 
+        /* ========================================
+           渲染 UI
+           ======================================== */
         return (
-            <div className="max-w-7xl mx-auto p-4 space-y-6">
-                
-                {/* Header */}
-                <header className="flex flex-col md:flex-row justify-between items-center bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-                    <div className="flex items-center space-x-3 mb-4 md:mb-0">
-                        <div className="bg-blue-600 text-white p-2 rounded-lg">
-                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+            <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+                {/* === Header 區塊 === */}
+                <header className="bg-white rounded-2xl card-shadow p-5 md:p-6">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-center space-x-4">
+                            <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-3 rounded-xl shadow-lg">
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h1 className="text-xl md:text-2xl font-bold text-gray-900">台股籌碼戰情室</h1>
+                                <p className="text-sm text-gray-500 mt-0.5">三大法人買賣超即時監控</p>
+                            </div>
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">台股籌碼戰情室</h1>
+
+                        <div className="flex flex-col items-end space-y-2">
+                            {/* 資料日期與使用者資訊 */}
+                            <div className="flex items-center space-x-3 text-xs text-gray-500">
+                                {dataDate && (
+                                    <span className="flex items-center px-2 py-1 bg-green-50 text-green-700 rounded-lg">
+                                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                        資料日期：{dataDate}
+                                    </span>
+                                )}
+                                {userId && (
+                                    <span className="flex items-center px-2 py-1 bg-gray-100 text-gray-600 rounded-lg" title={`完整 ID: ${userId}`}>
+                                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                        {userId.startsWith('anon_') ? '匿名' : 'LINE'}: {userId.startsWith('anon_') ? userId.slice(5, 13) : userId.slice(0, 8)}
+                                    </span>
+                                )}
+                            </div>
+                            {/* 快取與更新狀態 */}
+                            <div className="flex items-center space-x-3">
+                                <CacheIndicator fromCache={cacheInfo.fromCache} lastUpdate={cacheInfo.lastUpdate} />
+                                {isRefreshing && (
+                                    <span className="px-3 py-1.5 rounded-full bg-blue-50 text-blue-600 text-sm flex items-center">
+                                        <LoadingSpinner size="sm" />
+                                        <span className="ml-2">更新中...</span>
+                                    </span>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                    {isRefreshing && (
-                        <span className="px-3 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm transition-colors duration-300">
-                            數據更新中...
-                        </span>
-                    )}
                 </header>
 
+                {/* === 群組 Tabs === */}
+                <div className="bg-white rounded-2xl card-shadow p-4 md:p-5">
+                    <div className="flex items-center space-x-2 overflow-x-auto custom-scrollbar pb-2">
+                        {isLoadingGroups ? (
+                            <div className="py-2"><LoadingSpinner size="sm" text="載入群組..." /></div>
+                        ) : groups.length === 0 ? (
+                            <span className="text-gray-400 text-sm py-2">尚無群組，點擊右側按鈕建立</span>
+                        ) : (
+                            groups.map(group => (
+                                <button
+                                    key={group.id}
+                                    onClick={() => handleSelectGroup(group.id)}
+                                    className={`px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all duration-200 ${
+                                        group.id === selectedGroupId
+                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-200'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {group.name}
+                                    <span className={`ml-2 text-xs ${group.id === selectedGroupId ? 'text-blue-200' : 'text-gray-400'}`}>
+                                        ({group.stocks.length})
+                                    </span>
+                                </button>
+                            ))
+                        )}
+
+                        <button
+                            onClick={() => setShowCreateModal(true)}
+                            className="p-2.5 rounded-xl bg-gray-100 text-gray-500 hover:bg-blue-50 hover:text-blue-600 transition-colors flex-shrink-0"
+                            title="新增群組"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {selectedGroup && (
+                        <div className="flex items-center space-x-3 mt-4 pt-4 border-t border-gray-100">
+                            <span className="text-sm text-gray-500">群組操作：</span>
+                            <button
+                                onClick={() => { setNewGroupName(selectedGroup.name); setShowRenameModal(true); }}
+                                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                                重新命名
+                            </button>
+                            <span className="text-gray-200">|</span>
+                            <button
+                                onClick={() => setShowDeleteModal(true)}
+                                className="text-sm text-red-500 hover:text-red-700 hover:underline"
+                            >
+                                刪除群組
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* === 主要內容區 === */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    
-                    {/* 左側：股票選擇器 */}
-                    <section className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[600px]">
-                        <div className="p-4 border-b border-gray-100">
-                            <h2 className="text-lg font-semibold mb-3 flex items-center">
-                                <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                股票篩選
-                            </h2>
-                            <input 
-                                type="text" 
-                                placeholder="輸入代號或名稱 (例如: 2330)" 
-                                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all bg-gray-50 focus:bg-white"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
+
+                    {/* 左側：股票搜尋 + 群組股票 */}
+                    <section className="lg:col-span-1 space-y-5">
+
+                        {/* 搜尋新增股票卡片 */}
+                        <div className="bg-white rounded-2xl card-shadow flex flex-col h-[380px]">
+                            <div className="p-4 md:p-5 border-b border-gray-100">
+                                <h2 className="text-base font-semibold text-gray-800 mb-3 flex items-center">
+                                    <svg className="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                    新增股票
+                                </h2>
+                                <div className="relative">
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        placeholder={selectedGroup ? "輸入代號或名稱搜尋..." : "請先選擇群組"}
+                                        className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-gray-50 focus:bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        disabled={!selectedGroup}
+                                    />
+                                    <svg className="w-5 h-5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm("")}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                                            </svg>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                {isLoadingList ? (
+                                    <div className="flex justify-center items-center h-full">
+                                        <LoadingSpinner size="md" text="載入股票清單..." />
+                                    </div>
+                                ) : !selectedGroup ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                        <svg className="w-12 h-12 mb-2 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                        </svg>
+                                        <span>請先選擇或建立群組</span>
+                                    </div>
+                                ) : filteredStocks.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                                        {searchTerm ? (
+                                            <>
+                                                <svg className="w-12 h-12 mb-2 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span>找不到符合的股票</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg className="w-12 h-12 mb-2 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                                </svg>
+                                                <span>輸入股票代號或名稱搜尋</span>
+                                            </>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-gray-50">
+                                        {filteredStocks.map(stock => (
+                                            <div
+                                                key={stock.symbol}
+                                                className="flex items-center justify-between px-4 py-3 hover:bg-blue-50 transition-colors cursor-pointer group"
+                                                onClick={() => !selectedCodes.has(stock.symbol) && handleAddStock(stock.symbol, stock.name)}
+                                            >
+                                                <div className="flex items-center space-x-3">
+                                                    <span className="font-mono text-sm font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+                                                        {stock.symbol}
+                                                    </span>
+                                                    <span className="text-sm text-gray-700">{stock.name}</span>
+                                                </div>
+                                                {selectedCodes.has(stock.symbol) ? (
+                                                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">已加入</span>
+                                                ) : (
+                                                    <button className="px-3 py-1 text-xs bg-blue-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600">
+                                                        加入
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto custom-scrollbar">
-                            {isLoadingList ? (
-                                <div className="flex justify-center items-center h-full text-gray-400">載入中...</div>
-                            ) : (
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-gray-50 sticky top-0 z-10 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                        <tr>
-                                            <th className="px-4 py-3 w-12">
-                                                <input 
-                                                    type="checkbox" 
-                                                    checked={isAllFilteredSelected}
-                                                    onChange={() => handleSelectAll(filteredStocks)}
-                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                                />
-                                            </th>
-                                            <th className="px-4 py-3">代號</th>
-                                            <th className="px-4 py-3">名稱</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-100">
-                                        {filteredStocks.map(stock => (
-                                            <tr key={stock.symbol} className="hover:bg-blue-50 transition-colors duration-150 group">
-                                                <td className="px-4 py-3">
-                                                    <input 
-                                                        type="checkbox" 
-                                                        checked={selectedCodes.has(stock.symbol)}
-                                                        onChange={() => toggleSelect(stock.symbol)}
-                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                                                    />
-                                                </td>
-                                                <td className="px-4 py-3 font-mono text-gray-600 group-hover:text-blue-700">{stock.symbol}</td>
-                                                <td className="px-4 py-3 font-medium text-gray-900">{stock.name}</td>
-                                            </tr>
+                        {/* 群組內股票列表卡片 */}
+                        <div className="bg-white rounded-2xl card-shadow flex flex-col h-[200px]">
+                            <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                                <h2 className="text-sm font-semibold text-gray-700">
+                                    {selectedGroup ? selectedGroup.name : '群組股票'}
+                                    {selectedGroup && (
+                                        <span className="ml-2 text-xs font-normal text-gray-400">
+                                            ({selectedGroup.stocks.length} 檔)
+                                        </span>
+                                    )}
+                                </h2>
+                            </div>
+                            <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                {!selectedGroup ? (
+                                    <div className="flex justify-center items-center h-full text-gray-400 text-sm">請選擇群組</div>
+                                ) : selectedGroup.stocks.length === 0 ? (
+                                    <div className="flex justify-center items-center h-full text-gray-400 text-sm">群組內尚無股票</div>
+                                ) : (
+                                    <div className="divide-y divide-gray-50">
+                                        {selectedGroup.stocks.map(stock => (
+                                            <div key={stock.stockSymbol} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 group">
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="font-mono text-xs text-gray-500">{stock.stockSymbol}</span>
+                                                    <span className="text-sm text-gray-700">{stock.stockName}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleRemoveStock(stock.stockSymbol)}
+                                                    className="p-1 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-red-50"
+                                                    title="移除"
+                                                >
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         ))}
-                                        {filteredStocks.length === 0 && (
-                                            <tr>
-                                                <td colSpan="3" className="p-8 text-center text-gray-400">
-                                                    {searchTerm ? '無符合股票' : '請輸入代號或名稱搜尋'}
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            )}
-                        </div>
-                        <div className="p-3 bg-gray-50 text-xs text-center text-gray-400 border-t border-gray-100">
-                            請輸入股票代號或名稱搜尋
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </section>
 
-                    {/* 右側：監控看板 */}
-                    <section className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 flex flex-col h-[600px]">
-                        <div className="p-4 border-b border-gray-100 flex justify-between items-center">
-                            <h2 className="text-lg font-semibold flex items-center">
-                                <svg className="w-5 h-5 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    {/* 右側：籌碼監控看板 */}
+                    <section className="lg:col-span-2 bg-white rounded-2xl card-shadow flex flex-col h-[600px]">
+                        <div className="p-4 md:p-5 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                            <h2 className="text-base font-semibold text-gray-800 flex items-center">
+                                <svg className="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                                </svg>
                                 籌碼看板
+                                {selectedCodes.size > 0 && (
+                                    <span className="ml-2 text-xs font-normal text-gray-400">({selectedCodes.size} 檔)</span>
+                                )}
                             </h2>
-                            <button onClick={fetchMonitorData} className="text-sm text-blue-600 hover:text-blue-800 font-medium px-3 py-1 rounded hover:bg-blue-50 transition-colors">
-                                立即刷新
+                            <button
+                                onClick={() => fetchMonitorData(true)}
+                                disabled={isRefreshing || selectedCodes.size === 0}
+                                className="flex items-center px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <svg className={`w-4 h-4 mr-1.5 ${isRefreshing ? 'animate-spin-slow' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                {isRefreshing ? '更新中...' : '立即刷新'}
                             </button>
                         </div>
-                        
+
                         <div className="flex-1 overflow-auto custom-scrollbar relative">
                             {selectedCodes.size === 0 ? (
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 space-y-4">
-                                    <svg className="w-16 h-16 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                                    <p>請從左側勾選股票加入監控</p>
+                                    <svg className="w-20 h-20 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    <p className="text-center">
+                                        {selectedGroup ? '請新增股票到群組' : '請選擇或建立群組'}
+                                        <br/>
+                                        <span className="text-sm text-gray-300">從左側搜尋並加入股票開始監控</span>
+                                    </p>
+                                </div>
+                            ) : isRefreshing && monitorData.length === 0 ? (
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <LoadingSpinner size="lg" text="載入籌碼數據..." />
                                 </div>
                             ) : (
-                                <table className="w-full text-right text-sm">
-                                    <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 z-10 shadow-sm">
+                                <table className="w-full text-sm table-striped">
+                                    <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 z-10">
                                         <tr>
-                                            <th className="px-4 py-3 text-left w-24">股票</th>
-                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('price')}>
-                                                現價 {sortConfig.key === 'price' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            <th className="px-4 py-3.5 text-left">股票</th>
+                                            <th
+                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                onClick={() => handleSort('price')}
+                                            >
+                                                現價<SortIndicator columnKey="price" />
                                             </th>
-                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('foreignBuy')}>
-                                                外資 {sortConfig.key === 'foreignBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            <th
+                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                onClick={() => handleSort('foreignBuy')}
+                                            >
+                                                外資<SortIndicator columnKey="foreignBuy" />
                                             </th>
-                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('investmentTrustBuy')}>
-                                                投信 {sortConfig.key === 'investmentTrustBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            <th
+                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none hidden sm:table-cell"
+                                                onClick={() => handleSort('investmentTrustBuy')}
+                                            >
+                                                投信<SortIndicator columnKey="investmentTrustBuy" />
                                             </th>
-                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors" onClick={() => handleSort('dealerBuy')}>
-                                                自營 {sortConfig.key === 'dealerBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            <th
+                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none hidden sm:table-cell"
+                                                onClick={() => handleSort('dealerBuy')}
+                                            >
+                                                自營<SortIndicator columnKey="dealerBuy" />
                                             </th>
-                                            <th className="px-4 py-3 cursor-pointer hover:bg-gray-100 transition-colors bg-blue-50" onClick={() => handleSort('totalBuy')}>
-                                                合計 {sortConfig.key === 'totalBuy' && (sortConfig.direction === 'asc' ? '▲' : '▼')}
+                                            <th
+                                                className="px-4 py-3.5 text-right cursor-pointer hover:bg-blue-50 transition-colors select-none bg-blue-50/50"
+                                                onClick={() => handleSort('totalBuy')}
+                                            >
+                                                <span className="text-blue-700">合計</span>
+                                                <SortIndicator columnKey="totalBuy" />
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100 bg-white">
-                                        {sortedMonitorData.map(stock => (
-                                            <tr key={stock.code} className="hover:bg-gray-50 transition-colors animate-fade-in group">
-                                                <td className="px-4 py-3 text-left">
-                                                    <div className="font-bold text-gray-900">{stock.name}</div>
-                                                    <div className="text-xs text-gray-400 group-hover:text-blue-500 font-mono">{stock.code}</div>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {sortedMonitorData.map((stock, index) => (
+                                            <tr
+                                                key={stock.code}
+                                                className="hover:bg-blue-50/50 transition-colors animate-fade-in group"
+                                                style={{ animationDelay: `${index * 30}ms` }}
+                                            >
+                                                <td className="px-4 py-3.5 text-left">
+                                                    <div className="font-semibold text-gray-900">{stock.name}</div>
+                                                    <div className="text-xs text-gray-400 font-mono group-hover:text-blue-500 transition-colors">
+                                                        {stock.code}
+                                                    </div>
                                                 </td>
-                                                <td className="px-4 py-3 font-mono text-base font-bold text-gray-800">
-                                                    {stock.price ? stock.price : '--'}
+                                                <td className="px-3 py-3.5 text-right font-mono text-base font-bold text-gray-800">
+                                                    {stock.price ? Number(stock.price).toLocaleString() : '--'}
                                                 </td>
-                                                <td className={`px-4 py-3 font-mono font-medium ${getColorClass(stock.foreignBuy)}`}>
-                                                    {stock.foreignBuy > 0 ? '+' : ''}{stock.foreignBuy}
+                                                <td className={`px-3 py-3.5 text-right font-mono font-medium ${getColorClass(stock.foreignBuy)}`}>
+                                                    {formatNumber(stock.foreignBuy)}
                                                 </td>
-                                                <td className={`px-4 py-3 font-mono font-medium ${getColorClass(stock.investmentTrustBuy)}`}>
-                                                    {stock.investmentTrustBuy > 0 ? '+' : ''}{stock.investmentTrustBuy}
+                                                <td className={`px-3 py-3.5 text-right font-mono font-medium hidden sm:table-cell ${getColorClass(stock.investmentTrustBuy)}`}>
+                                                    {formatNumber(stock.investmentTrustBuy)}
                                                 </td>
-                                                <td className={`px-4 py-3 font-mono font-medium ${getColorClass(stock.dealerBuy)}`}>
-                                                    {stock.dealerBuy > 0 ? '+' : ''}{stock.dealerBuy}
+                                                <td className={`px-3 py-3.5 text-right font-mono font-medium hidden sm:table-cell ${getColorClass(stock.dealerBuy)}`}>
+                                                    {formatNumber(stock.dealerBuy)}
                                                 </td>
-                                                <td className={`px-4 py-3 font-mono font-bold bg-blue-50 ${getColorClass(stock.totalBuy)}`}>
-                                                    {stock.totalBuy > 0 ? '+' : ''}{stock.totalBuy}
+                                                <td className={`px-4 py-3.5 text-right font-mono font-bold ${getColorClass(stock.totalBuy)} ${getBgColorClass(stock.totalBuy)}`}>
+                                                    {formatNumber(stock.totalBuy)}
                                                 </td>
                                             </tr>
                                         ))}
@@ -313,10 +1055,112 @@
                         </div>
                     </section>
                 </div>
+
+                {/* === Modals === */}
+
+                {/* 建立群組 Modal */}
+                <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="新增群組">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">群組名稱</label>
+                            <input
+                                type="text"
+                                placeholder="例如：記憶體、PCB、AI概念股"
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                value={newGroupName}
+                                onChange={(e) => setNewGroupName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="flex justify-end space-x-3 pt-2">
+                            <button
+                                onClick={() => { setShowCreateModal(false); setNewGroupName(""); }}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleCreateGroup}
+                                disabled={!newGroupName.trim()}
+                                className="px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                建立
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* 重新命名 Modal */}
+                <Modal isOpen={showRenameModal} onClose={() => setShowRenameModal(false)} title="重新命名群組">
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1.5">新名稱</label>
+                            <input
+                                type="text"
+                                placeholder="輸入新的群組名稱"
+                                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                value={newGroupName}
+                                onChange={(e) => setNewGroupName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleRenameGroup()}
+                                autoFocus
+                            />
+                        </div>
+                        <div className="flex justify-end space-x-3 pt-2">
+                            <button
+                                onClick={() => { setShowRenameModal(false); setNewGroupName(""); }}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleRenameGroup}
+                                disabled={!newGroupName.trim()}
+                                className="px-5 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                                儲存
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* 刪除確認 Modal */}
+                <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="刪除群組">
+                    <div className="space-y-4">
+                        <div className="flex items-start space-x-3 p-4 bg-red-50 rounded-xl">
+                            <svg className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <div>
+                                <p className="text-gray-700">
+                                    確定要刪除「<span className="font-semibold text-gray-900">{selectedGroup?.name}</span>」群組嗎？
+                                </p>
+                                <p className="text-sm text-gray-500 mt-1">群組內的 {selectedGroup?.stocks.length || 0} 檔股票設定將會一併移除，此操作無法復原。</p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end space-x-3 pt-2">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-xl transition-colors"
+                            >
+                                取消
+                            </button>
+                            <button
+                                onClick={handleDeleteGroup}
+                                className="px-5 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors"
+                            >
+                                確認刪除
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
             </div>
         );
     };
 
+    /* ========================================
+       React 應用程式入口
+       ======================================== */
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<StockMonitor />);
 </script>
