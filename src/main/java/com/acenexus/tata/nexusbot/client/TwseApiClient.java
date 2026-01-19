@@ -452,6 +452,87 @@ public class TwseApiClient {
         return result;
     }
 
+    /**
+     * 取得指定日期「上櫃」全市場三大法人買賣超
+     * API: https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php
+     */
+    @Cacheable(value = "tpexInstitutionalAll", key = "#date.toString()")
+    public Map<String, InstitutionalInvestorsData> getTpexAllInstitutionalInvestorsByDate(LocalDate date) {
+        Map<String, InstitutionalInvestorsData> resultMap = new HashMap<>();
+
+        try {
+            // 民國年轉換: 2025-01-16 -> 114/01/16
+            String rocDate = String.format("%d/%02d/%02d", date.getYear() - 1911, date.getMonthValue(), date.getDayOfMonth());
+            String url = String.format("https://www.tpex.org.tw/web/stock/3insti/daily_trade/3itrade_hedge_result.php?l=zh-tw&o=json&se=AL&t=D&d=%s", rocDate);
+
+            log.info("TPEx institutional ALL request - date={}", rocDate);
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+
+            if (response.getStatusCode() != HttpStatus.OK || response.getBody() == null) {
+                log.warn("TPEx institutional API returned non-OK status for date={}", rocDate);
+                return resultMap;
+            }
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            JsonNode tables = root.path("tables");
+            
+            // 檢查是否有資料 (假日或非交易日)
+            if (!tables.isArray() || tables.isEmpty()) {
+                log.info("No TPEx trading data for date={}, tables empty", rocDate);
+                return resultMap;
+            }
+
+            JsonNode dataArray = tables.get(0).path("data");
+            
+            // 雙重檢查：確認回傳日期是否與請求日期一致 (TPEx 有時會回傳最新日期)
+            String respDateStr = tables.get(0).path("date").asText(); 
+            if (respDateStr != null && respDateStr.contains("/")) {
+                 LocalDate respDate = parseRocDate(respDateStr);
+                 if (!respDate.equals(date)) {
+                     log.warn("TPEx API returned date {} but requested {}, skipping", respDate, date);
+                     return resultMap;
+                 }
+            }
+
+            for (JsonNode row : dataArray) {
+                try {
+                    String symbol = row.get(0).asText().trim();
+                    String name = row.get(1).asText().trim();
+
+                    // 欄位說明 (單位: 股)
+                    // 2-4: 外資(不含自營), 5-7: 外資自營, 8-10: 外資合計
+                    // 11-13: 投信, 14-16: 自營商避險, 17-19: 自營商, 20-22: 自營商合計
+                    // 23: 三大法人合計
+                    Long foreignNet = parseLong(row.get(4).asText()) / 1000;
+                    Long trustNet = parseLong(row.get(13).asText()) / 1000;
+                    Long dealerNet = parseLong(row.get(22).asText()) / 1000;
+                    Long totalNet = parseLong(row.get(23).asText()) / 1000;
+
+                    InstitutionalInvestorsData data = InstitutionalInvestorsData.builder()
+                            .symbol(symbol)
+                            .name(name)
+                            .date(date)
+                            .foreignInvestorBuySell(foreignNet)
+                            .investmentTrustBuySell(trustNet)
+                            .dealerBuySell(dealerNet)
+                            .totalBuySell(totalNet)
+                            .build();
+
+                    resultMap.put(symbol, data);
+                } catch (Exception e) {
+                    log.warn("Failed to parse TPEx row: {}", e.getMessage());
+                }
+            }
+
+            log.info("TPEx institutional ALL loaded - date={}, count={}", rocDate, resultMap.size());
+
+        } catch (Exception e) {
+            log.error("TPEx institutional ALL error - date={}, error={}", date, e.getMessage());
+        }
+
+        return resultMap;
+    }
+
     // === 輔助方法 ===
 
     private LocalDate parseRocDate(String rocDateStr) {

@@ -5,6 +5,7 @@ import com.acenexus.tata.nexusbot.client.TwseApiClient;
 import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
 import com.acenexus.tata.nexusbot.dto.StockSymbolDto;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
+import com.acenexus.tata.nexusbot.service.StockChipService;
 import com.acenexus.tata.nexusbot.service.StockSymbolService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -29,6 +31,7 @@ public class StockController {
     private final FinMindApiClient finMindApiClient;
     private final TwseApiClient twseApiClient;
     private final StockSymbolService stockSymbolService;
+    private final StockChipService stockChipService;
 
     @GetMapping("/list")
     public ResponseEntity<List<StockSymbolDto>> getStockList() {
@@ -78,6 +81,57 @@ public class StockController {
             return ResponseEntity.ok(data);
         } catch (Exception ex) {
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/{symbol}/institutional-investors/range")
+    public ResponseEntity<Map<String, Object>> getInstitutionalInvestorsRange(
+            @PathVariable String symbol,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+            
+            // 使用 StockChipService 從資料庫查詢，若缺資料會自動補齊
+            List<InstitutionalInvestorsData> dailyData = stockChipService.getInstitutionalInvestorsRange(resolvedSymbol, start, end);
+            
+            if (dailyData.isEmpty()) {
+                return ResponseEntity.ok(Map.of("total", new java.util.HashMap<>(), "daily", List.of()));
+            }
+
+            // 累計數據
+            long totalForeign = 0;
+            long totalTrust = 0;
+            long totalDealer = 0;
+            long totalAll = 0;
+            String name = dailyData.get(0).getName();
+
+            for (InstitutionalInvestorsData data : dailyData) {
+                totalForeign += (data.getForeignInvestorBuySell() != null ? data.getForeignInvestorBuySell() : 0);
+                totalTrust += (data.getInvestmentTrustBuySell() != null ? data.getInvestmentTrustBuySell() : 0);
+                totalDealer += (data.getDealerBuySell() != null ? data.getDealerBuySell() : 0);
+                totalAll += (data.getTotalBuySell() != null ? data.getTotalBuySell() : 0);
+            }
+
+            Map<String, Object> summary = new java.util.HashMap<>();
+            summary.put("symbol", symbol);
+            summary.put("name", name);
+            summary.put("foreign", totalForeign);
+            summary.put("trust", totalTrust);
+            summary.put("dealer", totalDealer);
+            summary.put("total", totalAll);
+            summary.put("days", dailyData.size());
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("summary", summary);
+            response.put("daily", dailyData);
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting institutional investors range", e);
+            return ResponseEntity.badRequest().build();
         }
     }
 
