@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusBot 股市分析入口</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap"
+          rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .glass-morphism {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-indigo-50 min-h-screen">
+<div class="max-w-6xl mx-auto px-4 py-16">
+    <!-- Header -->
+    <header class="text-center mb-16">
+        <div class="inline-block p-3 rounded-2xl bg-indigo-600 text-white shadow-xl mb-6">
+            <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+            </svg>
+        </div>
+        <h1 class="text-4xl md:text-5xl font-black text-slate-900 mb-4 tracking-tight">NexusBot 股市分析系統</h1>
+        <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+            整合三大法人籌碼分析、AI 投資建議與自定義股票群組監控，助您掌握股市脈動。
+        </p>
+    </header>
+
+    <!-- Navigation Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 max-w-4xl mx-auto">
+
+        <!-- Comparison Tool -->
+        <a href="stock-comparison.html" class="group">
+            <div class="card-hover bg-white rounded-[32px] overflow-hidden shadow-lg border border-slate-100 h-full flex flex-col">
+                <div class="h-48 bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center relative overflow-hidden">
+                    <svg class="w-24 h-24 text-white/20 absolute -right-4 -bottom-4 rotate-12" fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
+                    </svg>
+                    <div class="bg-white/20 backdrop-blur-md p-5 rounded-full">
+                        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="p-8 flex-1 flex flex-col">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-3 group-hover:text-indigo-600 transition-colors">
+                        台股法人籌碼監控</h2>
+                    <p class="text-slate-500 leading-relaxed mb-6 flex-1">
+                        支援自定義股票群組，監控每日三大法人（外資、投信、自營商）盤後買賣超數據，提供自動化快取與多群組管理功能。
+                    </p>
+                    <div class="flex items-center text-indigo-600 font-bold">
+                        立即進入
+                        <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none"
+                             stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+        <!-- Range Stats Tool -->
+        <a href="stock-range-stats.html" class="group">
+            <div class="card-hover bg-white rounded-[32px] overflow-hidden shadow-lg border border-slate-100 h-full flex flex-col">
+                <div class="h-48 bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center relative overflow-hidden">
+                    <svg class="w-24 h-24 text-white/20 absolute -right-4 -bottom-4 rotate-12" fill="currentColor"
+                         viewBox="0 0 20 20">
+                        <path fill-rule="evenodd"
+                              d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z"
+                              clip-rule="evenodd"/>
+                    </svg>
+                    <div class="bg-white/20 backdrop-blur-md p-5 rounded-full">
+                        <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg>
+                    </div>
+                </div>
+                <div class="p-8 flex-1 flex flex-col">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-3 group-hover:text-emerald-600 transition-colors">
+                        籌碼區間累計統計</h2>
+                    <p class="text-slate-500 leading-relaxed mb-6 flex-1">
+                        自定義日期區間，深度追蹤單一個股在特定期間內的三大法人買賣超累計張數與每日明細數據。
+                    </p>
+                    <div class="flex items-center text-emerald-600 font-bold">
+                        查看統計
+                        <svg class="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none"
+                             stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </a>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="mt-20 pt-8 border-t border-slate-200 text-center text-slate-400 text-sm">
+        <p>&copy; 2026 NexusBot Intelligent Investment System. Powered by Groq AI.</p>
+    </footer>
+</div>
+</body>
+</html>

@@ -23,9 +23,11 @@ public class CorsConfig {
         // 允許的來源
         // localhost:63342 - IntelliJ 內建伺服器
         // localhost:5001 - Spring Boot 本身
+        // ngrok - 用於外部存取測試
         config.setAllowedOriginPatterns(Arrays.asList(
                 "http://localhost:*",
-                "http://127.0.0.1:*"
+                "http://127.0.0.1:*",
+                "https://*.ngrok-free.app"
         ));
 
         // 允許的 HTTP 方法

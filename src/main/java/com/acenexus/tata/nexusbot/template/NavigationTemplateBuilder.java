@@ -227,8 +227,9 @@ public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
         if (!liffConfig.isConfigured()) {
             return createCard(
                     "台股技術分析",
-                    "LIFF 功能尚未配置\n\n請聯繫管理員設定 LINE LIFF ID。\n\n配置步驟請參考：\n1. 前往 LINE Developers Console\n2. 建立 LIFF 應用\n3. 設定環境變數 LINE_LIFF_STOCK_ANALYSIS_ID",
+                    "liff 功能尚未配置的話 請用訪預設登入\n\n您也可以聯繫管理員設定 LINE LIFF ID 以獲得完整體驗。",
                     Arrays.asList(
+                            createPrimaryUriButton("訪預設登入", baseUrl + "/stock-index.html"),
                             createNavigateButton("返回主選單", MAIN_MENU)
                     )
             );
