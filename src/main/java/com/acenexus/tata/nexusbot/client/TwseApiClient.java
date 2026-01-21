@@ -247,15 +247,15 @@ public class TwseApiClient {
                     String symbol = row.get(0).asText().trim();
                     String name = row.get(1).asText().trim();
 
-                    // 解析欄位（單位：股 → 張，除以 1000）
-                    Long foreignBuy = parseLong(row.get(2).asText()) / 1000;
-                    Long foreignSell = parseLong(row.get(3).asText()) / 1000;
-                    Long foreignNet = parseLong(row.get(4).asText()) / 1000;
-                    Long trustBuy = parseLong(row.get(8).asText()) / 1000;
-                    Long trustSell = parseLong(row.get(9).asText()) / 1000;
-                    Long trustNet = parseLong(row.get(10).asText()) / 1000;
-                    Long dealerNet = parseLong(row.get(11).asText()) / 1000;
-                    Long totalNet = parseLong(row.get(18).asText()) / 1000;
+                    // 解析欄位（單位：股）
+                    Long foreignBuy = parseLong(row.get(2).asText());
+                    Long foreignSell = parseLong(row.get(3).asText());
+                    Long foreignNet = parseLong(row.get(4).asText());
+                    Long trustBuy = parseLong(row.get(8).asText());
+                    Long trustSell = parseLong(row.get(9).asText());
+                    Long trustNet = parseLong(row.get(10).asText());
+                    Long dealerNet = parseLong(row.get(11).asText());
+                    Long totalNet = parseLong(row.get(18).asText());
 
                     InstitutionalInvestorsData data = InstitutionalInvestorsData.builder()
                             .symbol(symbol)
@@ -405,10 +405,10 @@ public class TwseApiClient {
                     // 2-4: 外資(不含自營), 5-7: 外資自營, 8-10: 外資合計
                     // 11-13: 投信, 14-16: 自營商避險, 17-19: 自營商, 20-22: 自營商合計
                     // 23: 三大法人合計
-                    Long foreignNet = parseLong(row.get(4).asText()) / 1000;  // 外資買賣超 -> 張
-                    Long trustNet = parseLong(row.get(13).asText()) / 1000;   // 投信買賣超 -> 張
-                    Long dealerNet = parseLong(row.get(22).asText()) / 1000;  // 自營商合計買賣超 -> 張
-                    Long totalNet = parseLong(row.get(23).asText()) / 1000;   // 三大法人合計 -> 張
+                    Long foreignNet = parseLong(row.get(4).asText());  // 外資買賣超 -> 股
+                    Long trustNet = parseLong(row.get(13).asText());   // 投信買賣超 -> 股
+                    Long dealerNet = parseLong(row.get(22).asText());  // 自營商合計買賣超 -> 股
+                    Long totalNet = parseLong(row.get(23).asText());   // 三大法人合計 -> 股
 
                     InstitutionalInvestorsData data = InstitutionalInvestorsData.builder()
                             .symbol(symbol)
@@ -475,7 +475,7 @@ public class TwseApiClient {
 
             JsonNode root = objectMapper.readTree(response.getBody());
             JsonNode tables = root.path("tables");
-            
+
             // 檢查是否有資料 (假日或非交易日)
             if (!tables.isArray() || tables.isEmpty()) {
                 log.info("No TPEx trading data for date={}, tables empty", rocDate);
@@ -483,15 +483,15 @@ public class TwseApiClient {
             }
 
             JsonNode dataArray = tables.get(0).path("data");
-            
+
             // 雙重檢查：確認回傳日期是否與請求日期一致 (TPEx 有時會回傳最新日期)
-            String respDateStr = tables.get(0).path("date").asText(); 
+            String respDateStr = tables.get(0).path("date").asText();
             if (respDateStr != null && respDateStr.contains("/")) {
-                 LocalDate respDate = parseRocDate(respDateStr);
-                 if (!respDate.equals(date)) {
-                     log.warn("TPEx API returned date {} but requested {}, skipping", respDate, date);
-                     return resultMap;
-                 }
+                LocalDate respDate = parseRocDate(respDateStr);
+                if (!respDate.equals(date)) {
+                    log.warn("TPEx API returned date {} but requested {}, skipping", respDate, date);
+                    return resultMap;
+                }
             }
 
             for (JsonNode row : dataArray) {
@@ -503,10 +503,10 @@ public class TwseApiClient {
                     // 2-4: 外資(不含自營), 5-7: 外資自營, 8-10: 外資合計
                     // 11-13: 投信, 14-16: 自營商避險, 17-19: 自營商, 20-22: 自營商合計
                     // 23: 三大法人合計
-                    Long foreignNet = parseLong(row.get(4).asText()) / 1000;
-                    Long trustNet = parseLong(row.get(13).asText()) / 1000;
-                    Long dealerNet = parseLong(row.get(22).asText()) / 1000;
-                    Long totalNet = parseLong(row.get(23).asText()) / 1000;
+                    Long foreignNet = parseLong(row.get(4).asText());
+                    Long trustNet = parseLong(row.get(13).asText());
+                    Long dealerNet = parseLong(row.get(22).asText());
+                    Long totalNet = parseLong(row.get(23).asText());
 
                     InstitutionalInvestorsData data = InstitutionalInvestorsData.builder()
                             .symbol(symbol)

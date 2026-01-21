@@ -122,11 +122,8 @@ public class FinMindApiClient {
                                 .setScale(2, RoundingMode.HALF_UP);
                     }
 
-                    // 成交量（股數轉張數：除以1000）
+                    // 成交量（單位：股）
                     Long volume = parseLong(item.getTradingVolume());
-                    if (volume != null) {
-                        volume = volume / 1000;  // 轉換為張數
-                    }
 
                     // 成交金額（元轉千元）
                     BigDecimal turnover = parseBigDecimal(item.getTradingMoney());
@@ -300,20 +297,20 @@ public class FinMindApiClient {
 
                         switch (name) {
                             case "Foreign_Investor":
-                                foreignBuy = buy != null ? buy / 1000 : null;
-                                foreignSell = sell != null ? sell / 1000 : null;
+                                foreignBuy = buy;
+                                foreignSell = sell;
                                 break;
                             case "Investment_Trust":
-                                trustBuy = buy != null ? buy / 1000 : null;
-                                trustSell = sell != null ? sell / 1000 : null;
+                                trustBuy = buy;
+                                trustSell = sell;
                                 break;
                             case "Dealer_self":
-                                dealerSelfBuy = buy != null ? buy / 1000 : null;
-                                dealerSelfSell = sell != null ? sell / 1000 : null;
+                                dealerSelfBuy = buy;
+                                dealerSelfSell = sell;
                                 break;
                             case "Dealer_Hedging":
-                                dealerHedgingBuy = buy != null ? buy / 1000 : null;
-                                dealerHedgingSell = sell != null ? sell / 1000 : null;
+                                dealerHedgingBuy = buy;
+                                dealerHedgingSell = sell;
                                 break;
                         }
                     }

@@ -643,10 +643,14 @@
             return num > 0 ? 'bg-up-light' : 'bg-down-light';
         };
 
-        // === 格式化數值 (加上正負號與千分位) ===
+        // === 格式化數值 (加上正負號與千分位，單位從股轉為張) ===
         const formatNumber = (val) => {
-            const num = parseFloat(val);
+            let num = parseFloat(val);
             if (isNaN(num)) return '--';
+            
+            // 單位轉換：股 -> 張
+            num = Math.round(num / 1000);
+            
             const formatted = Math.abs(num).toLocaleString();
             if (num > 0) return `+${formatted}`;
             if (num < 0) return `-${formatted}`;

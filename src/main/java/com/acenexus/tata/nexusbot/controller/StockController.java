@@ -40,20 +40,20 @@ public class StockController {
         // 上市股票（TWSE）
         Map<String, String> twseMap = twseApiClient.getTaiwanStockNameToSymbolMap();
         twseMap.forEach((name, symbol) ->
-            result.add(StockSymbolDto.builder()
-                .symbol(symbol)
-                .name(name)
-                .market("上市")
-                .build()));
+                result.add(StockSymbolDto.builder()
+                        .symbol(symbol)
+                        .name(name)
+                        .market("上市")
+                        .build()));
 
         // 上櫃股票（TPEx）
         Map<String, String> tpexMap = twseApiClient.getTpexStockNameToSymbolMap();
         tpexMap.forEach((name, symbol) ->
-            result.add(StockSymbolDto.builder()
-                .symbol(symbol)
-                .name(name)
-                .market("上櫃")
-                .build()));
+                result.add(StockSymbolDto.builder()
+                        .symbol(symbol)
+                        .name(name)
+                        .market("上櫃")
+                        .build()));
 
         // 如果都沒資料，fallback 到 stockSymbolService
         if (result.isEmpty()) {
@@ -74,12 +74,16 @@ public class StockController {
             @PathVariable String symbol, @RequestParam(defaultValue = "10") int days) {
         String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
         try {
-            List<InstitutionalInvestorsData> data = twseApiClient.getRecentDaysInstitutionalInvestors(resolvedSymbol, days);
+            // 使用 StockChipService (DB First)
+            List<InstitutionalInvestorsData> data = stockChipService.getRecentDaysInstitutionalInvestors(resolvedSymbol, days);
+
+            // Fallback to FinMind only if still empty (e.g., very old historical data)
             if (data.isEmpty()) {
                 data = finMindApiClient.getRecentDaysInstitutionalInvestors(resolvedSymbol, days);
             }
             return ResponseEntity.ok(data);
         } catch (Exception ex) {
+            log.error("Error getting institutional investors for {}", symbol, ex);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -93,12 +97,20 @@ public class StockController {
             String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
             LocalDate start = LocalDate.parse(startDate);
             LocalDate end = LocalDate.parse(endDate);
-            
+
             // 使用 StockChipService 從資料庫查詢，若缺資料會自動補齊
             List<InstitutionalInvestorsData> dailyData = stockChipService.getInstitutionalInvestorsRange(resolvedSymbol, start, end);
-            
+
             if (dailyData.isEmpty()) {
-                return ResponseEntity.ok(Map.of("total", new java.util.HashMap<>(), "daily", List.of()));
+                Map<String, Object> emptySummary = new java.util.HashMap<>();
+                emptySummary.put("symbol", symbol);
+                emptySummary.put("name", symbol);
+                emptySummary.put("foreign", 0);
+                emptySummary.put("trust", 0);
+                emptySummary.put("dealer", 0);
+                emptySummary.put("total", 0);
+                emptySummary.put("days", 0);
+                return ResponseEntity.ok(Map.of("summary", emptySummary, "daily", List.of()));
             }
 
             // 累計數據
@@ -127,10 +139,10 @@ public class StockController {
             Map<String, Object> response = new java.util.HashMap<>();
             response.put("summary", summary);
             response.put("daily", dailyData);
-            
+
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            log.error("Error getting institutional investors range", e);
+            log.error("Error getting institutional investors range for {}", symbol, e);
             return ResponseEntity.badRequest().build();
         }
     }
@@ -150,13 +162,8 @@ public class StockController {
         List<Map<String, Object>> resultList = new java.util.ArrayList<>();
 
         if (days == 1) {
-            // 單日查詢：使用批次方法優化（上市 + 上櫃）
-            Map<String, InstitutionalInvestorsData> twseData = twseApiClient.getBatchInstitutionalInvestors(symbolList);
-            Map<String, InstitutionalInvestorsData> tpexData = twseApiClient.getBatchTpexInstitutionalInvestors(symbolList);
-            // 合併
-            Map<String, InstitutionalInvestorsData> batchData = new java.util.HashMap<>();
-            batchData.putAll(twseData);
-            batchData.putAll(tpexData);
+            // 使用 StockChipService 批次取得最新數據
+            Map<String, InstitutionalInvestorsData> batchData = stockChipService.getLatestInstitutionalInvestors(symbolList);
 
             for (String symbol : symbolList) {
                 InstitutionalInvestorsData data = batchData.get(symbol);
@@ -171,11 +178,10 @@ public class StockController {
                 }
             }
         } else {
-            // 多日查詢：逐一查詢並累加
+            // 多日查詢：使用 StockChipService 獲取各檔股票多日數據
             for (String symbol : symbolList) {
                 try {
-                    List<InstitutionalInvestorsData> data = twseApiClient.getRecentDaysInstitutionalInvestors(symbol, days);
-                    if (data.isEmpty()) data = finMindApiClient.getRecentDaysInstitutionalInvestors(symbol, days);
+                    List<InstitutionalInvestorsData> data = stockChipService.getRecentDaysInstitutionalInvestors(symbol, days);
                     if (!data.isEmpty()) {
                         long total = data.stream().mapToLong(d -> d.getTotalBuySell() != null ? d.getTotalBuySell() : 0).sum();
                         Map<String, Object> map = new java.util.HashMap<>();
@@ -208,20 +214,12 @@ public class StockController {
             return ResponseEntity.ok(emptyResult);
         }
 
-        // 批次查詢優化：即時報價 + 法人進出
-        // 上市報價
+        // 1. 即時報價 (必須呼叫 API)
         Map<String, com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData> batchQuotes =
                 twseApiClient.getBatchStockQuotes(symbolList);
-        // 上市法人進出
-        Map<String, InstitutionalInvestorsData> twseChipsData =
-                twseApiClient.getBatchInstitutionalInvestors(symbolList);
-        // 上櫃法人進出
-        Map<String, InstitutionalInvestorsData> tpexChipsData =
-                twseApiClient.getBatchTpexInstitutionalInvestors(symbolList);
-        // 合併法人進出數據（上市 + 上櫃）
-        Map<String, InstitutionalInvestorsData> batchChipsData = new java.util.HashMap<>();
-        batchChipsData.putAll(twseChipsData);
-        batchChipsData.putAll(tpexChipsData);
+
+        // 2. 籌碼數據 (DB First)
+        Map<String, InstitutionalInvestorsData> batchChipsData = stockChipService.getLatestInstitutionalInvestors(symbolList);
 
         List<Map<String, Object>> resultList = new java.util.ArrayList<>();
         java.time.LocalDate dataDate = null;
@@ -257,11 +255,10 @@ public class StockController {
                     foreign = chipsData.getForeignInvestorBuySell() != null ? chipsData.getForeignInvestorBuySell() : 0;
                     trust = chipsData.getInvestmentTrustBuySell() != null ? chipsData.getInvestmentTrustBuySell() : 0;
                     dealer = chipsData.getDealerBuySell() != null ? chipsData.getDealerBuySell() : 0;
-                    // 如果報價沒有名稱，從籌碼數據取得（上櫃股票）
+
                     if (name.equals(cleanSymbol) && chipsData.getName() != null && !chipsData.getName().isEmpty()) {
                         name = chipsData.getName();
                     }
-                    // 取得資料日期（取第一筆有日期的資料）
                     if (dataDate == null && chipsData.getDate() != null) {
                         dataDate = chipsData.getDate();
                     }

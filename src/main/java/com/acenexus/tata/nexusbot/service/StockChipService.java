@@ -29,6 +29,81 @@ public class StockChipService {
     private final TwseApiClient twseApiClient;
 
     /**
+     * 取得指定股票最近 N 天的法人進出數據
+     */
+    public List<InstitutionalInvestorsData> getRecentDaysInstitutionalInvestors(String symbol, int days) {
+        LocalDate endDate = LocalDate.now();
+        // 往前抓取足夠的天數以確保能涵蓋 N 個交易日 (考慮週末與假日，抓 N*2 天)
+        LocalDate startDate = endDate.minusDays(days * 2L);
+
+        List<InstitutionalInvestorsData> rangeData = getInstitutionalInvestorsRange(symbol, startDate, endDate);
+
+        // 只取最近的 N 筆
+        return rangeData.stream()
+                .sorted((a, b) -> b.getDate().compareTo(a.getDate()))
+                .limit(days)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 批次取得多檔股票最新的法人進出數據 (用於籌碼看板)
+     */
+    public Map<String, InstitutionalInvestorsData> getLatestInstitutionalInvestors(List<String> symbols) {
+        // 1. 找出最近一個有資料的交易日
+        LocalDate latestDate = findLatestTradingDate();
+        if (latestDate == null) {
+            return Map.of();
+        }
+
+        // 2. 確保該日資料已同步 (雖然 findLatestTradingDate 已經暗示有資料，但為了保險再 check 一次)
+        ensureDataAvailability(List.of(latestDate));
+
+        // 3. 從 DB 批次讀取該日這些股票的資料
+        return statsRepository.findByTradeDate(latestDate).stream()
+                .filter(s -> symbols.contains(s.getStockSymbol()))
+                .collect(Collectors.toMap(
+                        InstitutionalInvestorStats::getStockSymbol,
+                        this::toDto,
+                        (existing, replacement) -> existing
+                ));
+    }
+
+    /**
+     * 找出資料庫中最近一個有資料的交易日
+     */
+    public LocalDate findLatestTradingDate() {
+        LocalDate current = LocalDate.now();
+        // 往前找最多 10 天
+        for (int i = 0; i < 10; i++) {
+            LocalDate targetDate = current.minusDays(i);
+            if (targetDate.getDayOfWeek().getValue() >= 6) continue;
+
+            if (statsRepository.existsByTradeDate(targetDate)) {
+                return targetDate;
+            }
+
+            // 嘗試從 API 抓取看看 (可能剛盤後結算，DB 還沒同步)
+            // 只在工作日且下午 3 點後嘗試抓取當天
+            if (i == 0) {
+                java.time.LocalTime nowTime = java.time.LocalTime.now();
+                if (nowTime.isAfter(java.time.LocalTime.of(15, 30))) {
+                    fetchAndSaveDailyStats(targetDate);
+                    if (statsRepository.existsByTradeDate(targetDate)) {
+                        return targetDate;
+                    }
+                }
+            } else {
+                // 如果不是今天，只要發現 DB 沒資料就補抓一次看看
+                fetchAndSaveDailyStats(targetDate);
+                if (statsRepository.existsByTradeDate(targetDate)) {
+                    return targetDate;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * 取得指定股票在日期區間內的法人進出數據
      * 策略：資料庫優先 (DB First)，缺失日期自動補齊 (Auto-fill Missing Data)
      */
@@ -57,13 +132,13 @@ public class StockChipService {
         // 找出 DB 中已存在的日期 (使用全市場檢查，只要當天有任何一筆資料即視為已同步)
         // 注意：這裡假設 statsRepository 能高效檢查日期是否存在
         // 為了效能，我們只對「區間內」的日期做檢查，而不是逐日 query
-        
+
         // 實作策略：
         // 這裡無法簡單用 "findByTradeDateIn" 因為資料量太大
         // 我們改用 "找出缺少的日期" 的反向思維 -> 逐日檢查 (雖然 N+1 但 N 不大且有快取/索引)
         // 或者優化：先查該股票在區間內有的日期，缺的就是可能沒同步的
         // 但考慮到可能是 "該股票當天沒交易" vs "DB沒資料"，我們還是保守檢查全市場狀態
-        
+
         List<LocalDate> missingDates = new ArrayList<>();
         for (LocalDate date : dates) {
             if (!statsRepository.existsByTradeDate(date)) {
@@ -76,10 +151,10 @@ public class StockChipService {
         }
 
         log.info("Found {} missing dates in DB, starting auto-fill process...", missingDates.size());
-        
+
         for (LocalDate date : missingDates) {
             fetchAndSaveDailyStats(date);
-            
+
             // 避免觸發 API Rate Limit
             try {
                 Thread.sleep(200);
@@ -132,7 +207,7 @@ public class StockChipService {
                 }
                 log.debug("Fetched {} TPEx records for date {}", tpexDataMap.size(), date);
             }
-            
+
             if (entities.isEmpty()) {
                 log.info("No data found from API (TWSE & TPEx) for date {} (Market might be closed)", date);
                 // 可以考慮在 DB 記錄 "休市" 狀態
@@ -142,7 +217,7 @@ public class StockChipService {
             // 3. 批次儲存 (上市 + 上櫃)
             statsRepository.saveAll(entities);
             log.info("Saved total {} records (TWSE + TPEx) for date {}", entities.size(), date);
-            
+
         } catch (Exception e) {
             log.error("Error fetching/saving daily stats for date {}", date, e);
         }
