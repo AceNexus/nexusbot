@@ -229,7 +229,7 @@ public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
                     "台股技術分析",
                     "liff 功能尚未配置的話 請用訪預設登入\n\n您也可以聯繫管理員設定 LINE LIFF ID 以獲得完整體驗。",
                     Arrays.asList(
-                            createPrimaryUriButton("訪預設登入", baseUrl + "/stock-index.html"),
+                            createPrimaryUriButton("訪預設登入", baseUrl + "/index.html"),
                             createNavigateButton("返回主選單", MAIN_MENU)
                     )
             );
