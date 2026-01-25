@@ -230,6 +230,7 @@ public class StockController {
                 BigDecimal price = null;
 
                 // 從批次報價結果取得
+                BigDecimal previousClose = null;
                 com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData quote = batchQuotes.get(cleanSymbol);
                 if (quote != null) {
                     if (quote.getName() != null && !quote.getName().isEmpty()) {
@@ -239,6 +240,11 @@ public class StockController {
                         String z = quote.getCurrentPrice();
                         if (z != null && !z.equals("-")) {
                             price = new BigDecimal(z.replace(",", ""));
+                        }
+                        // 取得昨收價
+                        String y = quote.getPreviousClose();
+                        if (y != null && !y.equals("-")) {
+                            previousClose = new BigDecimal(y.replace(",", ""));
                         }
                     } catch (Exception e) {
                         // ignore parse error
@@ -264,10 +270,21 @@ public class StockController {
                     }
                 }
 
+                // 計算漲跌與漲跌幅
+                BigDecimal change = null;
+                BigDecimal changePercent = null;
+                if (price != null && previousClose != null && previousClose.compareTo(BigDecimal.ZERO) != 0) {
+                    change = price.subtract(previousClose);
+                    changePercent = change.multiply(new BigDecimal("100"))
+                            .divide(previousClose, 2, java.math.RoundingMode.HALF_UP);
+                }
+
                 Map<String, Object> map = new java.util.HashMap<>();
                 map.put("code", cleanSymbol);
                 map.put("name", name);
                 map.put("price", price);
+                map.put("change", change);
+                map.put("changePercent", changePercent);
                 map.put("foreignBuy", foreign);
                 map.put("investmentTrustBuy", trust);
                 map.put("dealerBuy", dealer);

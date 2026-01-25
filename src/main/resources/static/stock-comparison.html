@@ -107,6 +107,33 @@
             .mobile-text-sm { font-size: 0.875rem; }
             .mobile-px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
         }
+
+        /* === 拖曳排序樣式 === */
+        .draggable-item {
+            cursor: grab;
+            user-select: none;
+        }
+        .draggable-item:active {
+            cursor: grabbing;
+        }
+        .draggable-item.dragging {
+            opacity: 0.5;
+            background-color: #e0e7ff;
+        }
+        .draggable-item.drag-over {
+            border-top: 2px solid #3b82f6;
+        }
+        .drag-handle {
+            cursor: grab;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+        }
+        .drag-handle:hover {
+            opacity: 1;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
     </style>
 </head>
 
@@ -231,15 +258,26 @@
      * 生成或取得使用者 ID
      * - LINE 登入用戶：Uxxxxxxxx（由 LINE 提供）
      * - 網頁匿名用戶：anon_xxxxxxxx（本地生成）
+     *
+     * [TODO] 目前使用固定訪客 ID 進行測試，正式環境請恢復為動態生成
      */
     const getOrCreateUserId = () => {
-        const STORAGE_KEY = 'nexusbot_user_id';
-        let userId = localStorage.getItem(STORAGE_KEY);
-        if (!userId) {
-            userId = 'anon_' + crypto.randomUUID();
-            localStorage.setItem(STORAGE_KEY, userId);
-        }
-        return userId;
+        // ========================================
+        // [固定訪客 ID - 測試用]
+        // 正式環境請將下方 return 註解掉，並取消下面動態生成的註解
+        // ========================================
+        return 'guest_test_user_001';
+
+        // ========================================
+        // [動態生成 ID - 正式環境]
+        // ========================================
+        // const STORAGE_KEY = 'nexusbot_user_id';
+        // let userId = localStorage.getItem(STORAGE_KEY);
+        // if (!userId) {
+        //     userId = 'anon_' + crypto.randomUUID();
+        //     localStorage.setItem(STORAGE_KEY, userId);
+        // }
+        // return userId;
     };
 
     /* ========================================
@@ -381,6 +419,10 @@
 
         // === 搜尋輸入框參考 ===
         const searchInputRef = useRef(null);
+
+        // === 拖曳排序狀態 ===
+        const [draggedIndex, setDraggedIndex] = useState(null);
+        const [dragOverIndex, setDragOverIndex] = useState(null);
 
         // === 計算屬性 ===
         const selectedGroup = useMemo(() => {
@@ -622,6 +664,59 @@
             }
         };
 
+        // === 拖曳排序處理 ===
+        const handleDragStart = (e, index) => {
+            setDraggedIndex(index);
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', index);
+        };
+
+        const handleDragOver = (e, index) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (dragOverIndex !== index) {
+                setDragOverIndex(index);
+            }
+        };
+
+        const handleDragLeave = (e) => {
+            e.preventDefault();
+            setDragOverIndex(null);
+        };
+
+        const handleDrop = async (e, dropIndex) => {
+            e.preventDefault();
+            setDragOverIndex(null);
+
+            if (draggedIndex === null || draggedIndex === dropIndex || !selectedGroup) {
+                setDraggedIndex(null);
+                return;
+            }
+
+            // 重新排序股票陣列
+            const stocks = [...selectedGroup.stocks];
+            const [draggedItem] = stocks.splice(draggedIndex, 1);
+            stocks.splice(dropIndex, 0, draggedItem);
+
+            // 更新本地狀態
+            setGroups(groups.map(g => {
+                if (g.id === selectedGroupId) {
+                    return { ...g, stocks };
+                }
+                return g;
+            }));
+
+            setDraggedIndex(null);
+
+            // 可選：呼叫後端 API 保存順序（如果後端支援）
+            // 目前先只做前端排序，不呼叫 API
+        };
+
+        const handleDragEnd = () => {
+            setDraggedIndex(null);
+            setDragOverIndex(null);
+        };
+
         // === 排序處理 ===
         const handleSort = (key) => {
             setSortConfig(prev => ({
@@ -647,14 +742,30 @@
         const formatNumber = (val) => {
             let num = parseFloat(val);
             if (isNaN(num)) return '--';
-            
+
             // 單位轉換：股 -> 張
             num = Math.round(num / 1000);
-            
+
             const formatted = Math.abs(num).toLocaleString();
             if (num > 0) return `+${formatted}`;
             if (num < 0) return `-${formatted}`;
             return formatted;
+        };
+
+        // === 格式化價格漲跌 ===
+        const formatPriceChange = (val) => {
+            const num = parseFloat(val);
+            if (isNaN(num) || num === 0) return '--';
+            const formatted = Math.abs(num).toFixed(2);
+            return num > 0 ? `+${formatted}` : `-${formatted}`;
+        };
+
+        // === 格式化漲跌幅百分比 ===
+        const formatChangePercent = (val) => {
+            const num = parseFloat(val);
+            if (isNaN(num) || num === 0) return '--';
+            const formatted = Math.abs(num).toFixed(2);
+            return num > 0 ? `+${formatted}%` : `-${formatted}%`;
         };
 
         // === 搜尋過濾 ===
@@ -671,13 +782,24 @@
         const sortedMonitorData = useMemo(() => {
             let data = monitorData.map(stock => ({
                 ...stock,
-                totalBuy: (stock.foreignBuy || 0) + (stock.investmentTrustBuy || 0) + (stock.dealerBuy || 0)
+                totalBuy: (stock.foreignBuy || 0) + (stock.investmentTrustBuy || 0) + (stock.dealerBuy || 0),
+                // 確保 change 和 changePercent 有預設值
+                change: stock.change || 0,
+                changePercent: stock.changePercent || 0
             }));
 
             if (sortConfig.key) {
                 data.sort((a, b) => {
-                    const aVal = a[sortConfig.key] || 0;
-                    const bVal = b[sortConfig.key] || 0;
+                    let aVal = a[sortConfig.key];
+                    let bVal = b[sortConfig.key];
+
+                    // 處理數值型欄位
+                    if (typeof aVal === 'string') aVal = parseFloat(aVal) || 0;
+                    if (typeof bVal === 'string') bVal = parseFloat(bVal) || 0;
+
+                    aVal = aVal || 0;
+                    bVal = bVal || 0;
+
                     return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
                 });
             }
@@ -923,6 +1045,9 @@
                                         </span>
                                     )}
                                 </h2>
+                                {selectedGroup && selectedGroup.stocks.length > 1 && (
+                                    <span className="text-[10px] text-gray-400">拖曳可排序</span>
+                                )}
                             </div>
                             <div className="flex-1 overflow-y-auto custom-scrollbar">
                                 {!selectedGroup ? (
@@ -931,9 +1056,26 @@
                                     <div className="flex justify-center items-center h-full text-gray-400 text-sm">群組內尚無股票</div>
                                 ) : (
                                     <div className="divide-y divide-gray-50">
-                                        {selectedGroup.stocks.map(stock => (
-                                            <div key={stock.stockSymbol} className="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 group">
+                                        {selectedGroup.stocks.map((stock, index) => (
+                                            <div
+                                                key={stock.stockSymbol}
+                                                draggable
+                                                onDragStart={(e) => handleDragStart(e, index)}
+                                                onDragOver={(e) => handleDragOver(e, index)}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={(e) => handleDrop(e, index)}
+                                                onDragEnd={handleDragEnd}
+                                                className={`flex items-center justify-between px-4 py-2.5 hover:bg-gray-50 group draggable-item ${
+                                                    draggedIndex === index ? 'dragging' : ''
+                                                } ${dragOverIndex === index ? 'drag-over' : ''}`}
+                                            >
                                                 <div className="flex items-center space-x-2">
+                                                    {/* 拖曳把手 */}
+                                                    <span className="drag-handle text-gray-300 mr-1">
+                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path d="M7 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM7 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 2a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 8a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM13 14a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/>
+                                                        </svg>
+                                                    </span>
                                                     <span className="font-mono text-xs text-gray-500">{stock.stockSymbol}</span>
                                                     <span className="text-sm text-gray-700">{stock.stockName}</span>
                                                     {stock.market && (
@@ -1007,33 +1149,39 @@
                                 <table className="w-full text-sm table-striped">
                                     <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 z-10">
                                         <tr>
-                                            <th className="px-4 py-3.5 text-left">股票</th>
+                                            <th className="px-3 py-3.5 text-left">股票</th>
                                             <th
-                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                className="px-2 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                 onClick={() => handleSort('price')}
                                             >
                                                 現價<SortIndicator columnKey="price" />
                                             </th>
                                             <th
-                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                className="px-2 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
+                                                onClick={() => handleSort('changePercent')}
+                                            >
+                                                漲跌幅<SortIndicator columnKey="changePercent" />
+                                            </th>
+                                            <th
+                                                className="px-2 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                 onClick={() => handleSort('foreignBuy')}
                                             >
                                                 外資<SortIndicator columnKey="foreignBuy" />
                                             </th>
                                             <th
-                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none hidden sm:table-cell"
+                                                className="px-2 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                 onClick={() => handleSort('investmentTrustBuy')}
                                             >
                                                 投信<SortIndicator columnKey="investmentTrustBuy" />
                                             </th>
                                             <th
-                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none hidden sm:table-cell"
+                                                className="px-2 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
                                                 onClick={() => handleSort('dealerBuy')}
                                             >
                                                 自營<SortIndicator columnKey="dealerBuy" />
                                             </th>
                                             <th
-                                                className="px-4 py-3.5 text-right cursor-pointer hover:bg-blue-50 transition-colors select-none bg-blue-50/50"
+                                                className="px-3 py-3.5 text-right cursor-pointer hover:bg-blue-50 transition-colors select-none bg-blue-50/50"
                                                 onClick={() => handleSort('totalBuy')}
                                             >
                                                 <span className="text-blue-700">合計</span>
@@ -1048,9 +1196,9 @@
                                                 className="hover:bg-blue-50/50 transition-colors animate-fade-in group"
                                                 style={{ animationDelay: `${index * 30}ms` }}
                                             >
-                                                <td className="px-4 py-3.5 text-left">
+                                                <td className="px-3 py-3.5 text-left">
                                                     <div className="flex items-center space-x-2">
-                                                        <div className="font-semibold text-gray-900">{stock.name}</div>
+                                                        <div className="font-semibold text-gray-900 text-sm">{stock.name}</div>
                                                         {stock.market && (
                                                             <span className={`text-[10px] px-1 py-0 rounded ${
                                                                 stock.market === '上市'
@@ -1065,19 +1213,28 @@
                                                         {stock.code}
                                                     </div>
                                                 </td>
-                                                <td className="px-3 py-3.5 text-right font-mono text-base font-bold text-gray-800">
-                                                    {stock.price ? Number(stock.price).toLocaleString() : '--'}
+                                                <td className="px-2 py-3.5 text-right">
+                                                    <div className="font-mono text-sm font-bold text-gray-800">
+                                                        {stock.price ? Number(stock.price).toLocaleString() : '--'}
+                                                    </div>
+                                                    {/* 漲跌金額顯示在現價下方 */}
+                                                    <div className={`font-mono text-xs ${getColorClass(stock.change)}`}>
+                                                        {formatPriceChange(stock.change)}
+                                                    </div>
                                                 </td>
-                                                <td className={`px-3 py-3.5 text-right font-mono font-medium ${getColorClass(stock.foreignBuy)}`}>
+                                                <td className={`px-2 py-3.5 text-right font-mono text-sm font-medium ${getColorClass(stock.changePercent)}`}>
+                                                    {formatChangePercent(stock.changePercent)}
+                                                </td>
+                                                <td className={`px-2 py-3.5 text-right font-mono text-sm font-medium ${getColorClass(stock.foreignBuy)}`}>
                                                     {formatNumber(stock.foreignBuy)}
                                                 </td>
-                                                <td className={`px-3 py-3.5 text-right font-mono font-medium hidden sm:table-cell ${getColorClass(stock.investmentTrustBuy)}`}>
+                                                <td className={`px-2 py-3.5 text-right font-mono text-sm font-medium ${getColorClass(stock.investmentTrustBuy)}`}>
                                                     {formatNumber(stock.investmentTrustBuy)}
                                                 </td>
-                                                <td className={`px-3 py-3.5 text-right font-mono font-medium hidden sm:table-cell ${getColorClass(stock.dealerBuy)}`}>
+                                                <td className={`px-2 py-3.5 text-right font-mono text-sm font-medium ${getColorClass(stock.dealerBuy)}`}>
                                                     {formatNumber(stock.dealerBuy)}
                                                 </td>
-                                                <td className={`px-4 py-3.5 text-right font-mono font-bold ${getColorClass(stock.totalBuy)} ${getBgColorClass(stock.totalBuy)}`}>
+                                                <td className={`px-3 py-3.5 text-right font-mono text-sm font-bold ${getColorClass(stock.totalBuy)} ${getBgColorClass(stock.totalBuy)}`}>
                                                     {formatNumber(stock.totalBuy)}
                                                 </td>
                                             </tr>
