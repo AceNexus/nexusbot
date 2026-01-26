@@ -69,6 +69,38 @@ public class StockChipService {
     }
 
     /**
+     * 批次取得多檔股票指定日期的法人進出數據
+     *
+     * @param symbols 股票代號清單
+     * @param date    查詢日期
+     * @return 股票代號 -> 籌碼數據的 Map，若該日無資料則回傳空 Map
+     */
+    public Map<String, InstitutionalInvestorsData> getInstitutionalInvestorsByDate(List<String> symbols, LocalDate date) {
+        // 1. 檢查是否為週末
+        if (date.getDayOfWeek().getValue() >= 6) {
+            log.debug("Requested date {} is weekend, returning empty", date);
+            return Map.of();
+        }
+
+        // 2. 確保該日資料已同步
+        ensureDataAvailability(List.of(date));
+
+        // 3. 從 DB 批次讀取該日這些股票的資料
+        List<InstitutionalInvestorStats> stats = statsRepository.findByTradeDate(date);
+        if (stats.isEmpty()) {
+            return Map.of();
+        }
+
+        return stats.stream()
+                .filter(s -> symbols.contains(s.getStockSymbol()))
+                .collect(Collectors.toMap(
+                        InstitutionalInvestorStats::getStockSymbol,
+                        this::toDto,
+                        (existing, replacement) -> existing
+                ));
+    }
+
+    /**
      * 找出資料庫中最近一個有資料的交易日
      */
     public LocalDate findLatestTradingDate() {

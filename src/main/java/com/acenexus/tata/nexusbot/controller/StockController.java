@@ -39,21 +39,11 @@ public class StockController {
 
         // 上市股票（TWSE）
         Map<String, String> twseMap = twseApiClient.getTaiwanStockNameToSymbolMap();
-        twseMap.forEach((name, symbol) ->
-                result.add(StockSymbolDto.builder()
-                        .symbol(symbol)
-                        .name(name)
-                        .market("上市")
-                        .build()));
+        twseMap.forEach((name, symbol) -> result.add(StockSymbolDto.builder().symbol(symbol).name(name).market("上市").build()));
 
         // 上櫃股票（TPEx）
         Map<String, String> tpexMap = twseApiClient.getTpexStockNameToSymbolMap();
-        tpexMap.forEach((name, symbol) ->
-                result.add(StockSymbolDto.builder()
-                        .symbol(symbol)
-                        .name(name)
-                        .market("上櫃")
-                        .build()));
+        tpexMap.forEach((name, symbol) -> result.add(StockSymbolDto.builder().symbol(symbol).name(name).market("上櫃").build()));
 
         // 如果都沒資料，fallback 到 stockSymbolService
         if (result.isEmpty()) {
@@ -63,15 +53,13 @@ public class StockController {
         // 依代號排序
         result.sort((a, b) -> a.getSymbol().compareTo(b.getSymbol()));
 
-        log.info("Stock list loaded - 上市: {}, 上櫃: {}, total: {}",
-                twseMap.size(), tpexMap.size(), result.size());
+        log.info("Stock list loaded - 上市: {}, 上櫃: {}, total: {}", twseMap.size(), tpexMap.size(), result.size());
 
         return ResponseEntity.ok(result);
     }
 
     @GetMapping("/{symbol}/institutional-investors")
-    public ResponseEntity<List<InstitutionalInvestorsData>> getInstitutionalInvestors(
-            @PathVariable String symbol, @RequestParam(defaultValue = "10") int days) {
+    public ResponseEntity<List<InstitutionalInvestorsData>> getInstitutionalInvestors(@PathVariable String symbol, @RequestParam(defaultValue = "10") int days) {
         String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
         try {
             // 使用 StockChipService (DB First)
@@ -89,10 +77,7 @@ public class StockController {
     }
 
     @GetMapping("/{symbol}/institutional-investors/range")
-    public ResponseEntity<Map<String, Object>> getInstitutionalInvestorsRange(
-            @PathVariable String symbol,
-            @RequestParam String startDate,
-            @RequestParam String endDate) {
+    public ResponseEntity<Map<String, Object>> getInstitutionalInvestorsRange(@PathVariable String symbol, @RequestParam String startDate, @RequestParam String endDate) {
         try {
             String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
             LocalDate start = LocalDate.parse(startDate);
@@ -148,12 +133,8 @@ public class StockController {
     }
 
     @GetMapping("/batch-institutional-investors")
-    public ResponseEntity<List<Map<String, Object>>> getBatchInstitutionalInvestors(@RequestParam String symbols,
-                                                                                    @RequestParam(defaultValue = "1") int days) {
-        List<String> symbolList = java.util.Arrays.stream(symbols.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+    public ResponseEntity<List<Map<String, Object>>> getBatchInstitutionalInvestors(@RequestParam String symbols, @RequestParam(defaultValue = "1") int days) {
+        List<String> symbolList = java.util.Arrays.stream(symbols.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
 
         if (symbolList.isEmpty()) {
             return ResponseEntity.ok(List.of());
@@ -201,11 +182,8 @@ public class StockController {
     }
 
     @GetMapping("/monitor")
-    public ResponseEntity<Map<String, Object>> getStockMonitorData(@RequestParam String symbols) {
-        List<String> symbolList = java.util.Arrays.stream(symbols.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
+    public ResponseEntity<Map<String, Object>> getStockMonitorData(@RequestParam String symbols, @RequestParam(required = false) String date) {
+        List<String> symbolList = java.util.Arrays.stream(symbols.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
 
         if (symbolList.isEmpty()) {
             Map<String, Object> emptyResult = new java.util.HashMap<>();
@@ -214,12 +192,31 @@ public class StockController {
             return ResponseEntity.ok(emptyResult);
         }
 
-        // 1. 即時報價 (必須呼叫 API)
-        Map<String, com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData> batchQuotes =
-                twseApiClient.getBatchStockQuotes(symbolList);
+        // 解析查詢日期，若未指定則查最新
+        LocalDate queryDate = null;
+        if (date != null && !date.isEmpty()) {
+            try {
+                queryDate = LocalDate.parse(date);
+            } catch (Exception e) {
+                log.warn("Invalid date format: {}, falling back to latest", date);
+            }
+        }
+
+        // 1. 即時報價 (必須呼叫 API) - 僅查詢今天時才取即時報價
+        Map<String, com.acenexus.tata.nexusbot.dto.TwseApiResponse.TwseStockData> batchQuotes;
+        if (queryDate == null || queryDate.equals(LocalDate.now())) {
+            batchQuotes = twseApiClient.getBatchStockQuotes(symbolList);
+        } else {
+            batchQuotes = Map.of(); // 歷史日期不取即時報價
+        }
 
         // 2. 籌碼數據 (DB First)
-        Map<String, InstitutionalInvestorsData> batchChipsData = stockChipService.getLatestInstitutionalInvestors(symbolList);
+        Map<String, InstitutionalInvestorsData> batchChipsData;
+        if (queryDate != null) {
+            batchChipsData = stockChipService.getInstitutionalInvestorsByDate(symbolList, queryDate);
+        } else {
+            batchChipsData = stockChipService.getLatestInstitutionalInvestors(symbolList);
+        }
 
         List<Map<String, Object>> resultList = new java.util.ArrayList<>();
         java.time.LocalDate dataDate = null;
@@ -275,8 +272,7 @@ public class StockController {
                 BigDecimal changePercent = null;
                 if (price != null && previousClose != null && previousClose.compareTo(BigDecimal.ZERO) != 0) {
                     change = price.subtract(previousClose);
-                    changePercent = change.multiply(new BigDecimal("100"))
-                            .divide(previousClose, 2, java.math.RoundingMode.HALF_UP);
+                    changePercent = change.multiply(new BigDecimal("100")).divide(previousClose, 2, java.math.RoundingMode.HALF_UP);
                 }
 
                 Map<String, Object> map = new java.util.HashMap<>();
