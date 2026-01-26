@@ -2,11 +2,14 @@ package com.acenexus.tata.nexusbot.controller;
 
 import com.acenexus.tata.nexusbot.client.FinMindApiClient;
 import com.acenexus.tata.nexusbot.client.TwseApiClient;
+import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
 import com.acenexus.tata.nexusbot.dto.StockSymbolDto;
+import com.acenexus.tata.nexusbot.dto.TechnicalIndicatorData;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
 import com.acenexus.tata.nexusbot.service.StockChipService;
 import com.acenexus.tata.nexusbot.service.StockSymbolService;
+import com.acenexus.tata.nexusbot.service.TechnicalAnalysisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +35,7 @@ public class StockController {
     private final TwseApiClient twseApiClient;
     private final StockSymbolService stockSymbolService;
     private final StockChipService stockChipService;
+    private final TechnicalAnalysisService technicalAnalysisService;
 
     @GetMapping("/list")
     public ResponseEntity<List<StockSymbolDto>> getStockList() {
@@ -296,5 +300,103 @@ public class StockController {
         response.put("dataDate", dataDate);
         response.put("stocks", resultList);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 取得股票 K 線數據與技術指標
+     *
+     * @param symbol 股票代號
+     * @param days   天數（預設 120，約半年）
+     * @return K線數據與技術指標
+     */
+    @GetMapping("/{symbol}/kline")
+    public ResponseEntity<Map<String, Object>> getKlineData(@PathVariable String symbol,
+                                                            @RequestParam(defaultValue = "120") int days) {
+
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+
+            // 計算查詢日期範圍
+            LocalDate endDate = LocalDate.now();
+            // 為了計算 MA60，需要多取一些數據
+            LocalDate startDate = endDate.minusDays(days + 60);
+
+            // 取得 K 線數據
+            List<CandlestickData> candlesticks = finMindApiClient.getStockPriceHistory(
+                    resolvedSymbol,
+                    startDate.toString(),
+                    endDate.toString()
+            );
+
+            if (candlesticks.isEmpty()) {
+                return ResponseEntity.ok(Map.of(
+                        "symbol", symbol,
+                        "name", stockSymbolService.getNameBySymbol(resolvedSymbol),
+                        "candles", List.of(),
+                        "indicators", Map.of()
+                ));
+            }
+
+            // 計算技術指標
+            List<TechnicalIndicatorData> allIndicators = technicalAnalysisService.calculateAllIndicators(candlesticks);
+
+            // 只回傳最近 N 天的數據
+            int dataSize = candlesticks.size();
+            int returnSize = Math.min(days, dataSize);
+            List<CandlestickData> returnCandles = candlesticks.subList(dataSize - returnSize, dataSize);
+            List<TechnicalIndicatorData> returnIndicators = allIndicators.subList(dataSize - returnSize, dataSize);
+
+            // 取得最新的技術指標摘要
+            TechnicalIndicatorData latestIndicator = allIndicators.get(allIndicators.size() - 1);
+
+            // 組裝回傳格式
+            Map<String, Object> indicatorsSummary = new java.util.HashMap<>();
+            indicatorsSummary.put("ma5", extractMAValues(returnIndicators, "ma5"));
+            indicatorsSummary.put("ma20", extractMAValues(returnIndicators, "ma20"));
+            indicatorsSummary.put("ma60", extractMAValues(returnIndicators, "ma60"));
+            indicatorsSummary.put("latestRSI", latestIndicator.getRsi());
+            indicatorsSummary.put("ma20Bias", latestIndicator.getMa20Bias());
+            indicatorsSummary.put("aboveMA20", latestIndicator.getAboveMA20());
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("symbol", resolvedSymbol);
+            response.put("name", stockSymbolService.getNameBySymbol(resolvedSymbol));
+            response.put("candles", returnCandles);
+            response.put("indicators", indicatorsSummary);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            log.error("Error getting kline data for {}", symbol, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 提取均線數據用於圖表繪製
+     */
+    private List<Map<String, Object>> extractMAValues(List<TechnicalIndicatorData> indicators, String maType) {
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (TechnicalIndicatorData indicator : indicators) {
+            BigDecimal value = null;
+            switch (maType) {
+                case "ma5":
+                    value = indicator.getMa5();
+                    break;
+                case "ma20":
+                    value = indicator.getMa20();
+                    break;
+                case "ma60":
+                    value = indicator.getMa60();
+                    break;
+            }
+            if (value != null) {
+                Map<String, Object> point = new java.util.HashMap<>();
+                point.put("time", indicator.getDate().toString());
+                point.put("value", value);
+                result.add(point);
+            }
+        }
+        return result;
     }
 }

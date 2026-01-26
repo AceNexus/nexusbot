@@ -114,7 +114,7 @@ public class StockSymbolService {
         }
 
         log.info("Loading Taiwan stock data from TWSE API...");
-        
+
         // 載入上市股票
         Map<String, String> twseMap = twseApiClient.getTaiwanStockNameToSymbolMap();
         if (!twseMap.isEmpty()) {
@@ -129,7 +129,7 @@ public class StockSymbolService {
             tpexMap.values().forEach(symbol -> symbolToMarketCache.put(symbol, "上櫃"));
         }
 
-        log.info("Taiwan stock cache loaded successfully - total count={}, market count={}", 
+        log.info("Taiwan stock cache loaded successfully - total count={}, market count={}",
                 taiwanStockCache.estimatedSize(), symbolToMarketCache.estimatedSize());
     }
 
@@ -141,6 +141,22 @@ public class StockSymbolService {
             loadTaiwanStockCache();
         }
         return symbolToMarketCache.getIfPresent(symbol);
+    }
+
+    /**
+     * 根據代號取得股票名稱
+     */
+    public String getNameBySymbol(String symbol) {
+        if (taiwanStockCache.estimatedSize() == 0) {
+            loadTaiwanStockCache();
+        }
+        // taiwanStockCache 是 name -> symbol，需要反向查找
+        for (Map.Entry<String, String> entry : taiwanStockCache.asMap().entrySet()) {
+            if (entry.getValue().equals(symbol)) {
+                return entry.getKey();
+            }
+        }
+        return symbol;  // 若找不到，返回代號本身
     }
 
     /**

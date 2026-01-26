@@ -15,6 +15,8 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <!-- Babel - JSX 編譯器 -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- TradingView Lightweight Charts - K線圖 -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
 
     <!-- ========================================
          自定義樣式
@@ -133,6 +135,38 @@
         }
         .drag-handle:active {
             cursor: grabbing;
+        }
+
+        /* === K線圖 Modal 樣式 === */
+        .chart-modal {
+            max-width: 900px;
+            width: 95vw;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        @media (max-width: 640px) {
+            .chart-modal {
+                width: 100vw;
+                max-width: 100vw;
+                margin: 0;
+                border-radius: 1rem 1rem 0 0;
+                position: fixed;
+                bottom: 0;
+                max-height: 85vh;
+            }
+        }
+        .chart-container {
+            background: #131722;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .stock-name-clickable {
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .stock-name-clickable:hover {
+            color: #3b82f6;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -386,6 +420,354 @@
     };
 
     /* ========================================
+       UI 元件 - K線圖 Modal
+       ======================================== */
+    const StockChartModal = ({ isOpen, onClose, symbol, stockName }) => {
+        const chartContainerRef = useRef(null);
+        const chartRef = useRef(null);
+        const [isLoading, setIsLoading] = useState(false);
+        const [error, setError] = useState(null);
+        const [chartData, setChartData] = useState(null);
+        const [selectedDays, setSelectedDays] = useState(120);
+
+        // 載入 K 線數據
+        const fetchKlineData = useCallback(async (days) => {
+            if (!symbol) return;
+
+            setIsLoading(true);
+            setError(null);
+
+            try {
+                const res = await fetch(`${API_BASE}/${symbol}/kline?days=${days}`);
+                if (!res.ok) throw new Error('無法載入數據');
+
+                const data = await res.json();
+                setChartData(data);
+            } catch (err) {
+                console.error('K-line data fetch error:', err);
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        }, [symbol]);
+
+        // 當 modal 開啟時載入數據
+        useEffect(() => {
+            if (isOpen && symbol) {
+                fetchKlineData(selectedDays);
+            }
+        }, [isOpen, symbol, selectedDays, fetchKlineData]);
+
+        // 建立/更新圖表
+        useEffect(() => {
+            if (!isOpen || !chartData || !chartContainerRef.current) return;
+
+            // 清除舊圖表
+            if (chartRef.current) {
+                chartRef.current.remove();
+                chartRef.current = null;
+            }
+
+            const container = chartContainerRef.current;
+            const containerWidth = container.clientWidth || 800;
+            // 響應式高度：手機較矮
+            const isMobile = window.innerWidth < 768;
+            const containerHeight = isMobile ? 320 : 400;
+
+            // 建立圖表
+            const chart = LightweightCharts.createChart(container, {
+                width: containerWidth,
+                height: containerHeight,
+                layout: {
+                    background: { type: 'solid', color: '#131722' },
+                    textColor: '#d1d4dc',
+                    fontSize: isMobile ? 10 : 12,
+                },
+                grid: {
+                    vertLines: { color: '#1f2937' },
+                    horzLines: { color: '#1f2937' },
+                },
+                crosshair: {
+                    mode: LightweightCharts.CrosshairMode.Normal,
+                },
+                rightPriceScale: {
+                    borderColor: '#2B2B43',
+                    scaleMargins: {
+                        top: 0.1,
+                        bottom: 0.2,
+                    },
+                },
+                timeScale: {
+                    borderColor: '#2B2B43',
+                    timeVisible: true,
+                    secondsVisible: false,
+                },
+            });
+
+            chartRef.current = chart;
+
+            // 轉換 K 線數據格式
+            const candlestickData = chartData.candles.map(c => ({
+                time: c.date,
+                open: parseFloat(c.open),
+                high: parseFloat(c.high),
+                low: parseFloat(c.low),
+                close: parseFloat(c.close),
+            }));
+
+            // 添加 K 線
+            const candlestickSeries = chart.addCandlestickSeries({
+                upColor: '#ef4444',      // 紅色上漲 (台股慣例)
+                downColor: '#22c55e',    // 綠色下跌
+                borderDownColor: '#22c55e',
+                borderUpColor: '#ef4444',
+                wickDownColor: '#22c55e',
+                wickUpColor: '#ef4444',
+            });
+            candlestickSeries.setData(candlestickData);
+
+            // 添加均線
+            const { indicators } = chartData;
+
+            // MA5 - 黃色（不顯示標題避免重疊）
+            if (indicators.ma5 && indicators.ma5.length > 0) {
+                const ma5Series = chart.addLineSeries({
+                    color: '#facc15',
+                    lineWidth: 1,
+                    lastValueVisible: false,
+                    priceLineVisible: false,
+                });
+                ma5Series.setData(indicators.ma5.map(d => ({
+                    time: d.time,
+                    value: parseFloat(d.value)
+                })));
+            }
+
+            // MA20 - 藍色
+            if (indicators.ma20 && indicators.ma20.length > 0) {
+                const ma20Series = chart.addLineSeries({
+                    color: '#3b82f6',
+                    lineWidth: 1,
+                    lastValueVisible: false,
+                    priceLineVisible: false,
+                });
+                ma20Series.setData(indicators.ma20.map(d => ({
+                    time: d.time,
+                    value: parseFloat(d.value)
+                })));
+            }
+
+            // MA60 - 紫色
+            if (indicators.ma60 && indicators.ma60.length > 0) {
+                const ma60Series = chart.addLineSeries({
+                    color: '#a855f7',
+                    lineWidth: 1,
+                    lastValueVisible: false,
+                    priceLineVisible: false,
+                });
+                ma60Series.setData(indicators.ma60.map(d => ({
+                    time: d.time,
+                    value: parseFloat(d.value)
+                })));
+            }
+
+            // 添加成交量
+            const volumeData = chartData.candles.map(c => ({
+                time: c.date,
+                value: c.volume / 1000,  // 轉換為張
+                color: parseFloat(c.close) >= parseFloat(c.open) ? 'rgba(239, 68, 68, 0.5)' : 'rgba(34, 197, 94, 0.5)',
+            }));
+
+            const volumeSeries = chart.addHistogramSeries({
+                color: '#26a69a',
+                priceFormat: {
+                    type: 'volume',
+                },
+                priceScaleId: '',
+                scaleMargins: {
+                    top: 0.8,
+                    bottom: 0,
+                },
+            });
+            volumeSeries.setData(volumeData);
+
+            // 自適應寬度
+            chart.timeScale().fitContent();
+
+            // 響應式處理
+            const handleResize = () => {
+                if (chartRef.current && container) {
+                    chartRef.current.applyOptions({ width: container.clientWidth });
+                }
+            };
+            window.addEventListener('resize', handleResize);
+
+            return () => {
+                window.removeEventListener('resize', handleResize);
+            };
+        }, [isOpen, chartData]);
+
+        // 關閉時清理圖表
+        useEffect(() => {
+            if (!isOpen && chartRef.current) {
+                chartRef.current.remove();
+                chartRef.current = null;
+            }
+        }, [isOpen]);
+
+        // ESC 鍵關閉
+        useEffect(() => {
+            const handleEsc = (e) => e.key === 'Escape' && onClose();
+            if (isOpen) {
+                document.addEventListener('keydown', handleEsc);
+                document.body.style.overflow = 'hidden';
+            }
+            return () => {
+                document.removeEventListener('keydown', handleEsc);
+                document.body.style.overflow = '';
+            };
+        }, [isOpen, onClose]);
+
+        if (!isOpen) return null;
+
+        // 技術指標摘要
+        const indicators = chartData?.indicators || {};
+        const rsi = indicators.latestRSI;
+        const ma20Bias = indicators.ma20Bias;
+        const aboveMA20 = indicators.aboveMA20;
+
+        const getRSIClass = (val) => {
+            if (val == null) return 'neutral';
+            if (val > 70) return 'positive';
+            if (val < 30) return 'negative';
+            return 'neutral';
+        };
+
+        const getBiasClass = (val) => {
+            if (val == null) return 'neutral';
+            return val > 0 ? 'positive' : val < 0 ? 'negative' : 'neutral';
+        };
+
+        return (
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop"
+                onClick={onClose}
+            >
+                <div
+                    className="bg-white rounded-2xl shadow-2xl chart-modal mx-4 animate-fade-in"
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* Header */}
+                    <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
+                        <div className="flex items-center space-x-2">
+                            <span className="font-mono text-sm font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">
+                                {symbol}
+                            </span>
+                            <h3 className="text-base md:text-lg font-bold text-gray-800 truncate max-w-[150px] md:max-w-none">
+                                {stockName || chartData?.name}
+                            </h3>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="p-2 rounded-full hover:bg-gray-100 transition-colors -mr-1"
+                        >
+                            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* 技術指標卡片區 */}
+                    <div className="px-3 py-3 bg-gray-50 border-b border-gray-100">
+                        <div className="grid grid-cols-3 gap-2">
+                            {/* RSI 卡片 */}
+                            <div className="bg-white rounded-lg p-2.5 text-center shadow-sm">
+                                <div className="text-[10px] text-gray-400 mb-1">RSI(14)</div>
+                                <div className={`text-base font-bold ${
+                                    rsi == null ? 'text-gray-400' :
+                                    rsi > 70 ? 'text-red-500' :
+                                    rsi < 30 ? 'text-green-500' : 'text-gray-700'
+                                }`}>
+                                    {rsi != null ? rsi.toFixed(1) : '--'}
+                                </div>
+                            </div>
+                            {/* 乖離率卡片 */}
+                            <div className="bg-white rounded-lg p-2.5 text-center shadow-sm">
+                                <div className="text-[10px] text-gray-400 mb-1">月線乖離</div>
+                                <div className={`text-base font-bold ${
+                                    ma20Bias == null ? 'text-gray-400' :
+                                    ma20Bias > 0 ? 'text-red-500' :
+                                    ma20Bias < 0 ? 'text-green-500' : 'text-gray-700'
+                                }`}>
+                                    {ma20Bias != null ? `${ma20Bias > 0 ? '+' : ''}${ma20Bias.toFixed(2)}%` : '--'}
+                                </div>
+                            </div>
+                            {/* 月線狀態卡片 */}
+                            <div className="bg-white rounded-lg p-2.5 text-center shadow-sm">
+                                <div className="text-[10px] text-gray-400 mb-1">月線</div>
+                                <div className={`text-base font-bold ${
+                                    aboveMA20 == null ? 'text-gray-400' :
+                                    aboveMA20 ? 'text-red-500' : 'text-green-500'
+                                }`}>
+                                    {aboveMA20 != null ? (aboveMA20 ? '站上' : '跌破') : '--'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* 時間範圍選擇 - 獨立一行 */}
+                        <div className="flex items-center justify-center mt-3 space-x-2">
+                            {[30, 60, 120].map(days => (
+                                <button
+                                    key={days}
+                                    onClick={() => setSelectedDays(days)}
+                                    className={`px-4 py-1.5 text-sm font-medium rounded-full transition-all ${
+                                        selectedDays === days
+                                            ? 'bg-blue-600 text-white shadow-md'
+                                            : 'bg-white text-gray-500 hover:bg-gray-100 shadow-sm'
+                                    }`}
+                                >
+                                    {days}日
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 圖表區域 */}
+                    <div className="px-2 py-3 md:p-4">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center h-[320px] md:h-[400px]">
+                                <LoadingSpinner size="lg" text="載入 K 線數據..." />
+                            </div>
+                        ) : error ? (
+                            <div className="flex flex-col items-center justify-center h-[320px] md:h-[400px] text-gray-400">
+                                <svg className="w-16 h-16 mb-3 text-gray-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                <p className="text-sm">{error}</p>
+                            </div>
+                        ) : (
+                            <div ref={chartContainerRef} className="chart-container" />
+                        )}
+                    </div>
+
+                    {/* 圖例說明 */}
+                    <div className="px-4 pb-3 flex items-center justify-center space-x-6 text-sm text-gray-600">
+                        <span className="flex items-center">
+                            <span className="w-4 h-1 bg-yellow-400 rounded mr-1.5"></span> MA5
+                        </span>
+                        <span className="flex items-center">
+                            <span className="w-4 h-1 bg-blue-500 rounded mr-1.5"></span> MA20
+                        </span>
+                        <span className="flex items-center">
+                            <span className="w-4 h-1 bg-purple-500 rounded mr-1.5"></span> MA60
+                        </span>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    /* ========================================
        主要元件 - StockMonitor
        ======================================== */
     const StockMonitor = () => {
@@ -401,7 +783,8 @@
         const [allStocks, setAllStocks] = useState([]);
         const [monitorData, setMonitorData] = useState([]);
         const [searchTerm, setSearchTerm] = useState("");
-        const [sortConfig, setSortConfig] = useState({ key: 'totalBuy', direction: 'desc' });
+        // sortConfig.key 為 null 時表示「自訂順序」（跟隨群組股票順序）
+        const [sortConfig, setSortConfig] = useState({ key: null, direction: null });
         const [isLoadingList, setIsLoadingList] = useState(false);
         const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -422,6 +805,16 @@
         const [showRenameModal, setShowRenameModal] = useState(false);
         const [showDeleteModal, setShowDeleteModal] = useState(false);
         const [newGroupName, setNewGroupName] = useState("");
+
+        // === K線圖 Modal 狀態 ===
+        const [showChartModal, setShowChartModal] = useState(false);
+        const [chartStock, setChartStock] = useState({ symbol: null, name: null });
+
+        // === 開啟 K 線圖 Modal ===
+        const handleOpenChart = (symbol, name) => {
+            setChartStock({ symbol, name });
+            setShowChartModal(true);
+        };
 
         // === 搜尋輸入框參考 ===
         const searchInputRef = useRef(null);
@@ -733,10 +1126,19 @@
 
         // === 排序處理 ===
         const handleSort = (key) => {
-            setSortConfig(prev => ({
-                key,
-                direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
-            }));
+            setSortConfig(prev => {
+                // 如果點擊同一個欄位：desc -> asc -> 自訂(null)
+                if (prev.key === key) {
+                    if (prev.direction === 'desc') {
+                        return { key, direction: 'asc' };
+                    } else {
+                        // 從 asc 回到自訂順序
+                        return { key: null, direction: null };
+                    }
+                }
+                // 點擊新欄位，預設降序
+                return { key, direction: 'desc' };
+            });
         };
 
         // === 數值顏色判斷 ===
@@ -766,22 +1168,6 @@
             return formatted;
         };
 
-        // === 格式化價格漲跌 ===
-        const formatPriceChange = (val) => {
-            const num = parseFloat(val);
-            if (isNaN(num) || num === 0) return '--';
-            const formatted = Math.abs(num).toFixed(2);
-            return num > 0 ? `+${formatted}` : `-${formatted}`;
-        };
-
-        // === 格式化漲跌幅百分比 ===
-        const formatChangePercent = (val) => {
-            const num = parseFloat(val);
-            if (isNaN(num) || num === 0) return '--';
-            const formatted = Math.abs(num).toFixed(2);
-            return num > 0 ? `+${formatted}%` : `-${formatted}%`;
-        };
-
         // === 搜尋過濾 ===
         const filteredStocks = useMemo(() => {
             if (!searchTerm) return [];
@@ -803,6 +1189,7 @@
             }));
 
             if (sortConfig.key) {
+                // 按指定欄位排序
                 data.sort((a, b) => {
                     let aVal = a[sortConfig.key];
                     let bVal = b[sortConfig.key];
@@ -816,17 +1203,31 @@
 
                     return sortConfig.direction === 'asc' ? aVal - bVal : bVal - aVal;
                 });
+            } else if (selectedGroup && selectedGroup.stocks) {
+                // 自訂順序：按群組股票順序排序
+                const orderMap = new Map();
+                selectedGroup.stocks.forEach((stock, index) => {
+                    orderMap.set(stock.stockSymbol, index);
+                });
+                data.sort((a, b) => {
+                    const aIndex = orderMap.has(a.code) ? orderMap.get(a.code) : 9999;
+                    const bIndex = orderMap.has(b.code) ? orderMap.get(b.code) : 9999;
+                    return aIndex - bIndex;
+                });
             }
             return data;
-        }, [monitorData, sortConfig]);
+        }, [monitorData, sortConfig, selectedGroup]);
 
         // === 排序指示器 ===
         const SortIndicator = ({ columnKey }) => {
             if (sortConfig.key !== columnKey) {
                 return <span className="ml-1 text-gray-300">⇅</span>;
             }
-            return <span className="ml-1">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>;
+            return <span className="ml-1 text-blue-600">{sortConfig.direction === 'asc' ? '▲' : '▼'}</span>;
         };
+
+        // === 是否為自訂排序 ===
+        const isCustomOrder = sortConfig.key === null;
 
         /* ========================================
            渲染 UI
@@ -1181,18 +1582,13 @@
                                 <table className="w-full text-sm table-striped">
                                     <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider sticky top-0 z-10">
                                         <tr>
-                                            <th className="px-3 py-3.5 text-left">股票</th>
                                             <th
-                                                className="px-2 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                                                onClick={() => handleSort('price')}
+                                                className={`px-3 py-3.5 text-left cursor-pointer hover:bg-gray-100 transition-colors select-none ${isCustomOrder ? 'bg-amber-50' : ''}`}
+                                                onClick={() => setSortConfig({ key: null, direction: null })}
+                                                title="點擊恢復自訂順序"
                                             >
-                                                現價<SortIndicator columnKey="price" />
-                                            </th>
-                                            <th
-                                                className="px-2 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
-                                                onClick={() => handleSort('changePercent')}
-                                            >
-                                                漲跌幅<SortIndicator columnKey="changePercent" />
+                                                股票
+                                                {isCustomOrder && <span className="ml-1 text-amber-600 text-[10px]">自訂</span>}
                                             </th>
                                             <th
                                                 className="px-2 py-3.5 text-right cursor-pointer hover:bg-gray-100 transition-colors select-none"
@@ -1230,7 +1626,13 @@
                                             >
                                                 <td className="px-3 py-3.5 text-left">
                                                     <div className="flex items-center space-x-2">
-                                                        <div className="font-semibold text-gray-900 text-sm">{stock.name}</div>
+                                                        <div
+                                                            className="font-semibold text-gray-900 text-sm stock-name-clickable"
+                                                            onClick={() => handleOpenChart(stock.code, stock.name)}
+                                                            title="點擊查看 K 線圖"
+                                                        >
+                                                            {stock.name}
+                                                        </div>
                                                         {stock.market && (
                                                             <span className={`text-[10px] px-1 py-0 rounded ${
                                                                 stock.market === '上市'
@@ -1244,18 +1646,6 @@
                                                     <div className="text-xs text-gray-400 font-mono group-hover:text-blue-500 transition-colors">
                                                         {stock.code}
                                                     </div>
-                                                </td>
-                                                <td className="px-2 py-3.5 text-right">
-                                                    <div className="font-mono text-sm font-bold text-gray-800">
-                                                        {stock.price ? Number(stock.price).toLocaleString() : '--'}
-                                                    </div>
-                                                    {/* 漲跌金額顯示在現價下方 */}
-                                                    <div className={`font-mono text-xs ${getColorClass(stock.change)}`}>
-                                                        {formatPriceChange(stock.change)}
-                                                    </div>
-                                                </td>
-                                                <td className={`px-2 py-3.5 text-right font-mono text-sm font-medium ${getColorClass(stock.changePercent)}`}>
-                                                    {formatChangePercent(stock.changePercent)}
                                                 </td>
                                                 <td className={`px-2 py-3.5 text-right font-mono text-sm font-medium ${getColorClass(stock.foreignBuy)}`}>
                                                     {formatNumber(stock.foreignBuy)}
@@ -1376,6 +1766,14 @@
                         </div>
                     </div>
                 </Modal>
+
+                {/* K 線圖 Modal */}
+                <StockChartModal
+                    isOpen={showChartModal}
+                    onClose={() => setShowChartModal(false)}
+                    symbol={chartStock.symbol}
+                    stockName={chartStock.name}
+                />
             </div>
         );
     };
