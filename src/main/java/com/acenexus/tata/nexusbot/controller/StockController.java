@@ -6,15 +6,20 @@ import com.acenexus.tata.nexusbot.dto.CandlestickData;
 import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
 import com.acenexus.tata.nexusbot.dto.StockSymbolDto;
 import com.acenexus.tata.nexusbot.dto.TechnicalIndicatorData;
+import com.acenexus.tata.nexusbot.dto.TickData;
+import com.acenexus.tata.nexusbot.dto.TickStats;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
+import com.acenexus.tata.nexusbot.service.RealtimeTickService;
 import com.acenexus.tata.nexusbot.service.StockChipService;
 import com.acenexus.tata.nexusbot.service.StockSymbolService;
 import com.acenexus.tata.nexusbot.service.TechnicalAnalysisService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,6 +41,7 @@ public class StockController {
     private final StockSymbolService stockSymbolService;
     private final StockChipService stockChipService;
     private final TechnicalAnalysisService technicalAnalysisService;
+    private final RealtimeTickService realtimeTickService;
 
     @GetMapping("/list")
     public ResponseEntity<List<StockSymbolDto>> getStockList() {
@@ -398,5 +404,111 @@ public class StockController {
             }
         }
         return result;
+    }
+
+    /**
+     * 開始監控股票即時成交
+     * POST /api/stock/{symbol}/tick-monitor
+     */
+    @PostMapping("/{symbol}/tick-monitor")
+    public ResponseEntity<Map<String, Object>> startTickMonitor(@PathVariable String symbol) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            String source = realtimeTickService.startMonitor(resolvedSymbol);
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("symbol", resolvedSymbol);
+            response.put("source", source);
+            response.put("status", "monitoring");
+            response.put("summary", realtimeTickService.getSubscriptionSummary());
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error starting tick monitor for {}", symbol, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 停止監控股票即時成交
+     * DELETE /api/stock/{symbol}/tick-monitor
+     */
+    @DeleteMapping("/{symbol}/tick-monitor")
+    public ResponseEntity<Map<String, Object>> stopTickMonitor(@PathVariable String symbol) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            realtimeTickService.stopMonitor(resolvedSymbol);
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("symbol", resolvedSymbol);
+            response.put("status", "stopped");
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error stopping tick monitor for {}", symbol, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 取得即時成交統計
+     * GET /api/stock/{symbol}/ticks/stats
+     */
+    @GetMapping("/{symbol}/ticks/stats")
+    public ResponseEntity<TickStats> getTickStats(@PathVariable String symbol) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            TickStats stats = realtimeTickService.getRealtimeStats(resolvedSymbol);
+            return ResponseEntity.ok(stats);
+        } catch (Exception e) {
+            log.error("Error getting tick stats for {}", symbol, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 取得最近成交明細
+     * GET /api/stock/{symbol}/ticks?limit=50
+     */
+    @GetMapping("/{symbol}/ticks")
+    public ResponseEntity<List<TickData>> getRecentTicks(@PathVariable String symbol,
+                                                         @RequestParam(defaultValue = "50") int limit) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            List<TickData> ticks = realtimeTickService.getRecentTicks(resolvedSymbol, limit);
+            return ResponseEntity.ok(ticks);
+        } catch (Exception e) {
+            log.error("Error getting ticks for {}", symbol, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 取得大單成交
+     * GET /api/stock/{symbol}/ticks/big?threshold=100
+     */
+    @GetMapping("/{symbol}/ticks/big")
+    public ResponseEntity<List<TickData>> getBigTrades(@PathVariable String symbol,
+                                                       @RequestParam(defaultValue = "100") int threshold) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            List<TickData> bigTrades = realtimeTickService.getBigTrades(resolvedSymbol, threshold);
+            return ResponseEntity.ok(bigTrades);
+        } catch (Exception e) {
+            log.error("Error getting big trades for {}", symbol, e);
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * 取得監控狀態
+     * GET /api/stock/tick-monitor/status
+     */
+    @GetMapping("/tick-monitor/status")
+    public ResponseEntity<Map<String, Object>> getTickMonitorStatus() {
+        Map<String, Object> response = new java.util.HashMap<>();
+        response.put("summary", realtimeTickService.getSubscriptionSummary());
+        response.put("monitors", realtimeTickService.getMonitorStatus());
+        return ResponseEntity.ok(response);
     }
 }

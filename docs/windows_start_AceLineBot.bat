@@ -1,6 +1,10 @@
 @echo off
+chcp 65001 >nul
 setlocal EnableDelayedExpansion
 title NexusBot Auto Start Launcher
+
+REM 設定 Java UTF-8 編碼（解決中文亂碼）
+set JAVA_TOOL_OPTIONS=-Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8
 
 echo.
 echo =========================================
@@ -204,7 +208,7 @@ if %errorlevel% neq 0 (
 )
 
 cd /d "%BOT_RUN_DIR%"
-start "NexusBot [Port:%SERVER_PORT%]" cmd /k "java -Dnexusbot.base-url=%URL% -Dserver.port=%SERVER_PORT% -Dspring.datasource.url=jdbc:h2:file:%DATA_DIR%/testdb;DB_CLOSE_ON_EXIT=TRUE;AUTO_RECONNECT=TRUE -jar nexusbot.jar"
+start "NexusBot [Port:%SERVER_PORT%]" cmd /k "chcp 65001 >nul && java -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -Dnexusbot.base-url=%URL% -Dserver.port=%SERVER_PORT% -Dspring.datasource.url=jdbc:h2:file:%DATA_DIR%/testdb;DB_CLOSE_ON_EXIT=TRUE;AUTO_RECONNECT=TRUE -jar nexusbot.jar"
 if %errorlevel% neq 0 (
   echo ERROR: Failed to start NexusBot
   call :cleanup

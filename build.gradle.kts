@@ -53,6 +53,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
+    // WebSocket Client (for Fugle real-time data)
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
+
     // Email
     implementation("org.springframework.boot:spring-boot-starter-mail")
 

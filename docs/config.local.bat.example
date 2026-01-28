@@ -83,3 +83,13 @@ REM ========================================
 REM Admin Password Seed (any 4 digits)
 REM ========================================
 set ADMIN_PASSWORD_SEED=1234
+
+REM ========================================
+REM Fugle API Key (for real-time stock tick data)
+REM Get from: https://developer.fugle.tw/
+REM   1. Register/Login
+REM   2. Create an application
+REM   3. Copy the API Key
+REM Note: Free plan allows up to 5 stock subscriptions
+REM ========================================
+set FUGLE_API_KEY=YOUR_FUGLE_API_KEY_HERE
