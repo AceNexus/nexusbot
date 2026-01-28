@@ -397,7 +397,7 @@
         const [statsMap, setStatsMap] = useState({});
         const [bigTrades, setBigTrades] = useState([]);
         const [subscribed, setSubscribed] = useState(0);
-        const [maxSubscriptions, setMaxSubscriptions] = useState(50);
+        const [maxSubscriptions, setMaxSubscriptions] = useState(5);
         const subscriptionsRef = useRef({});
 
         // 建立 WebSocket 連線
@@ -418,6 +418,45 @@
                         setBigTrades(prev => [...prev.slice(-99), { ...data.data, symbol: data.symbol, lots: data.lots }]);
                     }
                 });
+
+                // 訂閱全局狀態頻道 (接收同步、訂閱/取消訂閱通知)
+                client.subscribe('/topic/tick-status', (message) => {
+                    const data = JSON.parse(message.body);
+                    setSubscribed(data.subscribed);
+                    setMaxSubscriptions(data.maxSubscriptions);
+
+                    if (data.type === 'SYNC' && data.symbols) {
+                        // 收到同步訊息，載入現有監控的股票
+                        console.log('同步監控列表:', data.symbols);
+                        data.symbols.forEach(symbol => {
+                            // 訂閱該股票的 WebSocket 頻道
+                            if (!subscriptionsRef.current[symbol]) {
+                                subscribeToSymbolChannel(client, symbol);
+                            }
+                        });
+                    } else if (data.type === 'SUBSCRIBE_RESULT' && data.result === 'FUGLE') {
+                        // 其他人新增了股票，同步訂閱
+                        const symbol = data.symbol;
+                        if (!subscriptionsRef.current[symbol]) {
+                            subscribeToSymbolChannel(client, symbol);
+                        }
+                    } else if (data.type === 'UNSUBSCRIBE_RESULT') {
+                        // 其他人移除了股票，同步取消訂閱
+                        const symbol = data.symbol;
+                        if (subscriptionsRef.current[symbol]) {
+                            subscriptionsRef.current[symbol].unsubscribe();
+                            delete subscriptionsRef.current[symbol];
+                            // 移除本地狀態
+                            setMonitoredStocks(prev => prev.filter(s => s.symbol !== symbol));
+                            setTicksMap(prev => { const next = {...prev}; delete next[symbol]; return next; });
+                            setStatsMap(prev => { const next = {...prev}; delete next[symbol]; return next; });
+                        }
+                    }
+                });
+
+                // 請求同步目前監控狀態
+                client.send('/app/tick/sync', {}, '{}');
+
             }, (error) => {
                 console.error('WebSocket 連線失敗:', error);
                 setConnected(false);
@@ -430,12 +469,11 @@
             };
         }, []);
 
-        // 訂閱股票
-        const subscribeStock = useCallback((symbol) => {
-            if (!stompClient || !stompClient.connected) return;
+        // 訂閱股票的 WebSocket 頻道 (內部使用)
+        const subscribeToSymbolChannel = (client, symbol) => {
             if (subscriptionsRef.current[symbol]) return;
 
-            const subscription = stompClient.subscribe(`/topic/ticks/${symbol}`, (message) => {
+            const subscription = client.subscribe(`/topic/ticks/${symbol}`, (message) => {
                 const data = JSON.parse(message.body);
 
                 if (data.type === 'TICK') {
@@ -443,13 +481,9 @@
                         ...prev,
                         [symbol]: [...(prev[symbol] || []).slice(-199), data.data]
                     }));
-                    // 更新即時統計
                     updateStats(symbol, data.data);
                 } else if (data.type === 'STATS') {
                     setStatsMap(prev => ({ ...prev, [symbol]: data.data }));
-                } else if (data.type === 'SUBSCRIBE_RESULT') {
-                    setSubscribed(data.subscribed);
-                    setMaxSubscriptions(data.maxSubscriptions);
                 } else if (data.type === 'BIG_TRADE') {
                     setBigTrades(prev => [...prev.slice(-99), { ...data.data, symbol: data.symbol, lots: data.lots }]);
                 }
@@ -457,20 +491,33 @@
 
             subscriptionsRef.current[symbol] = subscription;
 
-            // 發送訂閱請求
+            // 加入本地監控列表 (如果還沒有)
+            setMonitoredStocks(prev => {
+                if (prev.find(s => s.symbol === symbol)) return prev;
+                return [...prev, { symbol, name: symbol }]; // 先用代號，稍後可從 API 取得名稱
+            });
+
+            // 設定為當前選中
+            setActiveSymbol(prev => prev || symbol);
+        };
+
+        // 訂閱股票 (用戶主動點擊)
+        const subscribeStock = useCallback((symbol) => {
+            if (!stompClient || !stompClient.connected) return;
+            if (subscriptionsRef.current[symbol]) return;
+
+            subscribeToSymbolChannel(stompClient, symbol);
+
+            // 發送訂閱請求到後端 (會廣播給所有人)
             stompClient.send(`/app/tick/subscribe/${symbol}`, {}, '{}');
         }, [stompClient]);
 
-        // 取消訂閱股票
+        // 取消訂閱股票 (用戶主動點擊)
         const unsubscribeStock = useCallback((symbol) => {
             if (!stompClient || !stompClient.connected) return;
 
-            if (subscriptionsRef.current[symbol]) {
-                subscriptionsRef.current[symbol].unsubscribe();
-                delete subscriptionsRef.current[symbol];
-            }
-
-            // 發送取消訂閱請求
+            // 發送取消訂閱請求到後端 (會廣播給所有人，包括自己)
+            // 本地清理會在收到 UNSUBSCRIBE_RESULT 時進行
             stompClient.send(`/app/tick/unsubscribe/${symbol}`, {}, '{}');
         }, [stompClient]);
 
@@ -508,7 +555,7 @@
             });
         };
 
-        // 新增股票
+        // 新增股票 (全局共享)
         const handleAddStock = (stock) => {
             if (monitoredStocks.find(s => s.symbol === stock.symbol)) {
                 setActiveSymbol(stock.symbol);
@@ -520,26 +567,19 @@
                 return;
             }
 
+            // 先加入本地 (帶有完整股票資訊)
             setMonitoredStocks(prev => [...prev, stock]);
             setActiveSymbol(stock.symbol);
+            // 發送訂閱請求，會廣播給所有人
             subscribeStock(stock.symbol);
         };
 
-        // 移除股票
+        // 移除股票 (全局共享)
         const handleRemoveStock = (symbol) => {
+            // 只發送取消訂閱請求，清理工作由全局狀態處理器完成
             unsubscribeStock(symbol);
-            setMonitoredStocks(prev => prev.filter(s => s.symbol !== symbol));
-            setTicksMap(prev => {
-                const next = { ...prev };
-                delete next[symbol];
-                return next;
-            });
-            setStatsMap(prev => {
-                const next = { ...prev };
-                delete next[symbol];
-                return next;
-            });
 
+            // 切換顯示的股票
             if (activeSymbol === symbol) {
                 const remaining = monitoredStocks.filter(s => s.symbol !== symbol);
                 setActiveSymbol(remaining.length > 0 ? remaining[0].symbol : null);
@@ -618,7 +658,7 @@
                 {/* Footer */}
                 <footer className="bg-white border-t border-gray-200 mt-8">
                     <div className="max-w-7xl mx-auto px-4 py-4 text-center text-sm text-gray-500">
-                        <p>即時數據來源：Fugle API | 免費版限制：最多訂閱 50 檔</p>
+                        <p>即時數據來源：Fugle API | 免費版限制：最多訂閱 5 檔</p>
                         <p className="mt-1">需設定 FUGLE_API_KEY 環境變數</p>
                     </div>
                 </footer>

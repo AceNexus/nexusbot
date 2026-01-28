@@ -13,7 +13,9 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 即時成交 WebSocket 控制器
@@ -38,7 +40,27 @@ public class TickWebSocketController {
     }
 
     /**
-     * 處理訂閱請求
+     * 同步目前監控狀態 (新訪客進入時調用)
+     * 前端發送到: /app/tick/sync
+     */
+    @MessageMapping("/tick/sync")
+    public void syncStatus() {
+        Set<String> symbols = realtimeTickService.getMonitoredSymbols();
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("type", "SYNC");
+        response.put("symbols", symbols);
+        response.put("subscribed", realtimeTickService.getSubscribedCount());
+        response.put("maxSubscriptions", realtimeTickService.getMaxSubscriptions());
+
+        // 回傳給所有人（包括剛連線的）
+        messagingTemplate.convertAndSend("/topic/tick-status", response);
+
+        log.info("[Tick] 同步狀態: {} 檔監控中", symbols.size());
+    }
+
+    /**
+     * 處理訂閱請求 (全局共享模式)
      * 前端發送到: /app/tick/subscribe/{symbol}
      */
     @MessageMapping("/tick/subscribe/{symbol}")
@@ -47,7 +69,7 @@ public class TickWebSocketController {
             String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
             String result = realtimeTickService.startMonitor(resolvedSymbol);
 
-            // 發送訂閱結果
+            // 廣播訂閱結果給所有人
             Map<String, Object> response = Map.of(
                     "type", "SUBSCRIBE_RESULT",
                     "symbol", resolvedSymbol,
@@ -57,7 +79,10 @@ public class TickWebSocketController {
             );
 
             messagingTemplate.convertAndSend("/topic/ticks/" + resolvedSymbol, response);
-            log.info("WebSocket 訂閱: {} -> {}", symbol, result);
+            // 廣播到全局頻道，讓所有人更新訂閱狀態
+            messagingTemplate.convertAndSend("/topic/tick-status", response);
+
+            log.info("[Tick] 訂閱: {} -> {}", symbol, result);
 
             // 如果訂閱成功，發送當前統計
             if ("FUGLE".equals(result)) {
@@ -65,12 +90,12 @@ public class TickWebSocketController {
                 broadcastStats(resolvedSymbol, stats);
             }
         } catch (Exception e) {
-            log.error("WebSocket 訂閱失敗: {}", symbol, e);
+            log.error("[Tick] 訂閱失敗: {}", symbol, e);
         }
     }
 
     /**
-     * 處理取消訂閱請求
+     * 處理取消訂閱請求 (全局共享模式)
      * 前端發送到: /app/tick/unsubscribe/{symbol}
      */
     @MessageMapping("/tick/unsubscribe/{symbol}")
@@ -79,7 +104,7 @@ public class TickWebSocketController {
             String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
             realtimeTickService.stopMonitor(resolvedSymbol);
 
-            // 發送取消訂閱結果
+            // 廣播取消訂閱結果給所有人
             Map<String, Object> response = Map.of(
                     "type", "UNSUBSCRIBE_RESULT",
                     "symbol", resolvedSymbol,
@@ -88,9 +113,12 @@ public class TickWebSocketController {
             );
 
             messagingTemplate.convertAndSend("/topic/ticks/" + resolvedSymbol, response);
-            log.info("WebSocket 取消訂閱: {}", symbol);
+            // 廣播到全局頻道，讓所有人更新訂閱狀態
+            messagingTemplate.convertAndSend("/topic/tick-status", response);
+
+            log.info("[Tick] 取消訂閱: {}", symbol);
         } catch (Exception e) {
-            log.error("WebSocket 取消訂閱失敗: {}", symbol, e);
+            log.error("[Tick] 取消訂閱失敗: {}", symbol, e);
         }
     }
 
@@ -133,4 +161,5 @@ public class TickWebSocketController {
         // 同時廣播到大單專用頻道
         messagingTemplate.convertAndSend("/topic/big-trades", message);
     }
+
 }

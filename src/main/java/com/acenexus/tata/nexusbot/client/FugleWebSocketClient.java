@@ -49,11 +49,13 @@ public class FugleWebSocketClient {
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     private volatile boolean connecting = false;
+    private volatile boolean initialConnection = true;  // 標記是否為首次啟動
+    private volatile boolean authenticated = false;     // 標記是否已驗證
 
     @PostConstruct
     public void init() {
         if (!fugleConfig.isEnabled()) {
-            log.warn("Fugle API Key 未設定，WebSocket 功能停用");
+            log.warn("[Fugle] API Key 未設定，WebSocket 功能停用");
             return;
         }
         connect();
@@ -61,12 +63,41 @@ public class FugleWebSocketClient {
 
     @PreDestroy
     public void cleanup() {
+        log.info("[Fugle] 服務關閉中，清理訂閱...");
+
+        // 先取消所有訂閱
+        if (session != null && session.isOpen() && !subscribedSymbols.isEmpty()) {
+            for (String symbol : subscribedSymbols) {
+                try {
+                    String msg = String.format("{\"event\":\"unsubscribe\",\"data\":{\"channel\":\"trades\",\"symbol\":\"%s\"}}", symbol);
+                    session.sendMessage(new TextMessage(msg));
+                    log.info("[Fugle] 已取消訂閱 {}", symbol);
+                } catch (Exception e) {
+                    log.warn("[Fugle] 取消訂閱 {} 失敗: {}", symbol, e.getMessage());
+                }
+            }
+            // 等待取消訂閱完成
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        // 清空本地狀態
+        subscribers.clear();
+        subscribedSymbols.clear();
+
+        // 關閉排程器
         scheduler.shutdown();
+
+        // 關閉連線
         if (session != null && session.isOpen()) {
             try {
                 session.close();
+                log.info("[Fugle] 連線已關閉");
             } catch (Exception e) {
-                log.warn("關閉 Fugle WebSocket 連線失敗", e);
+                log.warn("[Fugle] 關閉連線失敗", e);
             }
         }
     }
@@ -80,7 +111,7 @@ public class FugleWebSocketClient {
         }
 
         if (connecting) {
-            log.debug("Fugle WebSocket 正在連線中...");
+            log.debug("[Fugle] 正在連線中...");
             return;
         }
 
@@ -96,8 +127,17 @@ public class FugleWebSocketClient {
                 public void afterConnectionEstablished(WebSocketSession sess) {
                     session = sess;
                     connecting = false;
-                    log.info("Fugle WebSocket 連線成功");
-                    resubscribeAll();
+                    authenticated = false;
+
+                    // 發送身份驗證請求
+                    try {
+                        String authMsg = String.format("{\"event\":\"auth\",\"data\":{\"apikey\":\"%s\"}}", fugleConfig.getApiKey());
+                        sess.sendMessage(new TextMessage(authMsg));
+                        log.info("[Fugle] 連線成功，等待身份驗證...");
+                    } catch (Exception e) {
+                        log.error("[Fugle] 發送身份驗證失敗: {}", e.getMessage());
+                    }
+                    // 訂閱會在收到 authenticated 事件後進行
                 }
 
                 @Override
@@ -107,13 +147,21 @@ public class FugleWebSocketClient {
 
                 @Override
                 public void handleTransportError(WebSocketSession sess, Throwable exception) {
-                    log.error("Fugle WebSocket 傳輸錯誤: {}", exception.getMessage());
+                    String errorType = exception.getClass().getSimpleName();
+                    String errorMsg = exception.getMessage();
+                    if (errorMsg == null || errorMsg.isEmpty()) {
+                        errorMsg = "無詳細訊息";
+                    }
+                    log.error("[Fugle] 傳輸錯誤 ({}: {})", errorType, errorMsg);
                     connecting = false;
                 }
 
                 @Override
                 public void afterConnectionClosed(WebSocketSession sess, CloseStatus status) {
-                    log.warn("Fugle WebSocket 連線關閉: {}，準備重連...", status);
+                    log.warn("[Fugle] 連線關閉 (狀態碼: {}, 原因: {})，{}秒後重連",
+                            status.getCode(),
+                            status.getReason() != null ? status.getReason() : "無",
+                            fugleConfig.getReconnectDelay() / 1000);
                     connecting = false;
                     scheduleReconnect();
                 }
@@ -125,7 +173,10 @@ public class FugleWebSocketClient {
             }, headers, URI.create(fugleConfig.getWebsocketUrl())).get(10, TimeUnit.SECONDS);
 
         } catch (Exception e) {
-            log.error("Fugle WebSocket 連線失敗: {}", e.getMessage());
+            log.error("[Fugle] 連線失敗 ({}: {})，{}秒後重連",
+                    e.getClass().getSimpleName(),
+                    e.getMessage(),
+                    fugleConfig.getReconnectDelay() / 1000);
             connecting = false;
             scheduleReconnect();
         }
@@ -140,20 +191,22 @@ public class FugleWebSocketClient {
      */
     public boolean subscribe(String symbol, Consumer<TickData> callback) {
         if (!fugleConfig.isEnabled()) {
-            log.warn("Fugle 未啟用，無法訂閱 {}", symbol);
+            log.warn("[Fugle] 未啟用，無法訂閱 {}", symbol);
             return false;
         }
 
         if (subscribedSymbols.size() >= fugleConfig.getMaxSubscriptions()) {
-            log.warn("已達 Fugle 訂閱上限 ({})，無法訂閱 {}", fugleConfig.getMaxSubscriptions(), symbol);
+            log.warn("[Fugle] 已達訂閱上限 ({}/{}), 無法訂閱 {}", subscribedSymbols.size(), fugleConfig.getMaxSubscriptions(), symbol);
             return false;
         }
 
         subscribers.put(symbol, callback);
         subscribedSymbols.add(symbol);
 
-        if (isConnected()) {
+        if (isConnected() && authenticated) {
             sendSubscribe(symbol);
+        } else {
+            log.info("[Fugle] 等待連線/驗證完成後訂閱 {}", symbol);
         }
 
         return true;
@@ -166,13 +219,13 @@ public class FugleWebSocketClient {
         subscribers.remove(symbol);
         subscribedSymbols.remove(symbol);
 
-        if (isConnected()) {
+        if (isConnected() && authenticated) {
             try {
                 String msg = String.format("{\"event\":\"unsubscribe\",\"data\":{\"channel\":\"trades\",\"symbol\":\"%s\"}}", symbol);
                 session.sendMessage(new TextMessage(msg));
-                log.info("已取消訂閱 {} 即時成交", symbol);
+                log.info("[Fugle] 已取消訂閱 {} (剩餘: {})", symbol, subscribedSymbols.size());
             } catch (Exception e) {
-                log.error("取消訂閱失敗: {}", symbol, e);
+                log.error("[Fugle] 取消訂閱失敗: {}", symbol, e);
             }
         }
     }
@@ -212,9 +265,9 @@ public class FugleWebSocketClient {
         try {
             String msg = String.format("{\"event\":\"subscribe\",\"data\":{\"channel\":\"trades\",\"symbol\":\"%s\"}}", symbol);
             session.sendMessage(new TextMessage(msg));
-            log.info("已訂閱 {} 即時成交 (Fugle)", symbol);
+            log.info("[Fugle] 已訂閱 {} ({}/{})", symbol, subscribedSymbols.size(), fugleConfig.getMaxSubscriptions());
         } catch (Exception e) {
-            log.error("訂閱失敗: {}", symbol, e);
+            log.error("[Fugle] 訂閱失敗: {}", symbol, e);
         }
     }
 
@@ -225,7 +278,7 @@ public class FugleWebSocketClient {
         for (String symbol : subscribedSymbols) {
             sendSubscribe(symbol);
         }
-        log.info("重新訂閱 {} 檔股票", subscribedSymbols.size());
+        log.info("[Fugle] 重新訂閱完成 ({}/{})", subscribedSymbols.size(), fugleConfig.getMaxSubscriptions());
     }
 
     /**
@@ -250,11 +303,39 @@ public class FugleWebSocketClient {
                         callback.accept(tick);
                     }
                 }
+            } else if ("authenticated".equals(event)) {
+                // 身份驗證成功
+                authenticated = true;
+                log.info("[Fugle] 身份驗證成功");
+
+                // 根據是否首次連線決定行為
+                if (initialConnection) {
+                    subscribers.clear();
+                    subscribedSymbols.clear();
+                    initialConnection = false;
+                    log.info("[Fugle] 首次啟動，訂閱數: 0");
+                } else {
+                    // 斷線重連：重新訂閱現有股票
+                    if (!subscribedSymbols.isEmpty()) {
+                        log.info("[Fugle] 重連後重新訂閱 {} 檔", subscribedSymbols.size());
+                        resubscribeAll();
+                    }
+                }
             } else if ("error".equals(event)) {
-                log.error("Fugle WebSocket 錯誤: {}", node.path("data").asText());
+                String errorMsg = node.path("data").path("message").asText();
+                if (errorMsg.isEmpty()) {
+                    errorMsg = node.path("data").asText();
+                }
+                if (errorMsg.isEmpty()) {
+                    errorMsg = payload;  // 顯示完整原始訊息
+                }
+                log.error("[Fugle] API 錯誤: {}", errorMsg);
+            } else if (!"pong".equals(event) && !"subscribed".equals(event)) {
+                // 記錄未知事件類型（排除 pong 和 subscribed）
+                log.debug("[Fugle] 未處理事件: {}", payload);
             }
         } catch (Exception e) {
-            log.error("解析 Fugle 訊息失敗: {}", payload, e);
+            log.error("[Fugle] 解析訊息失敗: {}", payload, e);
         }
     }
 

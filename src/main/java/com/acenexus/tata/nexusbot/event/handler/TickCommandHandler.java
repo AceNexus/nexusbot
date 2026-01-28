@@ -93,7 +93,7 @@ public class TickCommandHandler implements LineBotEventHandler {
                                 "設定環境變數：FUGLE_API_KEY"
                 );
                 case "LIMIT_EXCEEDED" -> new TextMessage(String.format(
-                        "Fugle 訂閱額度已滿 (50檔上限)\n" +
+                        "Fugle 訂閱額度已滿 (5檔上限)\n" +
                                 "目前狀態: %s\n" +
                                 "請先停止其他股票的監控",
                         realtimeTickService.getSubscriptionSummary()
@@ -179,7 +179,7 @@ public class TickCommandHandler implements LineBotEventHandler {
                                     "免費註冊：https://developer.fugle.tw/"
                     );
                     case "LIMIT_EXCEEDED" -> new TextMessage(
-                            "Fugle 訂閱額度已滿 (50檔上限)"
+                            "Fugle 訂閱額度已滿 (5檔上限)"
                     );
                     case "FUGLE" -> new TextMessage(String.format(
                             "%s 即時監控已啟動\n請稍後再查詢大單成交",

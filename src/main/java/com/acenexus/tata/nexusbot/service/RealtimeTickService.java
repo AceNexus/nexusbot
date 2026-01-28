@@ -257,6 +257,13 @@ public class RealtimeTickService {
     }
 
     /**
+     * 取得目前監控中的所有股票代號
+     */
+    public Set<String> getMonitoredSymbols() {
+        return Set.copyOf(monitoredSymbols);
+    }
+
+    /**
      * 取得訂閱統計
      */
     public String getSubscriptionSummary() {
