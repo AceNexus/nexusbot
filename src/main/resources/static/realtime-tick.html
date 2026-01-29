@@ -434,6 +434,12 @@
                                 subscribeToSymbolChannel(client, symbol);
                             }
                         });
+                        // 直接從 SYNC 回應載入統計數據（避免時序問題）
+                        if (data.symbolStats) {
+                            Object.entries(data.symbolStats).forEach(([symbol, stats]) => {
+                                setStatsMap(prev => ({ ...prev, [symbol]: stats }));
+                            });
+                        }
                     } else if (data.type === 'SUBSCRIBE_RESULT' && data.result === 'FUGLE') {
                         // 其他人新增了股票，同步訂閱
                         const symbol = data.symbol;
@@ -441,13 +447,22 @@
                             subscribeToSymbolChannel(client, symbol);
                         }
                     } else if (data.type === 'UNSUBSCRIBE_RESULT') {
-                        // 其他人移除了股票，同步取消訂閱
+                        // 股票被移除，同步取消訂閱
                         const symbol = data.symbol;
                         if (subscriptionsRef.current[symbol]) {
                             subscriptionsRef.current[symbol].unsubscribe();
                             delete subscriptionsRef.current[symbol];
                             // 移除本地狀態
-                            setMonitoredStocks(prev => prev.filter(s => s.symbol !== symbol));
+                            setMonitoredStocks(prev => {
+                                const remaining = prev.filter(s => s.symbol !== symbol);
+                                // 如果被移除的是當前選中的，切換到第一個
+                                setActiveSymbol(prevActive =>
+                                    prevActive === symbol
+                                        ? (remaining.length > 0 ? remaining[0].symbol : null)
+                                        : prevActive
+                                );
+                                return remaining;
+                            });
                             setTicksMap(prev => { const next = {...prev}; delete next[symbol]; return next; });
                             setStatsMap(prev => { const next = {...prev}; delete next[symbol]; return next; });
                         }
@@ -469,8 +484,27 @@
             };
         }, []);
 
+        // 股票名稱快取
+        const stockNameCache = useRef({});
+
+        // 從 API 取得股票名稱 (有快取)
+        const fetchStockName = async (symbol) => {
+            if (stockNameCache.current[symbol]) {
+                return stockNameCache.current[symbol];
+            }
+            try {
+                const res = await fetch('/api/stock/list');
+                const stocks = await res.json();
+                // 快取所有股票名稱
+                stocks.forEach(s => { stockNameCache.current[s.symbol] = s.name; });
+                return stockNameCache.current[symbol] || symbol;
+            } catch (e) {
+                return symbol;
+            }
+        };
+
         // 訂閱股票的 WebSocket 頻道 (內部使用)
-        const subscribeToSymbolChannel = (client, symbol) => {
+        const subscribeToSymbolChannel = async (client, symbol) => {
             if (subscriptionsRef.current[symbol]) return;
 
             const subscription = client.subscribe(`/topic/ticks/${symbol}`, (message) => {
@@ -491,14 +525,15 @@
 
             subscriptionsRef.current[symbol] = subscription;
 
-            // 加入本地監控列表 (如果還沒有)
+            // 立即設定為當前選中 (不等待 API)
+            setActiveSymbol(prev => prev || symbol);
+
+            // 從 API 取得股票名稱並加入本地監控列表
+            const name = await fetchStockName(symbol);
             setMonitoredStocks(prev => {
                 if (prev.find(s => s.symbol === symbol)) return prev;
-                return [...prev, { symbol, name: symbol }]; // 先用代號，稍後可從 API 取得名稱
+                return [...prev, { symbol, name }];
             });
-
-            // 設定為當前選中
-            setActiveSymbol(prev => prev || symbol);
         };
 
         // 訂閱股票 (用戶主動點擊)

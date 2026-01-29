@@ -47,11 +47,18 @@ public class TickWebSocketController {
     public void syncStatus() {
         Set<String> symbols = realtimeTickService.getMonitoredSymbols();
 
+        // 收集各股票的統計數據，直接放入 SYNC 回應（含空統計，確保前端能正常渲染）
+        Map<String, TickStats> symbolStats = new HashMap<>();
+        for (String symbol : symbols) {
+            symbolStats.put(symbol, realtimeTickService.getRealtimeStats(symbol));
+        }
+
         Map<String, Object> response = new HashMap<>();
         response.put("type", "SYNC");
         response.put("symbols", symbols);
         response.put("subscribed", realtimeTickService.getSubscribedCount());
         response.put("maxSubscriptions", realtimeTickService.getMaxSubscriptions());
+        response.put("symbolStats", symbolStats);
 
         // 回傳給所有人（包括剛連線的）
         messagingTemplate.convertAndSend("/topic/tick-status", response);
