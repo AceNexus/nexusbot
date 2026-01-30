@@ -330,8 +330,15 @@ public class FugleWebSocketClient {
                     errorMsg = payload;  // 顯示完整原始訊息
                 }
                 log.error("[Fugle] API 錯誤: {}", errorMsg);
-            } else if (!"pong".equals(event) && !"subscribed".equals(event)) {
-                // 記錄未知事件類型（排除 pong 和 subscribed）
+            } else if ("subscribed".equals(event)) {
+                String channel = node.path("data").path("channel").asText();
+                String symbol = node.path("data").path("symbol").asText();
+                log.info("[Fugle] 訂閱確認: {} ({})", symbol, channel);
+            } else if ("unsubscribed".equals(event)) {
+                String channel = node.path("data").path("channel").asText();
+                String symbol = node.path("data").path("symbol").asText();
+                log.info("[Fugle] 取消訂閱確認: {} ({})", symbol, channel);
+            } else if (!"pong".equals(event) && !"heartbeat".equals(event)) {
                 log.debug("[Fugle] 未處理事件: {}", payload);
             }
         } catch (Exception e) {
