@@ -25,7 +25,8 @@ import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 
 /**
  * 提醒排程器
- * 每分鐘掃描一次，發送到期的提醒並處理重複邏輯
+ * 每秒掃描一次，發送到期的提醒並處理重複邏輯
+ * - 只發送已到期（reminderTimeInstant <= now）的提醒，絕不提前發送
  * - 通知邏輯完全委派給 ReminderNotificationService
  * - 排程器專注於「何時發送」，通知服務負責「如何發送」
  */
@@ -41,10 +42,10 @@ public class ReminderScheduler {
     private final AIService aiService;
 
     /**
-     * 每分鐘整分執行一次，掃描並發送到期提醒
-     * cron: 每分鐘的第 0 秒執行（確保在整分時執行）
+     * 每秒執行一次，掃描並發送到期提醒
+     * 精準到秒級，且只發送已到期的提醒
      */
-    @Scheduled(cron = "0 * * * * *")
+    @Scheduled(fixedRate = 1000)
     public void processReminders() {
         try {
             List<Reminder> dueReminders = findDueReminders();
@@ -71,11 +72,10 @@ public class ReminderScheduler {
 
     private List<Reminder> findDueReminders() {
         Instant now = Instant.now();
-        Instant currentMinuteStart = now.truncatedTo(ChronoUnit.MINUTES);
-        Instant nextMinuteStart = currentMinuteStart.plus(1, ChronoUnit.MINUTES);
-
-        long startMillis = currentMinuteStart.toEpochMilli();
-        long endMillis = nextMinuteStart.toEpochMilli();
+        // 下限：避免撈到太久以前卡住的提醒
+        long startMillis = now.minus(5, ChronoUnit.MINUTES).toEpochMilli();
+        // 上限：now + 1ms 搭配 < 查詢，等同 <= now，確保不會提前發送
+        long endMillis = now.plusMillis(1).toEpochMilli();
 
         return reminderRepository.findDueRemindersByInstant(startMillis, endMillis);
     }
