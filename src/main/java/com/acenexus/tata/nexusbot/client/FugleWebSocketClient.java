@@ -238,6 +238,13 @@ public class FugleWebSocketClient {
     }
 
     /**
+     * 檢查是否已連線且通過驗證（可接受訂閱）
+     */
+    public boolean isReady() {
+        return isConnected() && authenticated;
+    }
+
+    /**
      * 檢查是否已訂閱
      */
     public boolean isSubscribed(String symbol) {
@@ -306,20 +313,15 @@ public class FugleWebSocketClient {
             } else if ("authenticated".equals(event)) {
                 // 身份驗證成功
                 authenticated = true;
+                initialConnection = false;
                 log.info("[Fugle] 身份驗證成功");
 
-                // 根據是否首次連線決定行為
-                if (initialConnection) {
-                    subscribers.clear();
-                    subscribedSymbols.clear();
-                    initialConnection = false;
-                    log.info("[Fugle] 首次啟動，訂閱數: 0");
+                // 重新訂閱所有待處理的股票（首次連線或斷線重連皆適用）
+                if (!subscribedSymbols.isEmpty()) {
+                    log.info("[Fugle] 訂閱/重新訂閱 {} 檔", subscribedSymbols.size());
+                    resubscribeAll();
                 } else {
-                    // 斷線重連：重新訂閱現有股票
-                    if (!subscribedSymbols.isEmpty()) {
-                        log.info("[Fugle] 重連後重新訂閱 {} 檔", subscribedSymbols.size());
-                        resubscribeAll();
-                    }
+                    log.info("[Fugle] 目前無待訂閱股票");
                 }
             } else if ("error".equals(event)) {
                 String errorMsg = node.path("data").path("message").asText();
@@ -378,7 +380,7 @@ public class FugleWebSocketClient {
                 .symbol(symbol)
                 .time(time)
                 .price(price)
-                .volume(data.path("volume").asInt(0))
+                .volume(data.path("size").asInt(0))
                 .serial(data.path("serial").asLong(0))
                 .bidPrice(bid)
                 .askPrice(ask)

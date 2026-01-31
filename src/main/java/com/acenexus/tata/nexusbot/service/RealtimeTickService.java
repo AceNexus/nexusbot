@@ -300,6 +300,13 @@ public class RealtimeTickService {
     }
 
     /**
+     * 檢查 Fugle 是否已連線且通過驗證
+     */
+    public boolean isFugleReady() {
+        return fugleConfig.isEnabled() && fugleClient.isReady();
+    }
+
+    /**
      * 每日開盤前清除資料（08:30）
      */
     @Scheduled(cron = "0 30 8 * * MON-FRI")

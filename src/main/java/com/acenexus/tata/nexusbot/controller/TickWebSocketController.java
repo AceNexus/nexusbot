@@ -59,11 +59,13 @@ public class TickWebSocketController {
         response.put("subscribed", realtimeTickService.getSubscribedCount());
         response.put("maxSubscriptions", realtimeTickService.getMaxSubscriptions());
         response.put("symbolStats", symbolStats);
+        response.put("fugleEnabled", realtimeTickService.isFugleEnabled());
+        response.put("fugleReady", realtimeTickService.isFugleReady());
 
         // 回傳給所有人（包括剛連線的）
         messagingTemplate.convertAndSend("/topic/tick-status", response);
 
-        log.info("[Tick] 同步狀態: {} 檔監控中", symbols.size());
+        log.info("[Tick] 同步狀態: {} 檔監控中, Fugle ready={}", symbols.size(), realtimeTickService.isFugleReady());
     }
 
     /**
@@ -76,14 +78,25 @@ public class TickWebSocketController {
             String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
             String result = realtimeTickService.startMonitor(resolvedSymbol);
 
-            // 廣播訂閱結果給所有人
-            Map<String, Object> response = Map.of(
-                    "type", "SUBSCRIBE_RESULT",
-                    "symbol", resolvedSymbol,
-                    "result", result,
-                    "subscribed", realtimeTickService.getSubscribedCount(),
-                    "maxSubscriptions", realtimeTickService.getMaxSubscriptions()
-            );
+            // 廣播訂閱結果給所有人（使用 HashMap 以支援更多欄位）
+            Map<String, Object> response = new HashMap<>();
+            response.put("type", "SUBSCRIBE_RESULT");
+            response.put("symbol", resolvedSymbol);
+            response.put("result", result);
+            response.put("subscribed", realtimeTickService.getSubscribedCount());
+            response.put("maxSubscriptions", realtimeTickService.getMaxSubscriptions());
+            response.put("fugleReady", realtimeTickService.isFugleReady());
+
+            // 訂閱失敗時附上原因
+            if (!"FUGLE".equals(result)) {
+                String errorMsg = switch (result) {
+                    case "NO_API_KEY" -> "Fugle API Key 未設定，無法使用即時成交功能";
+                    case "LIMIT_EXCEEDED" -> "已達訂閱上限 (" + realtimeTickService.getMaxSubscriptions() + " 檔)";
+                    case "FAILED" -> "訂閱失敗，請稍後再試";
+                    default -> "未知錯誤: " + result;
+                };
+                response.put("error", errorMsg);
+            }
 
             messagingTemplate.convertAndSend("/topic/ticks/" + resolvedSymbol, response);
             // 廣播到全局頻道，讓所有人更新訂閱狀態
