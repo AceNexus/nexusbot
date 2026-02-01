@@ -3,13 +3,18 @@ package com.acenexus.tata.nexusbot.controller;
 import com.acenexus.tata.nexusbot.client.FinMindApiClient;
 import com.acenexus.tata.nexusbot.client.TwseApiClient;
 import com.acenexus.tata.nexusbot.dto.CandlestickData;
+import com.acenexus.tata.nexusbot.dto.ForeignShareholdingData;
 import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
+import com.acenexus.tata.nexusbot.dto.MarginTradingData;
+import com.acenexus.tata.nexusbot.dto.SecuritiesLendingData;
+import com.acenexus.tata.nexusbot.dto.ShareholdingDistributionSummary;
 import com.acenexus.tata.nexusbot.dto.StockSymbolDto;
 import com.acenexus.tata.nexusbot.dto.TechnicalIndicatorData;
 import com.acenexus.tata.nexusbot.dto.TickData;
 import com.acenexus.tata.nexusbot.dto.TickStats;
 import com.acenexus.tata.nexusbot.enums.StockMarket;
 import com.acenexus.tata.nexusbot.service.RealtimeTickService;
+import com.acenexus.tata.nexusbot.service.StockChipEnhancedService;
 import com.acenexus.tata.nexusbot.service.StockChipService;
 import com.acenexus.tata.nexusbot.service.StockSymbolService;
 import com.acenexus.tata.nexusbot.service.TechnicalAnalysisService;
@@ -40,6 +45,7 @@ public class StockController {
     private final TwseApiClient twseApiClient;
     private final StockSymbolService stockSymbolService;
     private final StockChipService stockChipService;
+    private final StockChipEnhancedService stockChipEnhancedService;
     private final TechnicalAnalysisService technicalAnalysisService;
     private final RealtimeTickService realtimeTickService;
 
@@ -510,5 +516,153 @@ public class StockController {
         response.put("summary", realtimeTickService.getSubscriptionSummary());
         response.put("monitors", realtimeTickService.getMonitorStatus());
         return ResponseEntity.ok(response);
+    }
+
+    // ==================== 籌碼面補強端點 ====================
+
+    @GetMapping("/{symbol}/margin-trading/range")
+    public ResponseEntity<Map<String, Object>> getMarginTradingRange(
+            @PathVariable String symbol,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            List<MarginTradingData> daily = stockChipEnhancedService.getMarginTradingRange(resolvedSymbol, start, end);
+
+            // 計算摘要
+            Map<String, Object> summary = new java.util.HashMap<>();
+            summary.put("symbol", resolvedSymbol);
+            summary.put("days", daily.size());
+            if (!daily.isEmpty()) {
+                MarginTradingData latest = daily.get(daily.size() - 1);
+                summary.put("latestMarginBalance", latest.getMarginPurchaseTodayBalance());
+                summary.put("latestShortBalance", latest.getShortSaleTodayBalance());
+                summary.put("latestUtilizationRate", latest.getUtilizationRate());
+
+                long totalMarginChange = daily.stream()
+                        .mapToLong(d -> d.getMarginPurchaseChange() != null ? d.getMarginPurchaseChange() : 0).sum();
+                long totalShortChange = daily.stream()
+                        .mapToLong(d -> d.getShortSaleChange() != null ? d.getShortSaleChange() : 0).sum();
+                summary.put("totalMarginChange", totalMarginChange);
+                summary.put("totalShortChange", totalShortChange);
+            }
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("summary", summary);
+            response.put("daily", daily);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting margin trading range for {}", symbol, e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{symbol}/securities-lending/range")
+    public ResponseEntity<Map<String, Object>> getSecuritiesLendingRange(
+            @PathVariable String symbol,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            List<SecuritiesLendingData> daily = stockChipEnhancedService.getSecuritiesLendingRange(resolvedSymbol, start, end);
+
+            Map<String, Object> summary = new java.util.HashMap<>();
+            summary.put("symbol", resolvedSymbol);
+            summary.put("days", daily.stream().map(SecuritiesLendingData::getDate).distinct().count());
+            long totalVolume = daily.stream()
+                    .mapToLong(d -> d.getTotalVolume() != null ? d.getTotalVolume() : 0).sum();
+            summary.put("totalVolume", totalVolume);
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("summary", summary);
+            response.put("daily", daily);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting securities lending range for {}", symbol, e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{symbol}/foreign-shareholding/range")
+    public ResponseEntity<Map<String, Object>> getForeignShareholdingRange(
+            @PathVariable String symbol,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            List<ForeignShareholdingData> daily = stockChipEnhancedService.getForeignShareholdingRange(resolvedSymbol, start, end);
+
+            Map<String, Object> summary = new java.util.HashMap<>();
+            summary.put("symbol", resolvedSymbol);
+            summary.put("days", daily.size());
+            if (!daily.isEmpty()) {
+                ForeignShareholdingData latest = daily.get(daily.size() - 1);
+                summary.put("name", latest.getName());
+                summary.put("latestSharesRatio", latest.getForeignInvestmentSharesRatio());
+                summary.put("latestShares", latest.getForeignInvestmentShares());
+                summary.put("numberOfSharesIssued", latest.getNumberOfSharesIssued());
+
+                ForeignShareholdingData first = daily.get(0);
+                if (latest.getForeignInvestmentSharesRatio() != null && first.getForeignInvestmentSharesRatio() != null) {
+                    summary.put("ratioChange", latest.getForeignInvestmentSharesRatio()
+                            .subtract(first.getForeignInvestmentSharesRatio()));
+                }
+            }
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("summary", summary);
+            response.put("daily", daily);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting foreign shareholding range for {}", symbol, e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{symbol}/shareholding-distribution")
+    public ResponseEntity<Map<String, Object>> getShareholdingDistribution(
+            @PathVariable String symbol,
+            @RequestParam String date) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            LocalDate queryDate = LocalDate.parse(date);
+            Map<String, Object> result = stockChipEnhancedService.getShareholdingDistribution(resolvedSymbol, queryDate);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("Error getting shareholding distribution for {}", symbol, e);
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/{symbol}/shareholding-distribution/trend")
+    public ResponseEntity<Map<String, Object>> getShareholdingDistributionTrend(
+            @PathVariable String symbol,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        try {
+            String resolvedSymbol = stockSymbolService.resolveSymbol(symbol, StockMarket.TW);
+            LocalDate start = LocalDate.parse(startDate);
+            LocalDate end = LocalDate.parse(endDate);
+
+            List<ShareholdingDistributionSummary> summaries =
+                    stockChipEnhancedService.getShareholdingDistributionTrend(resolvedSymbol, start, end);
+
+            Map<String, Object> response = new java.util.HashMap<>();
+            response.put("symbol", resolvedSymbol);
+            response.put("summaries", summaries);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error getting shareholding distribution trend for {}", symbol, e);
+            return ResponseEntity.badRequest().build();
+        }
     }
 }

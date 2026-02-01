@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>台股籌碼面分析 (NexusBot)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .text-up { color: #dc2626; }
+        .text-down { color: #16a34a; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        .tab-active { border-bottom: 2px solid #2563eb; color: #2563eb; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen p-4 md:p-8">
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useMemo } = React;
+
+    const getColorClass = (val) => {
+        if (val === undefined || val === null || val === 0) return "text-gray-500";
+        return val > 0 ? "text-up" : "text-down";
+    };
+
+    const formatNum = (val) => {
+        if (val === undefined || val === null) return "--";
+        return val.toLocaleString();
+    };
+
+    const formatSignedNum = (val) => {
+        if (val === undefined || val === null) return "--";
+        return (val > 0 ? "+" : "") + val.toLocaleString();
+    };
+
+    const formatPercent = (val) => {
+        if (val === undefined || val === null) return "--";
+        return Number(val).toFixed(2) + "%";
+    };
+
+    // ==================== 融資融券分頁 ====================
+    const MarginTradingTab = ({ data }) => {
+        if (!data) return null;
+        const { summary, daily } = data;
+        return (
+            <div className="space-y-4">
+                {summary && (
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <SummaryCard label="融資餘額" value={formatNum(summary.latestMarginBalance)} unit="張" />
+                        <SummaryCard label="融券餘額" value={formatNum(summary.latestShortBalance)} unit="張" />
+                        <SummaryCard label="融資使用率" value={formatPercent(summary.latestUtilizationRate)} />
+                        <SummaryCard label="區間融資增減" value={formatSignedNum(summary.totalMarginChange)} unit="張"
+                                     colorClass={getColorClass(summary.totalMarginChange)} />
+                        <SummaryCard label="區間融券增減" value={formatSignedNum(summary.totalShortChange)} unit="張"
+                                     colorClass={getColorClass(summary.totalShortChange)} />
+                    </div>
+                )}
+                {daily && daily.length > 0 && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <h2 className="font-bold text-slate-700">融資融券每日明細</h2>
+                            <span className="text-xs text-slate-400">共 {daily.length} 個交易日</span>
+                        </div>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50 text-slate-500 text-left">
+                                    <tr>
+                                        <th className="px-4 py-3 font-medium">日期</th>
+                                        <th className="px-4 py-3 font-medium text-right">融資餘額</th>
+                                        <th className="px-4 py-3 font-medium text-right">融資增減</th>
+                                        <th className="px-4 py-3 font-medium text-right">融券餘額</th>
+                                        <th className="px-4 py-3 font-medium text-right">融券增減</th>
+                                        <th className="px-4 py-3 font-medium text-right">資券互抵</th>
+                                        <th className="px-4 py-3 font-medium text-right">使用率</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {[...daily].reverse().map((d, i) => (
+                                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-4 py-2 font-mono text-slate-600">{d.date}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.marginPurchaseTodayBalance)}</td>
+                                            <td className={`px-4 py-2 text-right font-mono ${getColorClass(d.marginPurchaseChange)}`}>
+                                                {formatSignedNum(d.marginPurchaseChange)}
+                                            </td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.shortSaleTodayBalance)}</td>
+                                            <td className={`px-4 py-2 text-right font-mono ${getColorClass(d.shortSaleChange)}`}>
+                                                {formatSignedNum(d.shortSaleChange)}
+                                            </td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.offsetLoanAndShort)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatPercent(d.utilizationRate)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ==================== 借券分頁 ====================
+    const SecuritiesLendingTab = ({ data }) => {
+        if (!data) return null;
+        const { summary, daily } = data;
+
+        // 按日期分組，同日期的不同交易方式合併顯示
+        const groupedByDate = useMemo(() => {
+            if (!daily || daily.length === 0) return [];
+            const map = {};
+            daily.forEach(d => {
+                const key = d.date;
+                if (!map[key]) map[key] = { date: key, closePrice: d.closePrice, types: [] };
+                map[key].types.push(d);
+            });
+            return Object.values(map).sort((a, b) => b.date.localeCompare(a.date));
+        }, [daily]);
+
+        return (
+            <div className="space-y-4">
+                {summary && (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        <SummaryCard label="交易日數" value={summary.days} unit="天" />
+                        <SummaryCard label="區間總成交量" value={formatNum(summary.totalVolume)} unit="股" />
+                        <SummaryCard label="股票代號" value={summary.symbol} />
+                    </div>
+                )}
+                {groupedByDate.length > 0 && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <h2 className="font-bold text-slate-700">借券每日明細</h2>
+                            <span className="text-xs text-slate-400">共 {groupedByDate.length} 個交易日</span>
+                        </div>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50 text-slate-500 text-left">
+                                    <tr>
+                                        <th className="px-4 py-3 font-medium">日期</th>
+                                        <th className="px-4 py-3 font-medium">交易方式</th>
+                                        <th className="px-4 py-3 font-medium text-right">成交量(股)</th>
+                                        <th className="px-4 py-3 font-medium text-right">成交筆數</th>
+                                        <th className="px-4 py-3 font-medium text-right">平均費率(%)</th>
+                                        <th className="px-4 py-3 font-medium text-right">收盤價</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {groupedByDate.map((group, gi) =>
+                                        group.types.map((d, ti) => (
+                                            <tr key={`${gi}-${ti}`} className={`hover:bg-slate-50 transition-colors ${ti > 0 ? 'border-t border-dashed border-slate-100' : ''}`}>
+                                                {ti === 0
+                                                    ? <td className="px-4 py-2 font-mono text-slate-600" rowSpan={group.types.length}>{d.date}</td>
+                                                    : null}
+                                                <td className="px-4 py-2">
+                                                    <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${d.transactionType === '競價' ? 'bg-blue-50 text-blue-600' : 'bg-amber-50 text-amber-600'}`}>
+                                                        {d.transactionType}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-2 text-right font-mono">{formatNum(d.totalVolume)}</td>
+                                                <td className="px-4 py-2 text-right font-mono">{formatNum(d.totalTransactions)}</td>
+                                                <td className="px-4 py-2 text-right font-mono">{d.avgFeeRate != null ? Number(d.avgFeeRate).toFixed(4) : "--"}</td>
+                                                {ti === 0
+                                                    ? <td className="px-4 py-2 text-right font-mono" rowSpan={group.types.length}>{d.closePrice != null ? Number(d.closePrice).toFixed(2) : "--"}</td>
+                                                    : null}
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ==================== 外資持股分頁 ====================
+    const ForeignShareholdingTab = ({ data }) => {
+        if (!data) return null;
+        const { summary, daily } = data;
+        return (
+            <div className="space-y-4">
+                {summary && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <SummaryCard label="股票名稱" value={summary.name || summary.symbol} />
+                        <SummaryCard label="最新外資持股比例" value={formatPercent(summary.latestSharesRatio)} />
+                        <SummaryCard label="發行股數" value={formatNum(summary.numberOfSharesIssued)} unit="股" />
+                        <SummaryCard label="區間比例變化" value={summary.ratioChange != null ? (Number(summary.ratioChange) > 0 ? "+" : "") + Number(summary.ratioChange).toFixed(2) + "%" : "--"}
+                                     colorClass={getColorClass(summary.ratioChange)} />
+                    </div>
+                )}
+                {daily && daily.length > 0 && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                            <h2 className="font-bold text-slate-700">外資持股每日明細</h2>
+                            <span className="text-xs text-slate-400">共 {daily.length} 個交易日</span>
+                        </div>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50 text-slate-500 text-left">
+                                    <tr>
+                                        <th className="px-4 py-3 font-medium">日期</th>
+                                        <th className="px-4 py-3 font-medium text-right">外資持股數</th>
+                                        <th className="px-4 py-3 font-medium text-right">持股比例(%)</th>
+                                        <th className="px-4 py-3 font-medium text-right">尚可投資比例(%)</th>
+                                        <th className="px-4 py-3 font-medium text-right">投資上限(%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {[...daily].reverse().map((d, i) => (
+                                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-4 py-2 font-mono text-slate-600">{d.date}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.foreignInvestmentShares)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatPercent(d.foreignInvestmentSharesRatio)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatPercent(d.foreignInvestmentRemainRatio)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatPercent(d.foreignInvestmentUpperLimitRatio)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ==================== 集保分散分頁 ====================
+    const ShareholdingDistributionTab = ({ distData, trendData }) => {
+        return (
+            <div className="space-y-4">
+                {distData && distData.summary && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <SummaryCard label="資料日期" value={distData.summary.date} />
+                        <SummaryCard label="總股東人數" value={formatNum(distData.summary.totalPeople)} unit="人" />
+                        <SummaryCard label="大戶持股比例" value={formatPercent(distData.summary.majorHolderPercent)}
+                                     colorClass="text-up" />
+                        <SummaryCard label="散戶持股比例" value={formatPercent(distData.summary.retailHolderPercent)}
+                                     colorClass="text-down" />
+                    </div>
+                )}
+                {distData && distData.levels && distData.levels.length > 0 && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                            <h2 className="font-bold text-slate-700">持股級距明細</h2>
+                        </div>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50 text-slate-500 text-left">
+                                    <tr>
+                                        <th className="px-4 py-3 font-medium">持股級距(股)</th>
+                                        <th className="px-4 py-3 font-medium text-right">人數</th>
+                                        <th className="px-4 py-3 font-medium text-right">持股比例(%)</th>
+                                        <th className="px-4 py-3 font-medium text-right">股數</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {distData.levels.map((d, i) => (
+                                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-4 py-2 font-mono text-slate-600">{d.holdingSharesLevel}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.people)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatPercent(d.percent)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.unit)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+                {trendData && trendData.summaries && trendData.summaries.length > 0 && (
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                            <h2 className="font-bold text-slate-700">大戶/散戶持股趨勢</h2>
+                        </div>
+                        <div className="overflow-x-auto custom-scrollbar">
+                            <table className="w-full text-sm">
+                                <thead className="bg-slate-50 text-slate-500 text-left">
+                                    <tr>
+                                        <th className="px-4 py-3 font-medium">日期</th>
+                                        <th className="px-4 py-3 font-medium text-right">大戶比例(%)</th>
+                                        <th className="px-4 py-3 font-medium text-right">散戶比例(%)</th>
+                                        <th className="px-4 py-3 font-medium text-right">大戶人數</th>
+                                        <th className="px-4 py-3 font-medium text-right">散戶人數</th>
+                                        <th className="px-4 py-3 font-medium text-right">總人數</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {[...trendData.summaries].reverse().map((d, i) => (
+                                        <tr key={i} className="hover:bg-slate-50 transition-colors">
+                                            <td className="px-4 py-2 font-mono text-slate-600">{d.date}</td>
+                                            <td className="px-4 py-2 text-right font-mono text-up">{formatPercent(d.majorHolderPercent)}</td>
+                                            <td className="px-4 py-2 text-right font-mono text-down">{formatPercent(d.retailHolderPercent)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.majorHolderPeople)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.retailHolderPeople)}</td>
+                                            <td className="px-4 py-2 text-right font-mono">{formatNum(d.totalPeople)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ==================== 共用摘要卡片 ====================
+    const SummaryCard = ({ label, value, unit, colorClass, highlight }) => (
+        <div className={`bg-white p-4 rounded-2xl shadow-sm border ${highlight ? 'border-blue-200 bg-blue-50/30' : 'border-slate-100'}`}>
+            <div className="text-sm text-slate-500 mb-1">{label}</div>
+            <div className={`text-lg font-bold font-mono ${colorClass || 'text-slate-800'}`}>
+                {value} {unit && <span className="text-xs font-normal text-slate-400 ml-1">{unit}</span>}
+            </div>
+        </div>
+    );
+
+    // ==================== 主應用 ====================
+    const App = () => {
+        const [symbol, setSymbol] = useState("2330");
+        const [startDate, setStartDate] = useState(() => {
+            const d = new Date(); d.setDate(d.getDate() - 30);
+            return d.toISOString().split('T')[0];
+        });
+        const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+        const [activeTab, setActiveTab] = useState("margin");
+        const [loading, setLoading] = useState(false);
+        const [error, setError] = useState(null);
+
+        const [marginData, setMarginData] = useState(null);
+        const [lendingData, setLendingData] = useState(null);
+        const [foreignData, setForeignData] = useState(null);
+        const [distData, setDistData] = useState(null);
+        const [trendData, setTrendData] = useState(null);
+
+        const tabs = [
+            { id: "margin", label: "融資融券" },
+            { id: "lending", label: "借券賣出" },
+            { id: "foreign", label: "外資持股" },
+            { id: "distribution", label: "集保分散" }
+        ];
+
+        const handleResponse = async (res, label) => {
+            if (res.status === 400) throw new Error(`${label}：參數錯誤，請確認股票代號與日期`);
+            if (res.status === 404) throw new Error(`${label}：找不到股票 ${symbol} 的資料`);
+            if (res.status === 500) throw new Error(`${label}：伺服器內部錯誤，請稍後再試`);
+            if (!res.ok) throw new Error(`${label}：查詢失敗 (HTTP ${res.status})`);
+            return res.json();
+        };
+
+        const fetchData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const s = encodeURIComponent(symbol);
+                if (activeTab === "margin") {
+                    const res = await fetch(`/api/stock/${s}/margin-trading/range?startDate=${startDate}&endDate=${endDate}`);
+                    setMarginData(await handleResponse(res, "融資融券"));
+                } else if (activeTab === "lending") {
+                    const res = await fetch(`/api/stock/${s}/securities-lending/range?startDate=${startDate}&endDate=${endDate}`);
+                    setLendingData(await handleResponse(res, "借券"));
+                } else if (activeTab === "foreign") {
+                    const res = await fetch(`/api/stock/${s}/foreign-shareholding/range?startDate=${startDate}&endDate=${endDate}`);
+                    setForeignData(await handleResponse(res, "外資持股"));
+                } else if (activeTab === "distribution") {
+                    const [distRes, trendRes] = await Promise.all([
+                        fetch(`/api/stock/${s}/shareholding-distribution?date=${endDate}`),
+                        fetch(`/api/stock/${s}/shareholding-distribution/trend?startDate=${startDate}&endDate=${endDate}`)
+                    ]);
+                    setDistData(await handleResponse(distRes, "集保分散"));
+                    setTrendData(await handleResponse(trendRes, "集保趨勢"));
+                }
+            } catch (err) {
+                if (err.name === "TypeError" && err.message.includes("fetch")) {
+                    setError("網路連線失敗，請檢查網路狀態");
+                } else {
+                    setError(err.message);
+                }
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        return (
+            <div className="max-w-5xl mx-auto space-y-6">
+                <header className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h1 className="text-2xl font-bold text-slate-800 mb-6">籌碼面分析</h1>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-500 mb-1">股票代號</label>
+                            <input type="text" className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                   value={symbol} placeholder="例如：2330" onChange={e => setSymbol(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-500 mb-1">開始日期</label>
+                            <input type="date" className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                   value={startDate} onChange={e => setStartDate(e.target.value)} />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-500 mb-1">結束日期</label>
+                            <input type="date" className="w-full px-4 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                   value={endDate} onChange={e => setEndDate(e.target.value)} />
+                        </div>
+                        <button onClick={fetchData} disabled={loading}
+                                className="bg-blue-600 text-white px-6 py-2 rounded-xl font-medium hover:bg-blue-700 transition-colors disabled:bg-blue-300">
+                            {loading ? "查詢中..." : "開始查詢"}
+                        </button>
+                    </div>
+                </header>
+
+                {/* 分頁 */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="flex border-b border-slate-200">
+                        {tabs.map(tab => (
+                            <button key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex-1 px-4 py-3 text-sm transition-colors ${activeTab === tab.id ? 'tab-active' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'}`}>
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {error && (
+                    <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-100">{error}</div>
+                )}
+
+                {/* 分頁內容 */}
+                {activeTab === "margin" && <MarginTradingTab data={marginData} />}
+                {activeTab === "lending" && <SecuritiesLendingTab data={lendingData} />}
+                {activeTab === "foreign" && <ForeignShareholdingTab data={foreignData} />}
+                {activeTab === "distribution" && <ShareholdingDistributionTab distData={distData} trendData={trendData} />}
+
+                {!marginData && !lendingData && !foreignData && !distData && !loading && !error && (
+                    <div className="bg-white p-12 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400">
+                        請輸入股票代號並選擇日期範圍後點擊「開始查詢」
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+</body>
+</html>

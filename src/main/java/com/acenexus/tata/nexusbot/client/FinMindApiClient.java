@@ -1,9 +1,17 @@
 package com.acenexus.tata.nexusbot.client;
 
 import com.acenexus.tata.nexusbot.dto.CandlestickData;
+import com.acenexus.tata.nexusbot.dto.FinMindForeignShareholdingResponse;
 import com.acenexus.tata.nexusbot.dto.FinMindInstitutionalInvestorsResponse;
+import com.acenexus.tata.nexusbot.dto.FinMindMarginTradingResponse;
+import com.acenexus.tata.nexusbot.dto.FinMindSecuritiesLendingResponse;
+import com.acenexus.tata.nexusbot.dto.FinMindShareholdingDistributionResponse;
 import com.acenexus.tata.nexusbot.dto.FinMindStockPriceResponse;
+import com.acenexus.tata.nexusbot.dto.ForeignShareholdingData;
 import com.acenexus.tata.nexusbot.dto.InstitutionalInvestorsData;
+import com.acenexus.tata.nexusbot.dto.MarginTradingData;
+import com.acenexus.tata.nexusbot.dto.SecuritiesLendingData;
+import com.acenexus.tata.nexusbot.dto.ShareholdingDistributionData;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -390,6 +398,273 @@ public class FinMindApiClient {
                 })
                 .sorted((a, b) -> b.getDate().compareTo(a.getDate()))  // 按日期排序（從新到舊）
                 .collect(Collectors.toList());
+    }
+
+    // ==================== 籌碼面補強 API ====================
+
+    /**
+     * 建構 FinMind API URL（含 token）
+     */
+    private String buildFinMindUrl(String dataset, String stockId, String startDate, String endDate) {
+        StringBuilder url = new StringBuilder(String.format("%s?dataset=%s&data_id=%s&start_date=%s",
+                BASE_URL, dataset, stockId, startDate));
+        if (endDate != null && !endDate.isEmpty()) {
+            url.append("&end_date=").append(endDate);
+        }
+        if (apiToken != null && !apiToken.isEmpty()) {
+            url.append("&token=").append(apiToken);
+        }
+        return url.toString();
+    }
+
+    /**
+     * 取得融資融券數據
+     */
+    @Cacheable(value = "stockFinancialData", key = "#stockId + '_margin-trading_' + #startDate + '_' + #endDate")
+    public List<MarginTradingData> getMarginTrading(String stockId, String startDate, String endDate) {
+        try {
+            String url = buildFinMindUrl("TaiwanStockMarginPurchaseShortSale", stockId, startDate, endDate);
+            log.debug("FinMind MarginTrading query - stockId={}, startDate={}, endDate={}", stockId, startDate, endDate);
+
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.warn("FinMind MarginTrading query failed - stockId={}, status={}", stockId, response.getStatusCode());
+                return List.of();
+            }
+
+            FinMindMarginTradingResponse apiResponse = objectMapper.readValue(
+                    response.getBody(), FinMindMarginTradingResponse.class);
+
+            if (apiResponse.getStatus() != 200 || apiResponse.getData() == null) {
+                log.warn("FinMind MarginTrading API error - stockId={}, message={}", stockId, apiResponse.getMessage());
+                return List.of();
+            }
+
+            List<MarginTradingData> result = apiResponse.getData().stream()
+                    .map(item -> {
+                        long marginChange = (item.getMarginPurchaseTodayBalance() != null ? item.getMarginPurchaseTodayBalance() : 0)
+                                - (item.getMarginPurchaseYesterdayBalance() != null ? item.getMarginPurchaseYesterdayBalance() : 0);
+                        long shortChange = (item.getShortSaleTodayBalance() != null ? item.getShortSaleTodayBalance() : 0)
+                                - (item.getShortSaleYesterdayBalance() != null ? item.getShortSaleYesterdayBalance() : 0);
+
+                        BigDecimal utilizationRate = BigDecimal.ZERO;
+                        if (item.getMarginPurchaseLimit() != null && item.getMarginPurchaseLimit() > 0
+                                && item.getMarginPurchaseTodayBalance() != null) {
+                            utilizationRate = BigDecimal.valueOf(item.getMarginPurchaseTodayBalance())
+                                    .multiply(BigDecimal.valueOf(100))
+                                    .divide(BigDecimal.valueOf(item.getMarginPurchaseLimit()), 4, RoundingMode.HALF_UP);
+                        }
+
+                        return MarginTradingData.builder()
+                                .symbol(item.getStockId())
+                                .date(LocalDate.parse(item.getDate(), DATE_FORMATTER))
+                                .marginPurchaseBuy(item.getMarginPurchaseBuy())
+                                .marginPurchaseSell(item.getMarginPurchaseSell())
+                                .marginPurchaseCashRepayment(item.getMarginPurchaseCashRepayment())
+                                .marginPurchaseYesterdayBalance(item.getMarginPurchaseYesterdayBalance())
+                                .marginPurchaseTodayBalance(item.getMarginPurchaseTodayBalance())
+                                .marginPurchaseLimit(item.getMarginPurchaseLimit())
+                                .marginPurchaseChange(marginChange)
+                                .shortSaleBuy(item.getShortSaleBuy())
+                                .shortSaleSell(item.getShortSaleSell())
+                                .shortSaleCashRepayment(item.getShortSaleCashRepayment())
+                                .shortSaleYesterdayBalance(item.getShortSaleYesterdayBalance())
+                                .shortSaleTodayBalance(item.getShortSaleTodayBalance())
+                                .shortSaleLimit(item.getShortSaleLimit())
+                                .shortSaleChange(shortChange)
+                                .offsetLoanAndShort(item.getOffsetLoanAndShort())
+                                .utilizationRate(utilizationRate)
+                                .note(item.getNote() != null ? item.getNote().trim() : null)
+                                .build();
+                    })
+                    .sorted((a, b) -> a.getDate().compareTo(b.getDate()))
+                    .collect(Collectors.toList());
+
+            log.info("FinMind MarginTrading data retrieved - stockId={}, count={}", stockId, result.size());
+            return result;
+
+        } catch (RestClientException e) {
+            log.error("FinMind MarginTrading network error - stockId={}, error={}", stockId, e.getMessage());
+            return List.of();
+        } catch (Exception e) {
+            log.error("FinMind MarginTrading parse error - stockId={}, error={}", stockId, e.getMessage(), e);
+            return List.of();
+        }
+    }
+
+    /**
+     * 取得借券數據（按日期+交易方式彙總）
+     */
+    @Cacheable(value = "stockFinancialData", key = "#stockId + '_securities-lending_' + #startDate + '_' + #endDate")
+    public List<SecuritiesLendingData> getSecuritiesLending(String stockId, String startDate, String endDate) {
+        try {
+            String url = buildFinMindUrl("TaiwanStockSecuritiesLending", stockId, startDate, endDate);
+            log.debug("FinMind SecuritiesLending query - stockId={}, startDate={}, endDate={}", stockId, startDate, endDate);
+
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.warn("FinMind SecuritiesLending query failed - stockId={}, status={}", stockId, response.getStatusCode());
+                return List.of();
+            }
+
+            FinMindSecuritiesLendingResponse apiResponse = objectMapper.readValue(
+                    response.getBody(), FinMindSecuritiesLendingResponse.class);
+
+            if (apiResponse.getStatus() != 200 || apiResponse.getData() == null) {
+                log.warn("FinMind SecuritiesLending API error - stockId={}, message={}", stockId, apiResponse.getMessage());
+                return List.of();
+            }
+
+            // 按日期+交易方式分組彙總
+            Map<String, List<FinMindSecuritiesLendingResponse.SecuritiesLendingData>> grouped =
+                    apiResponse.getData().stream()
+                            .collect(Collectors.groupingBy(d -> d.getDate() + "_" + d.getTransactionType()));
+
+            List<SecuritiesLendingData> result = grouped.entrySet().stream()
+                    .map(entry -> {
+                        List<FinMindSecuritiesLendingResponse.SecuritiesLendingData> items = entry.getValue();
+                        FinMindSecuritiesLendingResponse.SecuritiesLendingData first = items.get(0);
+
+                        long totalVolume = items.stream()
+                                .mapToLong(i -> i.getVolume() != null ? i.getVolume() : 0)
+                                .sum();
+
+                        double avgFeeRate = items.stream()
+                                .filter(i -> i.getFeeRate() != null)
+                                .mapToDouble(FinMindSecuritiesLendingResponse.SecuritiesLendingData::getFeeRate)
+                                .average()
+                                .orElse(0.0);
+
+                        BigDecimal closePrice = first.getClose() != null
+                                ? BigDecimal.valueOf(first.getClose()) : null;
+
+                        return SecuritiesLendingData.builder()
+                                .symbol(first.getStockId())
+                                .date(LocalDate.parse(first.getDate(), DATE_FORMATTER))
+                                .transactionType(first.getTransactionType())
+                                .totalVolume(totalVolume)
+                                .totalTransactions(items.size())
+                                .avgFeeRate(BigDecimal.valueOf(avgFeeRate).setScale(4, RoundingMode.HALF_UP))
+                                .closePrice(closePrice)
+                                .build();
+                    })
+                    .sorted((a, b) -> a.getDate().compareTo(b.getDate()))
+                    .collect(Collectors.toList());
+
+            log.info("FinMind SecuritiesLending data retrieved - stockId={}, count={}", stockId, result.size());
+            return result;
+
+        } catch (RestClientException e) {
+            log.error("FinMind SecuritiesLending network error - stockId={}, error={}", stockId, e.getMessage());
+            return List.of();
+        } catch (Exception e) {
+            log.error("FinMind SecuritiesLending parse error - stockId={}, error={}", stockId, e.getMessage(), e);
+            return List.of();
+        }
+    }
+
+    /**
+     * 取得外資持股比例數據
+     */
+    @Cacheable(value = "stockFinancialData", key = "#stockId + '_foreign-shareholding_' + #startDate + '_' + #endDate")
+    public List<ForeignShareholdingData> getForeignShareholding(String stockId, String startDate, String endDate) {
+        try {
+            String url = buildFinMindUrl("TaiwanStockShareholding", stockId, startDate, endDate);
+            log.debug("FinMind ForeignShareholding query - stockId={}, startDate={}, endDate={}", stockId, startDate, endDate);
+
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.warn("FinMind ForeignShareholding query failed - stockId={}, status={}", stockId, response.getStatusCode());
+                return List.of();
+            }
+
+            FinMindForeignShareholdingResponse apiResponse = objectMapper.readValue(
+                    response.getBody(), FinMindForeignShareholdingResponse.class);
+
+            if (apiResponse.getStatus() != 200 || apiResponse.getData() == null) {
+                log.warn("FinMind ForeignShareholding API error - stockId={}, message={}", stockId, apiResponse.getMessage());
+                return List.of();
+            }
+
+            List<ForeignShareholdingData> result = apiResponse.getData().stream()
+                    .map(item -> ForeignShareholdingData.builder()
+                            .symbol(item.getStockId())
+                            .name(item.getStockName())
+                            .date(LocalDate.parse(item.getDate(), DATE_FORMATTER))
+                            .foreignInvestmentShares(item.getForeignInvestmentShares())
+                            .foreignInvestmentRemainingShares(item.getForeignInvestmentRemainingShares())
+                            .foreignInvestmentSharesRatio(item.getForeignInvestmentSharesRatio() != null
+                                    ? BigDecimal.valueOf(item.getForeignInvestmentSharesRatio()) : null)
+                            .foreignInvestmentRemainRatio(item.getForeignInvestmentRemainRatio() != null
+                                    ? BigDecimal.valueOf(item.getForeignInvestmentRemainRatio()) : null)
+                            .foreignInvestmentUpperLimitRatio(item.getForeignInvestmentUpperLimitRatio() != null
+                                    ? BigDecimal.valueOf(item.getForeignInvestmentUpperLimitRatio()) : null)
+                            .numberOfSharesIssued(item.getNumberOfSharesIssued())
+                            .build())
+                    .sorted((a, b) -> a.getDate().compareTo(b.getDate()))
+                    .collect(Collectors.toList());
+
+            log.info("FinMind ForeignShareholding data retrieved - stockId={}, count={}", stockId, result.size());
+            return result;
+
+        } catch (RestClientException e) {
+            log.error("FinMind ForeignShareholding network error - stockId={}, error={}", stockId, e.getMessage());
+            return List.of();
+        } catch (Exception e) {
+            log.error("FinMind ForeignShareholding parse error - stockId={}, error={}", stockId, e.getMessage(), e);
+            return List.of();
+        }
+    }
+
+    /**
+     * 取得集保分散表數據
+     */
+    @Cacheable(value = "stockFinancialData", key = "#stockId + '_shareholding-distribution_' + #startDate + '_' + #endDate")
+    public List<ShareholdingDistributionData> getShareholdingDistribution(String stockId, String startDate, String endDate) {
+        try {
+            String url = buildFinMindUrl("TaiwanStockHoldingSharesPer", stockId, startDate, endDate);
+            log.debug("FinMind ShareholdingDistribution query - stockId={}, startDate={}, endDate={}", stockId, startDate, endDate);
+
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                log.warn("FinMind ShareholdingDistribution query failed - stockId={}, status={}", stockId, response.getStatusCode());
+                return List.of();
+            }
+
+            FinMindShareholdingDistributionResponse apiResponse = objectMapper.readValue(
+                    response.getBody(), FinMindShareholdingDistributionResponse.class);
+
+            if (apiResponse.getStatus() != 200 || apiResponse.getData() == null) {
+                log.warn("FinMind ShareholdingDistribution API error - stockId={}, message={}", stockId, apiResponse.getMessage());
+                return List.of();
+            }
+
+            List<ShareholdingDistributionData> result = apiResponse.getData().stream()
+                    .map(item -> ShareholdingDistributionData.builder()
+                            .symbol(item.getStockId())
+                            .date(LocalDate.parse(item.getDate(), DATE_FORMATTER))
+                            .holdingSharesLevel(item.getHoldingSharesLevel())
+                            .people(item.getPeople())
+                            .percent(item.getPercent() != null
+                                    ? BigDecimal.valueOf(item.getPercent()) : null)
+                            .unit(item.getUnit())
+                            .build())
+                    .sorted((a, b) -> {
+                        int dateCompare = a.getDate().compareTo(b.getDate());
+                        return dateCompare != 0 ? dateCompare : a.getHoldingSharesLevel().compareTo(b.getHoldingSharesLevel());
+                    })
+                    .collect(Collectors.toList());
+
+            log.info("FinMind ShareholdingDistribution data retrieved - stockId={}, count={}", stockId, result.size());
+            return result;
+
+        } catch (RestClientException e) {
+            log.error("FinMind ShareholdingDistribution network error - stockId={}, error={}", stockId, e.getMessage());
+            return List.of();
+        } catch (Exception e) {
+            log.error("FinMind ShareholdingDistribution parse error - stockId={}, error={}", stockId, e.getMessage(), e);
+            return List.of();
+        }
     }
 
 }
