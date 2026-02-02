@@ -597,23 +597,40 @@
                     totalVolume: 0,
                     buyVolume: 0,
                     sellVolume: 0,
-                    buyRatio: 50
+                    buyRatio: 50,
+                    avgPrice: 0,
+                    totalAmount: 0 // 新增：總成交金額
                 };
 
-                const newTotalVolume = (stats.totalVolume || 0) + (tick.volume || 0);
-                const newBuyVolume = stats.buyVolume + (tick.tickType === 'BUY' ? tick.volume : 0);
-                const newSellVolume = stats.sellVolume + (tick.tickType === 'SELL' ? tick.volume : 0);
+                // 如果是從後端同步來的 stats，可能沒有 totalAmount，需反推
+                if (stats.totalAmount === undefined && stats.avgPrice && stats.totalVolume) {
+                    stats.totalAmount = stats.avgPrice * stats.totalVolume;
+                }
+
+                const tickVolume = tick.volume || 0;
+                const tickPrice = tick.price || 0;
+                const tradeAmount = tickPrice * tickVolume;
+
+                const newTotalVolume = (stats.totalVolume || 0) + tickVolume;
+                const newTotalAmount = (stats.totalAmount || 0) + tradeAmount;
+                
+                const newBuyVolume = (stats.buyVolume || 0) + (tick.tickType === 'BUY' ? tickVolume : 0);
+                const newSellVolume = (stats.sellVolume || 0) + (tick.tickType === 'SELL' ? tickVolume : 0);
                 const totalBuySell = newBuyVolume + newSellVolume;
+
+                const newAvgPrice = newTotalVolume > 0 ? newTotalAmount / newTotalVolume : 0;
 
                 return {
                     ...prev,
                     [symbol]: {
                         ...stats,
-                        totalTicks: stats.totalTicks + 1,
+                        totalTicks: (stats.totalTicks || 0) + 1,
                         totalVolume: newTotalVolume,
+                        totalAmount: newTotalAmount,
                         buyVolume: newBuyVolume,
                         sellVolume: newSellVolume,
                         buyRatio: totalBuySell > 0 ? (newBuyVolume / totalBuySell) * 100 : 50,
+                        avgPrice: newAvgPrice,
                         lastPrice: tick.price,
                         highPrice: stats.highPrice ? Math.max(parseFloat(stats.highPrice), parseFloat(tick.price)) : tick.price,
                         lowPrice: stats.lowPrice ? Math.min(parseFloat(stats.lowPrice), parseFloat(tick.price)) : tick.price

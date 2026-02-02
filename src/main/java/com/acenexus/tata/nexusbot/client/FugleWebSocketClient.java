@@ -21,7 +21,6 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -292,6 +291,7 @@ public class FugleWebSocketClient {
      * 處理收到的訊息
      */
     private void handleIncomingMessage(String payload) {
+        log.info("[Fugle] Received payload: {}", payload);
         try {
             JsonNode node = objectMapper.readTree(payload);
             String event = node.path("event").asText();
@@ -301,12 +301,7 @@ public class FugleWebSocketClient {
 
                 if ("trades".equals(channel)) {
                     JsonNode data = node.path("data");
-
-                    // symbol 可能在根層級或 data 內，依 Fugle API 版本而異
-                    String symbol = node.path("symbol").asText("");
-                    if (symbol.isEmpty()) {
-                        symbol = data.path("symbol").asText("");
-                    }
+                    String symbol = data.path("symbol").asText("");
                     if (symbol.isEmpty()) {
                         log.warn("[Fugle] 無法取得 symbol，原始訊息: {}", payload);
                         return;
@@ -378,21 +373,25 @@ public class FugleWebSocketClient {
             tickType = TickType.NEUTRAL;
         }
 
-        String timeStr = data.path("at").asText();
-        LocalDateTime time = LocalDateTime.now();
-        try {
-            if (timeStr != null && !timeStr.isEmpty()) {
-                time = LocalDateTime.parse(timeStr, DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-            }
-        } catch (Exception e) {
-            log.debug("解析時間失敗: {}", timeStr);
+        // 解析時間
+        long microSeconds = data.path("time").asLong(0);
+        LocalDateTime time;
+        if (microSeconds > 0) {
+            long epochSeconds = microSeconds / 1_000_000;
+            int nanoOfSecond = (int) ((microSeconds % 1_000_000) * 1_000);
+            time = LocalDateTime.ofEpochSecond(epochSeconds, nanoOfSecond, java.time.ZoneOffset.ofHours(8));
+        } else {
+            time = LocalDateTime.now();
         }
+
+        // 解析單筆成交量 (size 為張，系統內部使用股)
+        int volume = data.path("size").asInt(0) * 1000;
 
         return TickData.builder()
                 .symbol(symbol)
                 .time(time)
                 .price(price)
-                .volume(data.path("size").asInt(0))
+                .volume(volume)
                 .serial(data.path("serial").asLong(0))
                 .bidPrice(bid)
                 .askPrice(ask)
