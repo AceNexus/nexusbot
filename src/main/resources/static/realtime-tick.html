@@ -256,102 +256,229 @@
         );
     };
 
-    // 成交明細列表
-    const TickList = ({ ticks, symbol }) => {
-        const listRef = useRef(null);
-        const [autoScroll, setAutoScroll] = useState(true);
+        // 成交明細列表
 
-        useEffect(() => {
-            if (autoScroll && listRef.current) {
-                listRef.current.scrollTop = 0;
-            }
-        }, [ticks, autoScroll]);
+        const TickList = ({ ticks, symbol }) => {
 
-        const getTickColor = (tickType) => {
-            if (tickType === 'BUY') return COLORS.BUY;
-            if (tickType === 'SELL') return COLORS.SELL;
-            return COLORS.NEUTRAL;
-        };
+            const listRef = useRef(null);
 
-        const getTickLabel = (tickType) => {
-            if (tickType === 'BUY') return '外盤';
-            if (tickType === 'SELL') return '內盤';
-            return '中性';
-        };
+            const [autoScroll, setAutoScroll] = useState(true);
 
-        if (!symbol) {
-            return (
-                <div className="bg-white rounded-lg p-4 shadow h-full">
-                    <div className="text-gray-500 text-center py-8">
-                        請選擇股票開始監控
-                    </div>
-                </div>
-            );
-        }
+    
 
-        return (
-            <div className="bg-white rounded-lg shadow h-full flex flex-col">
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 className="text-lg font-semibold text-gray-800">成交明細 (即時滾動)</h3>
-                    <label className="flex items-center gap-2 text-sm text-gray-600">
-                        <input
-                            type="checkbox"
-                            checked={autoScroll}
-                            onChange={(e) => setAutoScroll(e.target.checked)}
-                            className="w-4 h-4"
-                        />
-                        自動捲動
-                    </label>
-                </div>
+            useEffect(() => {
 
-                <div className="grid grid-cols-4 gap-2 px-4 py-2 bg-gray-50 text-sm font-medium text-gray-600 border-b">
-                    <div>時間</div>
-                    <div className="text-right">價格</div>
-                    <div className="text-right">張數</div>
-                    <div className="text-center">內/外</div>
-                </div>
+                if (autoScroll && listRef.current) {
 
-                <div
-                    ref={listRef}
-                    className="flex-1 overflow-y-auto scrollbar-hide"
-                    style={{ maxHeight: '400px' }}
-                >
-                    {ticks.length === 0 ? (
+                    listRef.current.scrollTop = 0;
+
+                }
+
+            }, [ticks, autoScroll]);
+
+    
+
+            if (!symbol) {
+
+                return (
+
+                    <div className="bg-white rounded-lg p-4 shadow h-full">
+
                         <div className="text-gray-500 text-center py-8">
-                            等待即時成交數據...
+
+                            請選擇股票開始監控
+
                         </div>
-                    ) : (
-                        ticks.slice().reverse().map((tick, idx) => {
-                            const lots = tick.volumeLots || Math.floor((tick.volume || 0) / 1000);
-                            const isBigTrade = lots >= 100;
-                            return (
-                                <div
-                                    key={`${tick.serial || idx}-${tick.time}`}
-                                    className={`grid grid-cols-4 gap-2 px-4 py-2 border-b border-gray-100 text-sm tick-row-enter ${
-                                        isBigTrade ? 'bg-yellow-50' : ''
-                                    }`}
-                                >
-                                    <div className="text-gray-600">{formatTime(tick.time)}</div>
-                                    <div className="text-right font-medium">{formatPrice(tick.price)}</div>
-                                    <div className={`text-right font-medium ${isBigTrade ? 'text-orange-600' : ''}`}>
-                                        {formatNumber(lots)}
+
+                    </div>
+
+                );
+
+            }
+
+    
+
+            // 預先計算每一筆成交的價格趨勢顏色 (從舊到新)
+
+            const ticksWithColor = (() => {
+
+                let lastColor = 'text-gray-800'; // 初始顏色
+
+                let lastPrice = null;
+
+    
+
+                return ticks.map((tick) => {
+
+                    let priceColor = lastColor;
+
+                    if (lastPrice !== null) {
+
+                        if (tick.price > lastPrice) {
+
+                            priceColor = 'text-red-600';
+
+                        } else if (tick.price < lastPrice) {
+
+                            priceColor = 'text-green-600';
+
+                        }
+
+                        // 若相等，維持 priceColor 不變
+
+                    }
+
+                    
+
+                    lastColor = priceColor;
+
+                    lastPrice = tick.price;
+
+    
+
+                    // 單量顏色：主動買=紅, 主動賣=綠
+
+                    let volumeColor = 'text-gray-800';
+
+                    if (tick.tickType === 'BUY') {
+
+                        volumeColor = 'text-red-600';
+
+                    } else if (tick.tickType === 'SELL') {
+
+                        volumeColor = 'text-green-600';
+
+                    }
+
+    
+
+                    return { ...tick, priceColor, volumeColor };
+
+                });
+
+            })();
+
+    
+
+            return (
+
+                <div className="bg-white rounded-lg shadow h-full flex flex-col">
+
+                    <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+
+                        <h3 className="text-lg font-semibold text-gray-800">成交明細 (即時滾動)</h3>
+
+                        <label className="flex items-center gap-2 text-sm text-gray-600">
+
+                            <input
+
+                                type="checkbox"
+
+                                checked={autoScroll}
+
+                                onChange={(e) => setAutoScroll(e.target.checked)}
+
+                                className="w-4 h-4"
+
+                            />
+
+                            自動捲動
+
+                        </label>
+
+                    </div>
+
+    
+
+                    <div className="grid grid-cols-5 gap-2 px-4 py-2 bg-gray-50 text-sm font-medium text-gray-600 border-b">
+
+                        <div>時間</div>
+
+                        <div className="text-right">買價</div>
+
+                        <div className="text-right">賣價</div>
+
+                        <div className="text-right">成交</div>
+
+                        <div className="text-right">單量</div>
+
+                    </div>
+
+    
+
+                    <div
+
+                        ref={listRef}
+
+                        className="flex-1 overflow-y-auto scrollbar-hide"
+
+                        style={{ maxHeight: '400px' }}
+
+                    >
+
+                        {ticksWithColor.length === 0 ? (
+
+                            <div className="text-gray-500 text-center py-8">
+
+                                等待即時成交數據...
+
+                            </div>
+
+                        ) : (
+
+                            // 反轉顯示：最新的在最上面
+
+                            ticksWithColor.slice().reverse().map((tick, idx) => {
+
+                                const lots = tick.volumeLots || Math.floor((tick.volume || 0) / 1000);
+
+                                const isBigTrade = lots >= 100;
+
+                                
+
+                                return (
+
+                                    <div
+
+                                        key={`${tick.serial || idx}-${tick.time}`}
+
+                                        className={`grid grid-cols-5 gap-2 px-4 py-2 border-b border-gray-100 text-sm tick-row-enter items-center ${
+
+                                            isBigTrade ? 'bg-yellow-50' : ''
+
+                                        }`}
+
+                                    >
+
+                                        <div className={`${tick.priceColor}`}>{formatTime(tick.time)}</div>
+
+                                        <div className={`text-right font-medium ${tick.priceColor}`}>{formatPrice(tick.bidPrice)}</div>
+
+                                        <div className={`text-right font-medium ${tick.priceColor}`}>{formatPrice(tick.askPrice)}</div>
+
+                                        <div className={`text-right font-bold ${tick.priceColor}`}>{formatPrice(tick.price)}</div>
+
+                                        <div className={`text-right font-bold ${tick.volumeColor}`}>
+
+                                            {formatNumber(lots)}
+
+                                        </div>
+
                                     </div>
-                                    <div className="text-center">
-                                        <span
-                                            className="inline-block px-2 py-0.5 rounded text-white text-xs"
-                                            style={{ backgroundColor: getTickColor(tick.tickType) }}
-                                        >
-                                            {getTickLabel(tick.tickType)}
-                                        </span>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
+
+                                );
+
+                            })
+
+                        )}
+
+                    </div>
+
                 </div>
-            </div>
-        );
-    };
+
+            );
+
+        };
 
     // 大單警示面板
     const BigTradePanel = ({ bigTrades }) => (
