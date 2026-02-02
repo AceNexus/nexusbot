@@ -108,6 +108,7 @@ public class RealtimeTickService {
         }
 
         // 廣播給所有監聽器
+        log.info("[Tick] 廣播 {} 給 {} 個監聽器", symbol, tickBroadcastListeners.size());
         broadcastTick(symbol, tick);
 
         // 大單警示

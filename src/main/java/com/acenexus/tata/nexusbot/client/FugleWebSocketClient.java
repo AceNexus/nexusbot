@@ -300,14 +300,26 @@ public class FugleWebSocketClient {
                 String channel = node.path("channel").asText();
 
                 if ("trades".equals(channel)) {
-                    String symbol = node.path("symbol").asText();
                     JsonNode data = node.path("data");
 
+                    // symbol 可能在根層級或 data 內，依 Fugle API 版本而異
+                    String symbol = node.path("symbol").asText("");
+                    if (symbol.isEmpty()) {
+                        symbol = data.path("symbol").asText("");
+                    }
+                    if (symbol.isEmpty()) {
+                        log.warn("[Fugle] 無法取得 symbol，原始訊息: {}", payload);
+                        return;
+                    }
+
                     TickData tick = parseTickData(symbol, data);
+                    log.info("[Fugle] 收到成交: {} {} 張 @ {} ({})", symbol, tick.getVolumeLots(), tick.getPrice(), tick.getTickType());
 
                     Consumer<TickData> callback = subscribers.get(symbol);
                     if (callback != null) {
                         callback.accept(tick);
+                    } else {
+                        log.warn("[Fugle] 收到 {} 成交但無對應 callback，已註冊: {}", symbol, subscribers.keySet());
                     }
                 }
             } else if ("authenticated".equals(event)) {

@@ -151,6 +151,7 @@ public class TickWebSocketController {
                 "symbol", symbol,
                 "data", tick
         );
+        log.info("[Tick] STOMP 廣播: {} {} 張 @ {} -> /topic/ticks/{}", symbol, tick.getVolumeLots(), tick.getPrice(), symbol);
         messagingTemplate.convertAndSend("/topic/ticks/" + symbol, message);
     }
 
