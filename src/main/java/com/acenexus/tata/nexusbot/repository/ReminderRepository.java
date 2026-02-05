@@ -18,8 +18,8 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
     List<Reminder> findActiveRemindersByRoomId(@Param("roomId") String roomId);
 
     /**
-     * 查詢指定時間範圍內的到期提醒（使用 UTC 時間戳進行精確比較）
+     * 查詢指定時間之前的所有到期提醒（不設下限，避免重啟後遺漏）
      */
-    @Query("SELECT r FROM Reminder r WHERE r.status = 'ACTIVE' AND r.reminderTimeInstant >= :startInstant AND r.reminderTimeInstant < :endInstant ORDER BY r.reminderTimeInstant ASC")
-    List<Reminder> findDueRemindersByInstant(@Param("startInstant") Long startInstant, @Param("endInstant") Long endInstant);
+    @Query("SELECT r FROM Reminder r WHERE r.status = 'ACTIVE' AND r.reminderTimeInstant < :endInstant ORDER BY r.reminderTimeInstant ASC")
+    List<Reminder> findDueRemindersByInstantBefore(@Param("endInstant") Long endInstant);
 }
