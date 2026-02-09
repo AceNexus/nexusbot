@@ -50,13 +50,6 @@ ai:
 admin:
   password-seed: 1103
 
-yahoo:
-  finance:
-    quote-summary-url: https://query1.finance.yahoo.com/v10/finance/quoteSummary
-    chart-url: https://query1.finance.yahoo.com/v8/finance/chart
-    timeout-seconds: 10
-    user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
-
 eureka:
   client:
     enabled: false
