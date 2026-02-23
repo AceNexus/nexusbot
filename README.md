@@ -1,199 +1,234 @@
 # NexusBot
 
-基於 Spring Boot 的 LINE Bot 應用，整合 AI 對話、智能提醒、Email 通知等功能。採用事件驅動架構與責任鏈模式，支援多實例部署與分散式協調。
+![Spring Boot Version](https://img.shields.io/badge/Spring%20Boot-3.4.3-brightgreen.svg)
+![Spring Cloud Version](https://img.shields.io/badge/Spring%20Cloud-2024.0.0-blue.svg)
+![Java Version](https://img.shields.io/badge/Java-17-orange.svg)
+![LINE Bot SDK](https://img.shields.io/badge/LINE%20Bot%20SDK-6.0.0-00C300.svg)
 
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.4.3-brightgreen.svg)](https://spring.io/projects/spring-boot)
-[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://adoptium.net/)
-[![LINE Bot SDK](https://img.shields.io/badge/LINE%20Bot%20SDK-6.0.0-00C300.svg)](https://github.com/line/line-bot-sdk-java)
-[![Gradle](https://img.shields.io/badge/Gradle-8.9-02303A.svg)](https://gradle.org/)
-
-## 目錄
-
-- [技術棧](#技術棧)
-- [快速開始](#快速開始)
-- [微服務生態系](#微服務生態系)
-- [架構設計](#架構設計)
-- [核心功能](#核心功能)
-- [資料庫設計](#資料庫設計)
-- [開發指南](#開發指南)
-- [測試](#測試)
-- [部署](#部署)
-
----
-
-## 技術棧
-
-### 後端框架
-
-- **Spring Boot**: 3.4.3
-- **Java**: 17
-- **LINE Bot SDK**: 6.0.0
-- **Spring Cloud**: 2024.0.0 (Bootstrap、Config Client、Eureka Client、Bus AMQP)
-- **Spring Data JPA**: ORM 層
-- **Spring WebFlux WebClient**: 整合外部 API (Groq AI, OpenStreetMap)
-
-### 資料庫
-
-- **H2**: 本地開發與測試
-- **MySQL**: 8.3.0（生產環境）
-- **Flyway**: 資料庫版本化遷移管理
-- **JPA/Hibernate**: ORM 框架
-
-### 第三方整合
-
-- **Groq API**: AI 對話服務
-- **OpenStreetMap Overpass API**: 地理位置服務
-- **JavaMail (SMTP)**: Email 通知
-- **Thymeleaf**: HTML 模板引擎
-
-### 建置與監控
-
-- **Gradle**: 8.9 with Kotlin DSL
-- **SpringDoc OpenAPI**: API 文件與 Swagger UI
-- **SLF4J + Logback**: 日誌框架（非同步輸出 + TraceId 追蹤）
-
----
+基於 Spring Boot 的 LINE Bot 服務，採用責任鏈模式處理事件，整合 AI 對話、智能提醒、Email 通知、股票監控與位置服務。
 
 ## 快速開始
 
 ### 前置需求
 
-- **JDK 17+**
-- **MySQL 8.x** (生產環境) 或使用內建 H2 (本地開發)
-- **LINE Developer Account** ([申請連結](https://developers.line.biz/))
-- **Groq API Key** ([申請連結](https://groq.com/))
-- **SMTP Email Account** (Gmail 或其他 SMTP 服務)
+- Java 17
+- Docker Desktop（完整微服務 stack）
 
-### 安裝步驟
+### 使用 IntelliJ IDEA
 
-**1. Clone 專案**
+1. `File` → `Open` → 選擇專案根目錄，等待 Gradle 同步完成
+2. `Run` → `Edit Configurations` → `NexusbotApplication` → `Environment variables`
+   填入所需憑證（見[環境變數](#環境變數)；`local` profile 皆有預設值，可直接啟動，但 LINE 收發與 AI 功能需填入真實金鑰）
+3. 點擊 `NexusbotApplication` 旁的 ▶ 啟動
+4. 開啟 http://localhost:5001/actuator/health 確認回傳 `{"status":"UP"}`
 
-```bash
-git clone https://github.com/AceNexus/nexusbot.git
-cd nexusbot
-```
+**本地輔助端點**（`local` profile）：
 
-**2. 修改環境變數**
+| 端點                                    | 說明                                                             |
+|---------------------------------------|----------------------------------------------------------------|
+| http://localhost:5001/h2-console      | H2 Console（JDBC: `jdbc:h2:file:./data/testdb`，user: `sa`，密碼留空） |
+| http://localhost:5001/swagger-ui.html | Swagger UI                                                     |
 
-`src/main/resources/bootstrap-local.yml`：
-
-```yaml
-line:
-  bot:
-  channel-token: YOUR_LINE_CHANNEL_TOKEN
-  channel-secret: YOUR_LINE_CHANNEL_SECRET
-
-groq:
-  api-key: YOUR_GROQ_API_KEY
-
-email:
-  host: smtp.gmail.com
-  port: 587
-  username: your-email@gmail.com
-  password: your-app-password # Gmail App Password
-  from: your-email@gmail.com
-  from-name: NexusBot 提醒通知
-```
-
-**3. 啟動應用**
+**LINE Webhook 測試**：使用 [ngrok](https://ngrok.com/) 建立公開 URL 並設定至 LINE Developers Console：
 
 ```bash
-# 清理並建置
-./gradlew clean build
-
-# 啟動應用 (預設 port 5001)
-./gradlew bootRun
+ngrok http 5001
+# Webhook URL（直連）：https://xxx.ngrok-free.app/webhook
+# Webhook URL（透過 Gateway）：https://xxx.ngrok-free.app/api/linebot/webhook
 ```
 
-**4. 驗證運作**
+## 系統架構
 
-- **應用程式**: http://localhost:5001
-- **H2 Console**: http://localhost:5001/h2-console
-    - JDBC URL: `jdbc:h2:file:./data/testdb`
-    - Username: `sa`
-    - Password: (留空)
-- **Swagger UI**: http://localhost:5001/swagger-ui.html
+### 請求處理流程
 
-**5. 設定 LINE Webhook 測試**
+```mermaid
+sequenceDiagram
+    participant L as LINE API
+    participant C as LineBotController
+    participant CO as LineBotEventCoordinator
+    participant R as EventConverterRegistry
+    participant D as LineBotEventDispatcher
+    participant H as EventHandler（責任鏈）
+    participant F as Facade / Service
+    L ->> C: POST /webhook（含 X-Line-Signature）
+    C ->> C: 驗證 HMAC-SHA256 簽章
+    C ->> CO: processWebhookEvents(events)
+    CO ->> R: JsonNode → LineBotEvent
+    R -->> CO: LineBotEvent
+    CO ->> D: dispatch(event)
+    D ->> H: 依優先級逐一呼叫 canHandle()
+    H ->> H: 第一個 canHandle() = true 的 Handler 執行 handle()
+    H ->> F: 業務邏輯
+    F -->> H: Message
+    H -->> L: 回覆訊息（Reply API）
+    C -->> L: 200 OK
+```
 
-- 使用 [ngrok](https://ngrok.com/) 建立公開 URL：
+### 責任鏈 Handler 優先級
 
- ```bash
- ngrok http 5001
- ```
+Handler 由 `LineBotEventDispatcher` 依優先級排序，數字越小越優先，第一個 `canHandle()` 回傳 `true` 的 Handler 負責處理。
 
-- 在 LINE Developers Console 設定 Webhook URL：
+| 優先級 | Handler                                                                                                                                                                          | 說明                          |
+|-----|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------|
+| 1   | `AuthCommandEventHandler`                                                                                                                                                        | 認證指令（`/auth`）               |
+| 2   | `AdminCommandEventHandler`、`AIPostbackEventHandler`、`TimezoneCommandEventHandler`                                                                                                | 管理員指令、AI Postback、時區設定指令    |
+| 3   | `EmailInputEventHandler`、`EmailPostbackEventHandler`、`ReminderInteractionEventHandler`、`TimezoneInputEventHandler`、`TimezonePostbackEventHandler`                                | 輸入流程狀態攔截                    |
+| 4   | `FollowHandler`、`UnfollowHandler`、`JoinGroupHandler`、`LeaveGroupHandler`、`MemberJoinedHandler`、`MemberLeftHandler`、`LocationPostbackEventHandler`、`ReminderPostbackEventHandler` | 生命週期事件與 Postback            |
+| 5   | `AudioMessageEventHandler`、`FileMessageEventHandler`、`ImageMessageEventHandler`、`LocationMessageEventHandler`、`StickerMessageEventHandler`、`VideoMessageEventHandler`            | 非文字訊息                       |
+| 10  | `NavigationPostbackEventHandler`                                                                                                                                                 | 導覽 Postback                 |
+| 20  | `StockCommandEventHandler`                                                                                                                                                       | 股票查詢指令                      |
+| 25  | `TickCommandHandler`                                                                                                                                                             | 即時成交監控指令                    |
+| 50  | `MenuCommandEventHandler`                                                                                                                                                        | 主選單指令                       |
+| 100 | `AIMessageEventHandler`                                                                                                                                                          | AI 對話（Fallback，處理所有未被攔截的文字） |
 
- ```
- # 直連 nexusbot（local 開發）
- https://xxx.ngrok-free.app/webhook
+**新增 Handler**：實作 `LineBotEventHandler`（`canHandle`、`handle`、`getPriority`），標註 `@Component`，Spring
+自動掃描註冊。`canHandle()` 必須為純函數（無副作用）。
 
- # 透過 Gateway（完整微服務 stack）
- https://xxx.ngrok-free.app/api/linebot/webhook
- ```
+## 環境變數
+
+| 變數                       | 預設值（local）              | 說明                              |
+|--------------------------|-------------------------|---------------------------------|
+| `SERVER_PORT`            | `5001`                  | 服務埠號                            |
+| `SERVER_HOST`            | -                       | 實例對外主機位址（prod Eureka 自我註冊用）     |
+| `SPRING_PROFILES_ACTIVE` | `local`                 | 啟動環境（`local` / `prod`）          |
+| `LINE_CHANNEL_TOKEN`     | `default-token`         | LINE Bot Channel Access Token   |
+| `LINE_CHANNEL_SECRET`    | `default-secret`        | LINE Bot Channel Secret         |
+| `LINE_LIFF_ID`           | _(空)_                   | LIFF App ID                     |
+| `GROQ_API_KEY`           | `default-groq-key`      | Groq AI API Key                 |
+| `AI_HISTORY_LIMIT`       | `15`                    | AI 對話歷史保留則數                     |
+| `EMAIL_USERNAME`         | `default@gmail.com`     | SMTP 帳號                         |
+| `EMAIL_PASSWORD`         | `default-password`      | SMTP 密碼（Gmail 需使用 App Password） |
+| `EMAIL_FROM`             | `default@gmail.com`     | 寄件人地址                           |
+| `EMAIL_FROM_NAME`        | `NexusBot 提醒通知`         | 寄件人顯示名稱                         |
+| `FUGLE_API_KEY`          | `default-fugle-key`     | Fugle 即時行情 API Key              |
+| `FINMIND_API_TOKEN`      | _(空)_                   | FinMind 台股資料 API Token          |
+| `ADMIN_PASSWORD_SEED`    | `1103`                  | 管理員動態密碼種子                       |
+| `NEXUSBOT_BASE_URL`      | `http://localhost:5001` | 服務本身的對外 URL（Email 確認連結用）        |
+| `RABBITMQ_HOST`          | `localhost`             | RabbitMQ 主機位址                   |
+| `RABBITMQ_PORT`          | `5672`                  | RabbitMQ 連接埠                    |
+| `RABBITMQ_USERNAME`      | `admin`                 | RabbitMQ 帳號                     |
+| `RABBITMQ_PASSWORD`      | `password`              | RabbitMQ 密碼                     |
+| `CONFIG_SERVER_URI`      | -                       | Config Server 位址（prod）          |
+| `CONFIG_SERVER_USERNAME` | -                       | Config Server 帳號（prod）          |
+| `CONFIG_SERVER_PASSWORD` | -                       | Config Server 密碼（prod）          |
+| `MYSQL_HOST`             | -                       | MySQL 主機位址（prod）                |
+| `MYSQL_PORT`             | `3306`                  | MySQL 連接埠（prod）                 |
+| `MYSQL_DATABASE`         | `nexusbot`              | MySQL 資料庫名稱（prod）               |
+| `MYSQL_USERNAME`         | -                       | MySQL 帳號（prod）                  |
+| `MYSQL_PASSWORD`         | -                       | MySQL 密碼（prod）                  |
+| `EUREKA_SERVER_HOST`     | -                       | Eureka Server 主機位址（prod）        |
+| `EUREKA_SERVER_PORT`     | `8761`                  | Eureka Server 連接埠（prod）         |
+
+`local` profile 不需要 Config Server、MySQL、Eureka 連線，使用 H2 in-memory 資料庫，所有變數皆有預設值。
+
+## 部署
+
+以下指令在**部署目標主機**上執行，需已安裝 Docker 與 Docker Compose。
+
+### 部署目錄結構
+
+```
+/opt/tata/nexusbot/
+├── nexusbot.jar               # 編譯產出
+├── Dockerfile                 # 來源：docs/docker/Dockerfile
+├── .dockerignore              # 來源：docs/docker/.dockerignore
+├── docker-compose.yml         # 來源：docs/docker/docker-compose.yml
+└── .env                       # 來源：docs/docker/.env.example（填入實際值）
+```
+
+### 首次部署
+
+1. 在專案開發機編譯 JAR：
+   ```bash
+   ./gradlew bootJar
+   ```
+2. 將 `build/libs/nexusbot-*.jar` 重新命名為 `nexusbot.jar`，與 `docs/docker/` 下的四個檔案一同複製至部署主機目錄
+3. 將 `.env.example` 改名為 `.env`，填入實際設定值
+4. 啟動：
+   ```bash
+   docker compose up -d
+   ```
+
+### 更新版本
+
+1. 重新編譯 JAR，複製覆蓋至部署目錄
+2. 重新建構並啟動：
+   ```bash
+   docker compose up -d --build
+   ```
+
+### 驗證
+
+```bash
+docker compose ps
+curl http://localhost:5001/actuator/health
+```
+
+### 常用維運指令
+
+| 指令                                | 說明        |
+|-----------------------------------|-----------|
+| `docker compose logs -f nexusbot` | 即時查看日誌    |
+| `docker compose restart nexusbot` | 重啟服務      |
+| `docker compose down`             | 停止並移除所有容器 |
+| `docker compose build --no-cache` | 重新建構映像    |
+
+## 版本管理
+
+本專案採用 [Semantic Versioning](https://semver.org/)，以 **Git Tag 作為唯一版本來源**。
+
+### 版號規則
+
+| 版號位置  | 何時遞增         | 範例                  |
+|-------|--------------|---------------------|
+| MAJOR | 重大架構變更、技術棧升級 | `v1.0.0` → `v2.0.0` |
+| MINOR | 新增功能、配置結構調整  | `v1.0.0` → `v1.1.0` |
+| PATCH | Bug 修復、小幅調整  | `v1.0.0` → `v1.0.1` |
+
+### 發版流程
+
+```bash
+./gradlew build                    # 1. 確認測試通過
+git add <files>                    # 2. Commit 變更
+git commit -m "[feat] 功能描述"
+git tag v1.0.0                     # 3. 打 Tag 定版
+git push && git push --tags        # 4. Push
+```
+
+### Commit 訊息格式
+
+```
+[類型] 中文描述
+```
+
+| 類型         | 說明        |
+|------------|-----------|
+| `feat`     | 新增功能      |
+| `fix`      | 修復 Bug    |
+| `refactor` | 重構（不影響功能） |
+| `docs`     | 文件更新      |
+| `test`     | 測試相關      |
+| `config`   | 配置檔變更     |
+
+## 參考資源
+
+- [LINE Messaging API 官方文件](https://developers.line.biz/en/reference/messaging-api/)
+- [Spring Boot 官方文件](https://docs.spring.io/spring-boot/docs/current/reference/html/)
+- [Spring Cloud Config 官方文件](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/)
+- [Groq API 文件](https://console.groq.com/docs/openai)
+- [Fugle MarketData API](https://developer.fugle.tw/)
+- [FinMind API 文件](https://finmindtrade.com/analysis/#/Finish/api)
+- [Flyway 官方文件](https://documentation.red-gate.com/flyway/)
 
 ---
 
-## 微服務生態系
-
-nexusbot 是 **AceNexus** 平台四個服務之一，在 `prod` profile 下向 Eureka 註冊、從 Config Server 拉取設定、透過 Gateway
-統一對外路由，並支援 RabbitMQ Bus Refresh 熱更新。
-
-### 服務啟動順序
-
-| # | 服務               | Port | 角色                                                             |
-|---|------------------|------|----------------------------------------------------------------|
-| 1 | `configservice`  | 8888 | Spring Cloud Config Server — 管理各服務 YAML 設定；RabbitMQ 廣播 refresh |
-| 2 | `eurekaservice`  | 8761 | Spring Cloud Netflix Eureka — 服務註冊中心                           |
-| 3 | `gatewayservice` | 8080 | Spring Cloud Gateway — 統一入口；JWT 驗證 + 請求日誌                      |
-| 4 | `nexusbot`       | 5001 | 本服務 — LINE Bot 應用                                              |
-
-### 流量路徑（Prod）
-
-```
-LINE → ngrok (HTTPS)
-     → gatewayservice :8080
-       ├── JWT 驗證（/api/linebot/webhook 豁免）
-       └── lb://nexusbot（Eureka 解析）
-           → nexusbot :5001
-```
-
-### 設定載入流程（Prod）
-
-```
-bootstrap.yml (name=nexusbot, profile=prod)
-  → bootstrap-prod.yml → Config Server :8888
-    → nexusbot-prod.yml（MySQL、Eureka、RabbitMQ Bus）
-      → Spring Context 啟動
-```
-
-### 動態設定更新
-
-向 Config Server 發送 `POST /actuator/busrefresh`，透過 RabbitMQ 廣播至所有服務，`@RefreshScope` Bean 無需重啟即可重新載入設定。
-
-### Windows 本地完整 Stack 啟動
-
-```
-1. start_deploy_configservice.bat  → Docker: RabbitMQ + configservice
-2. start_deploy_eurekaservice.bat  → Docker: eurekaservice
-3. start_deploy_gatewayservice.bat → Docker: gatewayservice
-4. ./gradlew bootRun               → Host JVM: nexusbot (SPRING_PROFILES_ACTIVE=prod)
-5. ngrok-tunnel.bat                → Docker: ngrok → 自動更新 LINE Webhook URL
-```
-
-腳本位於 `D:\java\AceNexus\windows_start\`，各服務環境變數請設定於對應的 `.env` 檔案。
-
----
-
-## 架構設計
+## 架構設計說明
 
 ### 核心架構模式
 
-- 專案採用 **事件驅動架構 (Event-Driven Architecture)** 與 **責任鏈模式 (Chain of Responsibility)** 處理 LINE Bot 事件。
+專案採用事件驅動架構（Event-Driven Architecture）與責任鏈模式（Chain of Responsibility）處理 LINE Bot 事件。
 
-#### 為什麼選擇事件驅動 + 責任鏈模式？
-
-- **傳統方案的問題**：
+#### 傳統方案的問題
 
 單一巨型 Handler 難以維護：
 
@@ -201,21 +236,13 @@ bootstrap.yml (name=nexusbot, profile=prod)
 // 傳統方案：所有邏輯集中在一個 Handler
 public void handleLineEvent(Event event) {
     if (event instanceof MessageEvent) {
-        MessageEvent msgEvent = (MessageEvent) event;
         String text = msgEvent.getMessage().getText();
-
-        // if-else 判斷
         if (text.startsWith("/menu")) {
             // 選單處理
         } else if (text.startsWith("/auth")) {
             // 認證處理
         } else if (isUserInReminderCreationFlow(userId)) {
-            // 提醒建立流程
-            if (currentStep == TIME_INPUT) {
-                // 時間輸入處理
-            } else if (currentStep == CONTENT_INPUT) {
-                // 內容輸入處理
-            }
+            if (currentStep == TIME_INPUT) { /* ... */ }
         } else if (isAIEnabled(roomId)) {
             // AI 對話處理
         }
@@ -225,33 +252,24 @@ public void handleLineEvent(Event event) {
 }
 ```
 
-**問題點**：
+**問題點**：單一職責違反、新增功能需修改主 Handler、測試困難、耦合度高。
 
-- **單一職責原則違反**：一個類別負責所有事件類型
-- **開放封閉原則違反**：新增功能需修改主 Handler
-- **測試困難**：需要模擬所有場景
-- **耦合度高**：所有邏輯互相依賴
-
----
-
-**責任鏈方案**：
+#### 責任鏈方案
 
 ```java
-// 責任鏈方案：每個 Handler 職責單一
 public interface LineBotEventHandler {
-    boolean canHandle(LineBotEvent event); // 判斷是否處理
+    boolean canHandle(LineBotEvent event); // 純函數，無副作用
 
-    Message handle(LineBotEvent event); // 執行處理邏輯
+    Message handle(LineBotEvent event);
 
-    int getPriority(); // 優先級
+    int getPriority();
 }
 
-// 範例 1：提醒互動 Handler
+// 範例：提醒互動 Handler
 @Component
 public class ReminderInteractionEventHandler implements LineBotEventHandler {
     @Override
     public boolean canHandle(LineBotEvent event) {
-        // 檢查使用者是否在提醒建立流程中
         return reminderStateManager.getCurrentStep(event.getRoomId()) != null;
     }
 
@@ -262,119 +280,21 @@ public class ReminderInteractionEventHandler implements LineBotEventHandler {
 
     @Override
     public int getPriority() {
-        return 5;
-    }
-}
-
-// 範例 2：AI 對話 Handler
-@Component
-public class AIMessageEventHandler implements LineBotEventHandler {
-    @Override
-    public boolean canHandle(LineBotEvent event) {
-        return event.getEventType() == EventType.MESSAGE && aiSettingsManager.isAIEnabled(event.getRoomId());
-    }
-
-    @Override
-    public Message handle(LineBotEvent event) {
-        return aiFacade.chat(event.getRoomId(), event.getMessageText());
-    }
-
-    @Override
-    public int getPriority() {
-        return 100;
+        return 3;
     }
 }
 ```
 
-**優勢**：
+**優勢**：職責單一、開放封閉、Handler 可獨立單元測試、優先級控制精確。
 
-- **職責單一**：每個 Handler 只處理一種場景
-- **開放封閉**：新增功能只需新增 Handler，無需修改 Dispatcher
-- **易於測試**：每個 Handler 可獨立單元測試
-- **優先級控制**：狀態型 Handler 優先於通用 Handler
+### 分散式鎖（DB-based）
 
----
-
-### 架構流程圖
-
-```mermaid
-graph TD
-    A[LINE Messaging API<br/>Webhook] --> B[LineBotController<br/>Signature Validation]
-    B --> C[EventConverter<br/>LINE SDK Event → LineBotEvent]
-C --> D[LineBotEventDispatcher<br/>Chain of Responsibility]
-
-D --> E{責任鏈排序<br/>Priority-based}
-
-E -->|Priority 3|F1[ReminderInteractionEventHandler<br/>處理提醒互動流程]
-E -->|Priority 3|F2[EmailInputEventHandler<br/>處理 Email 輸入]
-E -->|Priority 4|F4[ReminderPostbackEventHandler<br/>處理 Postback 事件]
-E -->|Priority 50|F3[MenuCommandEventHandler<br/>處理選單命令]
-E -->|Priority 100|F5[AIMessageEventHandler<br/>Fallback 處理]
-
-F1 --> G1[ReminderFacade]
-F2 --> G2[EmailFacade]
-F4 --> G1
-F3 --> G3[MenuFacade]
-F5 --> G4[AIFacade]
-
-G1 --> H[Service Layer]
-G2 --> H
-G3 --> H
-G4 --> H
-
-H --> I1[ReminderService]
-H --> I2[AIService]
-H --> I3[LocationService]
-H --> I4[EmailService]
-
-I1 --> J[Repository Layer<br/>JPA]
-I2 --> J
-I3 --> J
-I4 --> J
-
-J --> K[(Database<br/>H2 / MySQL)]
-```
-
----
-
-### 關鍵設計決策
-
-#### 1. 為什麼不使用外鍵約束？
-
-**決策**：資料庫層完全不設外鍵，在應用層強制資料完整性
-
-**理由**：
-
-- **寫入效能提升**：避免外鍵驗證的額外查詢與鎖定
-- **Flyway 遷移簡化**：修改表結構時無需處理複雜依賴
-
-**配套措施**：
-
-- Repository 層統一邏輯
-- Flyway 嚴格版本管理
-
----
-
-#### 2. 為什麼分散式鎖使用資料庫而非 Redis？
-
-**決策**：基於 MySQL 的樂觀鎖（`reminder_locks` 表）
-
-**理由**：
-
-- **依賴最小化**：已有 MySQL，無需額外維護 Redis
-- **故障隔離**：Redis 故障會導致所有鎖失效
-- **一致性**：資料庫事務保證鎖的強一致性
-
-**實作方式**：
+使用 `reminder_locks` 表的 UNIQUE KEY 作為鎖機制，無需引入 Redis：
 
 ```java
-// DistributedLock.java
-public boolean acquireLock(String lockKey, long timeoutMs) {
+public boolean acquireLock(String lockKey) {
     try {
-        ReminderLock lock = new ReminderLock();
-        lock.setLockKey(lockKey);
-        lock.setLockedAt(LocalDateTime.now());
-        reminderLockRepository.save(lock); // UNIQUE KEY 自動防止重複
+        reminderLockRepository.save(new ReminderLock(lockKey));
         return true;
     } catch (DataIntegrityViolationException e) {
         return false; // 已被鎖定
@@ -382,150 +302,14 @@ public boolean acquireLock(String lockKey, long timeoutMs) {
 }
 ```
 
-**已知限制**：
+### TraceId 追蹤
 
-- 目前用資料庫鎖簡單穩定，但高流量下效能可能不足，未來可改用 Redis 提升併發處理能力。
-
----
-
-#### 3. 為什麼使用日誌追蹤（TraceId）？
-
-**決策**：每個 HTTP 請求自動生成 TraceId，並傳播至非同步任務
-
-**理由**：
-
-- **問題定位**：快速追蹤單一請求的完整處理流程
-- **非同步追蹤**：MDC（Mapped Diagnostic Context）機制確保 TraceId 傳播至 CompletableFuture
-- **分散式追蹤準備**：預留 `X-Trace-Id` Header 供未來微服務使用
-
-**實作範例**：
-
-```java
-// TraceIdFilter.java - 自動產生 TraceId
-@Override
-protected void doFilterInternal(HttpServletRequest request, ...) {
-    String traceId = UUID.randomUUID().toString().substring(0, 8);
-    MDC.put("traceId", traceId);
-    // ... 處理請求
-    MDC.clear();
-}
-
-// MdcTaskDecorator.java - 傳播至非同步任務
-@Override
-public Runnable decorate(Runnable runnable) {
-    Map<String, String> contextMap = MDC.getCopyOfContextMap();
-    return () -> {
-        MDC.setContextMap(contextMap); // 恢復 TraceId
-        runnable.run();
-        MDC.clear();
-    };
-}
-```
-
-**日誌範例**：
+每個 HTTP 請求自動生成 8 字元 TraceId（`TraceIdFilter`），並透過 `MdcTaskDecorator` 傳播至 `CompletableFuture` 非同步任務：
 
 ```
-[2025-01-15 10:30:00.123] [abc123de] [INFO] [ReminderScheduler] - Processing reminder 12345
-[2025-01-15 10:30:00.234] [abc123de] [INFO] [DistributedLock] - Acquired lock: reminder:12345
-[2025-01-15 10:30:00.345] [abc123de] [INFO] [LineNotificationService] - Sent to U1234567890
+[2025-01-15 10:30:00.123] [INFO] [abc123de] [ReminderScheduler] - Processing reminder 12345
+[2025-01-15 10:30:00.234] [INFO] [abc123de] [DistributedLock]   - Acquired lock: reminder:12345
 ```
-
----
-
-## 核心功能
-
-### 1. AI 對話
-
-整合 Groq API 提供智能對話功能：
-
-- **多模型支援**
-- **上下文管理**：保留最近 15 則對話歷史
-- **Per-room 設定**：每個聊天室可獨立開關 AI 功能
-- **AI 增強提醒**：提醒內容自動 AI 優化，產生友善化建議
-
-**使用範例**：
-
-```
-使用者: "幫我總結今天的新聞"
-Bot: [呼叫 Groq API，回傳 AI 生成內容]
-```
-
----
-
-### 2. 智能提醒
-
-支援跨時區精準排程的提醒系統：
-
-- **時區支援**：Instant-based 儲存，確保絕對時間點一致性
-- **重複類型**：單次 (ONCE) / 每日 (DAILY) / 每週 (WEEKLY)
-- **多通道通知**：LINE / Email / 雙重通知
-- **分散式協調**：多實例環境下防止重複發送
-- **AI 增強**：提醒內容自動優化為友善訊息
-
-**建立流程**：
-
-1. 選擇重複類型 (單次/每日/每週)
-2. 選擇通知管道 (LINE/Email/雙重)
-3. 輸入提醒時間 (支援自然語言：「明天下午3點」)
-4. 輸入提醒內容
-5. 系統自動排程，到期發送通知
-
-**Cron 排程**：
-
-```java
-
-@Scheduled(cron = "0 * * * * *") // 每分鐘整分執行
-public void processReminders() {
-    // 查詢到期提醒 → 取得分散式鎖 → 發送通知 → 更新下次提醒時間
-}
-```
-
----
-
-### 3. Email 通知
-
-支援 Email 提醒與確認機制：
-
-- **SMTP 整合**：JavaMail + Thymeleaf HTML 範本
-- **確認連結**：Email 包含確認連結，點擊後記錄已讀
-- **雙重通知**：可同時透過 LINE 與 Email 發送
-- **AI 增強內容**：Email 也包含 AI 優化的友善提示
-
-**Email 範本範例**：
-
-```html
-<h2> 提醒通知</h2>
-<div>提醒內容：記得開會</div>
-<div> 貼心小提醒：別忘了準備會議資料</div>
-<a href="https://xxx/reminder/confirm/{token}">確認已收到</a>
-```
-
----
-
-### 4. 位置服務
-
-整合 OpenStreetMap Overpass API：
-
-- **附近廁所搜尋**：根據使用者位置搜尋附近公共廁所
-- **設施查詢**：餐廳、咖啡廳、便利商店等設施
-- **距離計算**：自動計算與使用者的直線距離
-- **LINE Carousel 展示**：最多顯示 10 個結果
-
-**查詢範例**：
-
-```
-使用者: [傳送位置訊息]
-Bot: [顯示附近 5 個公共廁所，含距離與地圖連結]
-```
-
----
-
-### 5. 管理員功能
-
-1. 使用者輸入 `/auth`
-2. 系統產生動態密碼
-3. 使用者回覆密碼
-4. 驗證通過後標記為管理員
 
 ---
 
@@ -534,188 +318,11 @@ Bot: [顯示附近 5 個公共廁所，含距離與地圖連結]
 ### 設計原則
 
 - **無外鍵約束**：提升寫入效能，應用層控制完整性
-- **索引策略**：覆蓋常用查詢路徑，避免過度索引
-- **跨資料庫相容**：支援 H2 (本地) 與 MySQL (生產)
-- **Flyway 版本管理**：所有變更透過遷移檔案追蹤
-- **軟刪除**：`chat_messages` 使用 `deleted_at` 標記
+- **Flyway 版本管理**：所有變更透過 `db/migration/V*.sql` 追蹤
+- **跨資料庫相容**：H2（local）與 MySQL 8.x（prod）
+- **時間儲存**：提醒時間以 `epoch millis`（`BIGINT`）儲存，確保跨時區一致性
 
----
-
-### 主要資料表
-
-<details>
-<summary><b> 點擊展開查看所有資料表 (9 張主表)</b></summary>
-
-#### 1. chat_rooms - 聊天室配置表
-
-| 欄位                     | 類型           | 說明                             |
-|------------------------|--------------|--------------------------------|
-| `id`                   | BIGINT       | 主鍵 (自動遞增)                      |
-| `room_id`              | VARCHAR(100) | 聊天室 ID (LINE userId 或 groupId) |
-| `room_type`            | VARCHAR(10)  | 類型 (USER / GROUP)              |
-| `ai_enabled`           | BOOLEAN      | AI 功能是否啟用                      |
-| `ai_model`             | VARCHAR(50)  | AI 模型名稱                        |
-| `timezone`             | VARCHAR(50)  | 時區 (預設 Asia/Taipei)            |
-| `is_admin`             | BOOLEAN      | 是否為管理員                         |
-| `auth_pending`         | BOOLEAN      | 認證等待中                          |
-| `waiting_for_location` | BOOLEAN      | 等待位置訊息                         |
-| `created_at`           | TIMESTAMP    | 建立時間                           |
-| `updated_at`           | TIMESTAMP    | 更新時間                           |
-
-**索引**：
-
-- `idx_chat_rooms_room_id` (room_id)
-- `idx_chat_rooms_ai_enabled` (ai_enabled)
-
----
-
-#### 2. chat_messages - 對話歷史表
-
-| 欄位                   | 類型           | 說明                   |
-|----------------------|--------------|----------------------|
-| `id`                 | BIGINT       | 主鍵                   |
-| `room_id`            | VARCHAR(100) | 聊天室 ID               |
-| `room_type`          | VARCHAR(10)  | 聊天室類型 (冗余)           |
-| `user_id`            | VARCHAR(100) | 發送者 ID (AI 訊息為 null) |
-| `message_type`       | VARCHAR(20)  | 訊息類型 (USER / AI)     |
-| `content`            | TEXT         | 訊息內容                 |
-| `tokens_used`        | INTEGER      | AI 使用的 tokens 數量     |
-| `processing_time_ms` | INTEGER      | AI 處理時間 (毫秒)         |
-| `ai_model`           | VARCHAR(50)  | 使用的 AI 模型            |
-| `deleted_at`         | TIMESTAMP    | 軟刪除標記 (NULL 表示未刪除)   |
-| `created_at`         | TIMESTAMP    | 建立時間                 |
-
-**索引**：
-
-- `idx_chat_messages_room_not_deleted` (room_id, deleted_at)
-
-**設計**：軟刪除設計，保留完整對話歷史供分析
-
----
-
-#### 3. reminders - 提醒設定表
-
-| 欄位                      | 類型           | 說明                           |
-|-------------------------|--------------|------------------------------|
-| `id`                    | BIGINT       | 主鍵                           |
-| `room_id`               | VARCHAR(100) | 聊天室 ID                       |
-| `content`               | TEXT         | 提醒內容                         |
-| `reminder_time_instant` | BIGINT       | 提醒時間 (epoch millis)          |
-| `timezone`              | VARCHAR(50)  | 時區                           |
-| `repeat_type`           | VARCHAR(20)  | 重複類型 (ONCE/DAILY/WEEKLY)     |
-| `notification_channel`  | VARCHAR(20)  | 通知管道 (LINE/EMAIL/BOTH)       |
-| `status`                | VARCHAR(20)  | 狀態 (ACTIVE/PAUSED/COMPLETED) |
-| `created_by`            | VARCHAR(100) | 建立者                          |
-| `created_at`            | TIMESTAMP    | 建立時間                         |
-
-**索引**：
-
-- `idx_reminders_instant_status` (reminder_time_instant, status)
-- `idx_reminders_room` (room_id)
-
-**設計**：`reminder_time_instant` 儲存 epoch millis，確保跨時區一致性
-
----
-
-#### 4. reminder_logs - 提醒發送日誌表
-
-| 欄位                     | 類型           | 說明                |
-|------------------------|--------------|-------------------|
-| `id`                   | BIGINT       | 主鍵                |
-| `reminder_id`          | BIGINT       | 提醒 ID             |
-| `room_id`              | VARCHAR(100) | 聊天室 ID            |
-| `sent_time`            | TIMESTAMP    | 發送時間              |
-| `status`               | VARCHAR(20)  | 狀態 (SENT/FAILED)  |
-| `delivery_method`      | VARCHAR(20)  | 發送方式 (LINE/EMAIL) |
-| `user_response_status` | VARCHAR(20)  | 使用者回應狀態           |
-| `user_response_time`   | TIMESTAMP    | 使用者回應時間           |
-| `confirmation_token`   | VARCHAR(100) | Email 確認 Token    |
-| `confirmed_at`         | TIMESTAMP    | Email 確認時間        |
-| `error_message`        | TEXT         | 錯誤訊息              |
-| `created_at`           | TIMESTAMP    | 建立時間              |
-
-**索引**：
-
-- `idx_logs_reminder` (reminder_id)
-- `idx_logs_room_sent` (room_id, sent_time)
-
----
-
-#### 5. reminder_states - 提醒建立流程狀態表
-
-| 欄位                     | 類型           | 說明                   |
-|------------------------|--------------|----------------------|
-| `room_id`              | VARCHAR(100) | 聊天室 ID (主鍵)          |
-| `step`                 | VARCHAR(50)  | 當前步驟                 |
-| `repeat_type`          | VARCHAR(20)  | 重複類型                 |
-| `notification_channel` | VARCHAR(20)  | 通知管道                 |
-| `reminder_time`        | TIMESTAMP    | 提醒時間 (LocalDateTime) |
-| `reminder_instant`     | TIMESTAMP    | 提醒時間 (Instant)       |
-| `timezone`             | VARCHAR(50)  | 時區                   |
-| `expires_at`           | TIMESTAMP    | 過期時間 (30 分鐘)         |
-| `created_at`           | TIMESTAMP    | 建立時間                 |
-
-**設計**：30 分鐘自動過期，避免殘留狀態
-
----
-
-#### 6. reminder_locks - 分散式鎖表
-
-| 欄位          | 類型           | 說明       |
-|-------------|--------------|----------|
-| `lock_key`  | VARCHAR(100) | 鎖定鍵 (主鍵) |
-| `locked_at` | TIMESTAMP    | 鎖定時間     |
-
-**索引**：
-
-- `idx_locks_locked_at` (locked_at) - 方便過期清理
-
-**設計**：極簡設計，依賴 UNIQUE KEY 自動防止重複
-
----
-
-#### 7. emails - Email 地址管理表
-
-| 欄位           | 類型           | 說明              |
-|--------------|--------------|-----------------|
-| `id`         | BIGINT       | 主鍵              |
-| `room_id`    | VARCHAR(100) | 聊天室 ID          |
-| `email`      | VARCHAR(255) | Email 地址        |
-| `is_enabled` | BOOLEAN      | 是否啟用此信箱的通知      |
-| `is_active`  | BOOLEAN      | 軟刪除標記 (true=有效) |
-| `created_at` | TIMESTAMP    | 建立時間            |
-
-**索引**：
-
-- `idx_emails_room_id` (room_id)
-
----
-
-#### 8. email_input_states - Email 輸入流程狀態表
-
-| 欄位           | 類型           | 說明          |
-|--------------|--------------|-------------|
-| `room_id`    | VARCHAR(100) | 聊天室 ID (主鍵) |
-| `expires_at` | TIMESTAMP    | 過期時間        |
-| `created_at` | TIMESTAMP    | 建立時間        |
-
----
-
-#### 9. timezone_input_states - 時區輸入流程狀態表
-
-| 欄位                  | 類型           | 說明          |
-|---------------------|--------------|-------------|
-| `room_id`           | VARCHAR(100) | 聊天室 ID (主鍵) |
-| `resolved_timezone` | VARCHAR(50)  | 解析後的時區      |
-| `original_input`    | VARCHAR(100) | 使用者原始輸入     |
-| `expires_at`        | TIMESTAMP    | 過期時間        |
-| `created_at`        | TIMESTAMP    | 建立時間        |
-
-</details>
-
----
-
-### ER 關係圖（概念）
+### ER 關係圖
 
 ```mermaid
 erDiagram
@@ -727,241 +334,118 @@ erDiagram
     chat_rooms ||--o| timezone_input_states: "timezone_flow"
     reminders ||--o{ reminder_logs: "generates"
     reminders ||--o| reminder_locks: "protected_by"
-
-    chat_rooms {
-        bigint id PK "自動遞增"
-        varchar_100 room_id UK "LINE userId或groupId"
-        varchar_10 room_type "USER/GROUP"
-        boolean ai_enabled "AI功能啟用"
-        varchar_50 ai_model "AI模型名稱"
-        varchar_50 timezone "預設Asia/Taipei"
-        boolean is_admin "管理員權限"
-        boolean auth_pending "認證等待中"
-        boolean waiting_for_location "等待位置訊息"
-        timestamp created_at
-        timestamp updated_at
-    }
-
-    chat_messages {
-        bigint id PK
-        varchar_100 room_id FK "聊天室ID"
-        varchar_100 user_id "發送者ID"
-        varchar_20 message_type "USER/AI"
-        text content "訊息內容"
-        timestamp deleted_at "軟刪除標記"
-        timestamp created_at
-    }
-
-    reminders {
-        bigint id PK
-        varchar_100 room_id FK "聊天室ID"
-        text content "提醒內容"
-        bigint reminder_time_instant "epoch_millis"
-        varchar_50 timezone "時區"
-        varchar_20 repeat_type "ONCE/DAILY/WEEKLY"
-        varchar_20 notification_channel "LINE/EMAIL/BOTH"
-        varchar_20 status "ACTIVE/PAUSED/COMPLETED"
-        varchar_100 created_by "建立者"
-        timestamp created_at
-    }
-
-    reminder_logs {
-        bigint id PK
-        bigint reminder_id FK "提醒ID"
-        varchar_100 room_id FK "聊天室ID"
-        timestamp sent_time "發送時間"
-        varchar_20 status "SENT/FAILED"
-        varchar_20 delivery_method "LINE/EMAIL"
-        varchar_20 user_response_status "使用者回應狀態"
-        timestamp user_response_time
-        varchar_100 confirmation_token UK "Email確認Token"
-        timestamp confirmed_at
-        text error_message
-        timestamp created_at
-    }
-
-    reminder_locks {
-        varchar_100 lock_key PK "鎖定鍵reminder_id"
-        timestamp locked_at "鎖定時間"
-    }
-
-    reminder_states {
-        varchar_100 room_id PK "聊天室ID"
-        varchar_50 step "當前步驟"
-        varchar_20 repeat_type "重複類型"
-        varchar_20 notification_channel "通知管道"
-        timestamp reminder_time "LocalDateTime"
-        timestamp reminder_instant "Instant"
-        varchar_50 timezone "時區"
-        timestamp expires_at "30分鐘過期"
-        timestamp created_at
-    }
-
-    emails {
-        bigint id PK
-        varchar_100 room_id FK "聊天室ID"
-        varchar_255 email "Email地址"
-        boolean is_enabled "是否啟用"
-        boolean is_active "軟刪除標記"
-        timestamp created_at
-    }
-
-    email_input_states {
-        varchar_100 room_id PK "聊天室ID"
-        timestamp expires_at "過期時間"
-        timestamp created_at
-    }
-
-    timezone_input_states {
-        varchar_100 room_id PK "聊天室ID"
-        varchar_50 resolved_timezone "解析後的時區"
-        varchar_100 original_input "用戶原始輸入"
-        timestamp expires_at "過期時間"
-        timestamp created_at
-    }
 ```
 
-**註**：實際資料庫無外鍵約束，關聯由應用層管理
+### 主要資料表
 
----
+<details>
+<summary><b>點擊展開（9 張主表）</b></summary>
 
-## 開發指南
+#### chat_rooms
 
-### 專案結構
+| 欄位                          | 類型              | 說明                    |
+|-----------------------------|-----------------|-----------------------|
+| `id`                        | BIGINT PK       | 自動遞增                  |
+| `room_id`                   | VARCHAR(100) UK | LINE userId 或 groupId |
+| `room_type`                 | VARCHAR(10)     | USER / GROUP          |
+| `ai_enabled`                | BOOLEAN         | AI 功能啟用狀態             |
+| `ai_model`                  | VARCHAR(50)     | AI 模型名稱               |
+| `timezone`                  | VARCHAR(50)     | 時區（預設 Asia/Taipei）    |
+| `is_admin`                  | BOOLEAN         | 管理員權限                 |
+| `auth_pending`              | BOOLEAN         | 認證等待中                 |
+| `waiting_for_location`      | BOOLEAN         | 等待位置訊息                |
+| `created_at` / `updated_at` | TIMESTAMP       | 時間戳記                  |
 
-```
-src/main/java/com/acenexus/tata/nexusbot/
-├── ai/ # AI 整合模組
-├── chatroom/ # 聊天室管理
-├── config/ # 配置類別
-├── constants/ # 常數定義
-├── controller/ # REST API & Webhook
-├── email/ # Email 管理
-├── entity/ # JPA 實體
-├── event/ # 事件處理核心
-│ └── handler/ # 事件處理器 (25+ handlers)
-├── facade/ # 門面層
-├── lock/ # 分散式鎖
-├── location/ # 位置服務
-├── notification/ # 通知系統
-├── reminder/ # 提醒核心
-├── repository/ # JPA Repository
-├── scheduler/ # 背景排程
-├── security/ # 安全性
-├── service/ # 服務層
-├── template/ # 訊息範本
-└── util/ # 工具類別
-```
+#### chat_messages
 
-### 新增事件處理器
+| 欄位             | 類型           | 說明                  |
+|----------------|--------------|---------------------|
+| `id`           | BIGINT PK    |                     |
+| `room_id`      | VARCHAR(100) | 聊天室 ID              |
+| `user_id`      | VARCHAR(100) | 發送者 ID（AI 訊息為 null） |
+| `message_type` | VARCHAR(20)  | USER / AI           |
+| `content`      | TEXT         | 訊息內容                |
+| `tokens_used`  | INTEGER      | AI tokens 用量        |
+| `deleted_at`   | TIMESTAMP    | 軟刪除標記               |
+| `created_at`   | TIMESTAMP    |                     |
 
-```java
+#### reminders
 
-@Component
-@RequiredArgsConstructor
-public class MyNewHandler implements LineBotEventHandler {
+| 欄位                      | 類型           | 說明                          |
+|-------------------------|--------------|-----------------------------|
+| `id`                    | BIGINT PK    |                             |
+| `room_id`               | VARCHAR(100) | 聊天室 ID                      |
+| `content`               | TEXT         | 提醒內容                        |
+| `reminder_time_instant` | BIGINT       | epoch millis                |
+| `timezone`              | VARCHAR(50)  | 時區                          |
+| `repeat_type`           | VARCHAR(20)  | ONCE / DAILY / WEEKLY       |
+| `notification_channel`  | VARCHAR(20)  | LINE / EMAIL / BOTH         |
+| `status`                | VARCHAR(20)  | ACTIVE / PAUSED / COMPLETED |
+| `created_by`            | VARCHAR(100) | 建立者                         |
+| `created_at`            | TIMESTAMP    |                             |
 
-    @Override
-    public boolean canHandle(LineBotEvent event) {
-        // MUST BE PURE FUNCTION - 無副作用
-        return event.getEventType() == EventType.MESSAGE
-                && event.getMessageText().startsWith("/mycommand");
-    }
+#### reminder_logs
 
-    @Override
-    public Message handle(LineBotEvent event) {
-        // 執行業務邏輯
-        return myFacade.doSomething(event.getRoomId());
-    }
+| 欄位                   | 類型              | 說明             |
+|----------------------|-----------------|----------------|
+| `id`                 | BIGINT PK       |                |
+| `reminder_id`        | BIGINT          | 提醒 ID          |
+| `room_id`            | VARCHAR(100)    | 聊天室 ID         |
+| `sent_time`          | TIMESTAMP       | 發送時間           |
+| `status`             | VARCHAR(20)     | SENT / FAILED  |
+| `delivery_method`    | VARCHAR(20)     | LINE / EMAIL   |
+| `confirmation_token` | VARCHAR(100) UK | Email 確認 Token |
+| `confirmed_at`       | TIMESTAMP       | Email 確認時間     |
+| `error_message`      | TEXT            | 錯誤訊息           |
+| `created_at`         | TIMESTAMP       |                |
 
-    @Override
-    public int getPriority() {
-        return 30; // 設定優先級
-    }
-}
-```
+#### reminder_states
 
-**優先級建議**：
+| 欄位                     | 類型              | 說明            |
+|------------------------|-----------------|---------------|
+| `room_id`              | VARCHAR(100) PK |               |
+| `step`                 | VARCHAR(50)     | 當前步驟          |
+| `repeat_type`          | VARCHAR(20)     | 重複類型          |
+| `notification_channel` | VARCHAR(20)     | 通知管道          |
+| `reminder_instant`     | TIMESTAMP       | 提醒時間（Instant） |
+| `timezone`             | VARCHAR(50)     | 時區            |
+| `expires_at`           | TIMESTAMP       | 30 分鐘後過期      |
+| `created_at`           | TIMESTAMP       |               |
 
-- 1-10：高優先級 (狀態型 Handler)
-- 11-30：中優先級 (命令/Postback Handler)
-- 31-50：一般優先級 (訊息 Handler)
-- 51-99：低優先級 (Fallback Handler)
+#### reminder_locks
 
----
+| 欄位          | 類型              | 說明               |
+|-------------|-----------------|------------------|
+| `lock_key`  | VARCHAR(100) PK | 鎖定鍵（reminder_id） |
+| `locked_at` | TIMESTAMP       | 鎖定時間             |
 
-## 測試
+#### emails
 
-### 測試策略
+| 欄位           | 類型           | 說明       |
+|--------------|--------------|----------|
+| `id`         | BIGINT PK    |          |
+| `room_id`    | VARCHAR(100) | 聊天室 ID   |
+| `email`      | VARCHAR(255) | Email 地址 |
+| `is_enabled` | BOOLEAN      | 是否啟用通知   |
+| `is_active`  | BOOLEAN      | 軟刪除標記    |
+| `created_at` | TIMESTAMP    |          |
 
-- **Handler 層**：單元測試 `canHandle()` 純函數，無需 Spring Context
-- **Service 層**：整合測試驗證業務邏輯
-- **Repository 層**：基於 H2 的資料存取測試
+#### email_input_states
 
-### 測試範例
+| 欄位           | 類型              | 說明   |
+|--------------|-----------------|------|
+| `room_id`    | VARCHAR(100) PK |      |
+| `expires_at` | TIMESTAMP       | 過期時間 |
+| `created_at` | TIMESTAMP       |      |
 
-```java
+#### timezone_input_states
 
-@Test
-void canHandle_shouldReturnTrue_whenUserInReminderFlow() {
-    // Given
-    LineBotEvent event = LineBotEvent.builder()
-            .roomId("U123")
-            .eventType(EventType.MESSAGE)
-            .build();
+| 欄位                  | 類型              | 說明      |
+|---------------------|-----------------|---------|
+| `room_id`           | VARCHAR(100) PK |         |
+| `resolved_timezone` | VARCHAR(50)     | 解析後的時區  |
+| `original_input`    | VARCHAR(100)    | 使用者原始輸入 |
+| `expires_at`        | TIMESTAMP       | 過期時間    |
+| `created_at`        | TIMESTAMP       |         |
 
-    when(reminderStateManager.getCurrentStep("U123"))
-            .thenReturn(ReminderState.Step.WAITING_FOR_TIME);
-
-    // When
-    boolean result = handler.canHandle(event);
-
-    // Then
-    assertTrue(result);
-}
-```
-
----
-
-## 部署
-
-### Docker 部署
-
-Docker 設定檔位於 `docs/docker/`，使用 Docker Compose 一鍵完成 build + run。
-
-**步驟**：
-
-```bash
-# 1. 建置 JAR
-./gradlew bootJar
-
-# 2. 複製 JAR 至 docker 目錄
-cp build/libs/nexusbot-*.jar docs/docker/nexusbot.jar
-
-# 3. 設定環境變數
-cd docs/docker
-cp .env.example .env
-# 編輯 .env，填入實際值
-
-# 4. 啟動
-docker compose up -d
-
-# 停止
-docker compose down
-```
-
-完整環境變數說明請參閱 [microservices-integration.md](docs/microservices-integration.md)。
-
----
-
-## 參考文檔
-
-- [LINE Messaging API](https://developers.line.biz/en/reference/messaging-api/)
-- [Spring Boot Documentation](https://spring.io/guides/gs/spring-boot/)
-- [Flyway Documentation](https://documentation.red-gate.com/flyway/)
-
----
-
-## 授權
-
-本專案為個人 Side Project，僅供學習與技術展示使用。
+</details>
