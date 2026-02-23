@@ -23,6 +23,12 @@ spring:
   cloud:
     config:
       enabled: false
+    bus:
+      enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.cloud.stream.binder.rabbit.config.RabbitServiceAutoConfiguration
 
 line:
   bot:
@@ -53,6 +59,11 @@ admin:
 eureka:
   client:
     enabled: false
+
+management:
+  health:
+    rabbit:
+      enabled: false
 
 osm:
   overpass-base-url: ${OSM_OVERPASS_BASE_URL:https://overpass-api.de/api/interpreter}

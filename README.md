@@ -11,6 +11,7 @@
 
 - [技術棧](#技術棧)
 - [快速開始](#快速開始)
+- [微服務生態系](#微服務生態系)
 - [架構設計](#架構設計)
 - [核心功能](#核心功能)
 - [資料庫設計](#資料庫設計)
@@ -27,7 +28,7 @@
 - **Spring Boot**: 3.4.3
 - **Java**: 17
 - **LINE Bot SDK**: 6.0.0
-- **Spring Cloud**: 2024.0.0 (含 Bootstrap 配置)
+- **Spring Cloud**: 2024.0.0 (Bootstrap、Config Client、Eureka Client、Bus AMQP)
 - **Spring Data JPA**: ORM 層
 - **Spring WebFlux WebClient**: 整合外部 API (Groq AI, OpenStreetMap)
 
@@ -94,14 +95,6 @@ email:
   from-name: NexusBot 提醒通知
 ```
 
-或使用環境變數：
-
-```bash
-export LINE_CHANNEL_TOKEN="your_line_token"
-export LINE_CHANNEL_SECRET="your_line_secret"
-export GROQ_API_KEY="your_groq_key"
-```
-
 **3. 啟動應用**
 
 ```bash
@@ -132,8 +125,63 @@ export GROQ_API_KEY="your_groq_key"
 - 在 LINE Developers Console 設定 Webhook URL：
 
  ```
+ # 直連 nexusbot（local 開發）
  https://xxx.ngrok-free.app/webhook
+
+ # 透過 Gateway（完整微服務 stack）
+ https://xxx.ngrok-free.app/api/linebot/webhook
  ```
+
+---
+
+## 微服務生態系
+
+nexusbot 是 **AceNexus** 平台四個服務之一，在 `prod` profile 下向 Eureka 註冊、從 Config Server 拉取設定、透過 Gateway
+統一對外路由，並支援 RabbitMQ Bus Refresh 熱更新。
+
+### 服務啟動順序
+
+| # | 服務               | Port | 角色                                                             |
+|---|------------------|------|----------------------------------------------------------------|
+| 1 | `configservice`  | 8888 | Spring Cloud Config Server — 管理各服務 YAML 設定；RabbitMQ 廣播 refresh |
+| 2 | `eurekaservice`  | 8761 | Spring Cloud Netflix Eureka — 服務註冊中心                           |
+| 3 | `gatewayservice` | 8080 | Spring Cloud Gateway — 統一入口；JWT 驗證 + 請求日誌                      |
+| 4 | `nexusbot`       | 5001 | 本服務 — LINE Bot 應用                                              |
+
+### 流量路徑（Prod）
+
+```
+LINE → ngrok (HTTPS)
+     → gatewayservice :8080
+       ├── JWT 驗證（/api/linebot/webhook 豁免）
+       └── lb://nexusbot（Eureka 解析）
+           → nexusbot :5001
+```
+
+### 設定載入流程（Prod）
+
+```
+bootstrap.yml (name=nexusbot, profile=prod)
+  → bootstrap-prod.yml → Config Server :8888
+    → nexusbot-prod.yml（MySQL、Eureka、RabbitMQ Bus）
+      → Spring Context 啟動
+```
+
+### 動態設定更新
+
+向 Config Server 發送 `POST /actuator/busrefresh`，透過 RabbitMQ 廣播至所有服務，`@RefreshScope` Bean 無需重啟即可重新載入設定。
+
+### Windows 本地完整 Stack 啟動
+
+```
+1. start_deploy_configservice.bat  → Docker: RabbitMQ + configservice
+2. start_deploy_eurekaservice.bat  → Docker: eurekaservice
+3. start_deploy_gatewayservice.bat → Docker: gatewayservice
+4. ./gradlew bootRun               → Host JVM: nexusbot (SPRING_PROFILES_ACTIVE=prod)
+5. ngrok-tunnel.bat                → Docker: ngrok → 自動更新 LINE Webhook URL
+```
+
+腳本位於 `D:\java\AceNexus\windows_start\`，各服務環境變數請設定於對應的 `.env` 檔案。
 
 ---
 
@@ -192,7 +240,9 @@ public void handleLineEvent(Event event) {
 // 責任鏈方案：每個 Handler 職責單一
 public interface LineBotEventHandler {
     boolean canHandle(LineBotEvent event); // 判斷是否處理
+
     Message handle(LineBotEvent event); // 執行處理邏輯
+
     int getPriority(); // 優先級
 }
 
@@ -877,24 +927,30 @@ void canHandle_shouldReturnTrue_whenUserInReminderFlow() {
 
 ### Docker 部署
 
-**建立 Dockerfile**：
+Docker 設定檔位於 `docs/docker/`，使用 Docker Compose 一鍵完成 build + run。
 
-**建置與執行**：
+**步驟**：
 
 ```bash
-# 建立 Image
-docker build -t nexusbot:latest .
+# 1. 建置 JAR
+./gradlew bootJar
 
-# 執行容器
-docker run -d \
- --name nexusbot \
- -p 5001:5001 \
- -e LINE_CHANNEL_TOKEN=your_token \
- -e LINE_CHANNEL_SECRET=your_secret \
- -e GROQ_API_KEY=your_key \
- -e SPRING_PROFILES_ACTIVE=prod \
- nexusbot:latest
+# 2. 複製 JAR 至 docker 目錄
+cp build/libs/nexusbot-*.jar docs/docker/nexusbot.jar
+
+# 3. 設定環境變數
+cd docs/docker
+cp .env.example .env
+# 編輯 .env，填入實際值
+
+# 4. 啟動
+docker compose up -d
+
+# 停止
+docker compose down
 ```
+
+完整環境變數說明請參閱 [microservices-integration.md](docs/microservices-integration.md)。
 
 ---
 
