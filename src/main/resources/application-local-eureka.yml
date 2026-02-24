@@ -1,0 +1,157 @@
+# ==========================================
+# 應用程式基礎設定
+# ==========================================
+nexusbot:
+  base-url: ${NEXUSBOT_BASE_URL:http://localhost:5002}
+
+# ==========================================
+# Spring Boot 核心設定
+# ==========================================
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/testdb;DB_CLOSE_ON_EXIT=TRUE;AUTO_RECONNECT=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.cloud.stream.binder.rabbit.config.RabbitServiceAutoConfiguration
+      - org.springframework.cloud.stream.config.BindingServiceConfiguration
+      - org.springframework.cloud.stream.function.FunctionConfiguration
+  cloud:
+    config:
+      enabled: false
+    bus:
+      enabled: false
+
+# ==========================================
+# 微服務架構設定 (啟用 Eureka)
+# ==========================================
+eureka:
+  client:
+    enabled: true
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+# ==========================================
+# 第三方服務整合 - LINE Bot
+# ==========================================
+line:
+  bot:
+    channel-token: ${LINE_CHANNEL_TOKEN:default-token}
+    channel-secret: ${LINE_CHANNEL_SECRET:default-secret}
+  liff:
+    id: ${LINE_LIFF_ID:}
+
+# ==========================================
+# 第三方服務整合 - Groq AI
+# ==========================================
+groq:
+  api-key: ${GROQ_API_KEY:default-groq-key}
+
+# ==========================================
+# 第三方服務整合 - Email (SMTP)
+# ==========================================
+email:
+  host: smtp.gmail.com
+  port: 587
+  username: ${EMAIL_USERNAME:default@gmail.com}
+  password: ${EMAIL_PASSWORD:default-password}
+  from: ${EMAIL_FROM:default@gmail.com}
+  from-name: ${EMAIL_FROM_NAME:NexusBot 提醒通知}
+  auth: true
+  starttls: true
+  debug: false
+
+# ==========================================
+# 業務邏輯設定 - AI 對話
+# ==========================================
+ai:
+  conversation:
+    history-limit: ${AI_HISTORY_LIMIT:15}
+
+# ==========================================
+# 第三方服務整合 - OpenStreetMap API
+# ==========================================
+osm:
+  overpass-base-url: ${OSM_OVERPASS_BASE_URL:https://overpass-api.de/api/interpreter}
+  timeout-ms: ${OSM_TIMEOUT:15000}
+  user-agent: ${OSM_USER_AGENT:NexusBot/1.0}
+  carousel-max-items: ${OSM_CAROUSEL_MAX_ITEMS:10}
+  toilet-tags:
+    - amenity=toilets
+    - amenity=public_bookcase
+    - building=toilets
+  facility-tags:
+    - amenity=restaurant
+    - amenity=cafe
+    - amenity=fast_food
+    - shop=convenience
+    - shop=supermarket
+    - amenity=fuel
+
+# ==========================================
+# 第三方服務整合 - FinMind API (台灣金融數據)
+# ==========================================
+finmind:
+  api-token: ${FINMIND_API_TOKEN:}
+
+# ==========================================
+# 第三方服務整合 - Fugle API (即時成交明細)
+# ==========================================
+fugle:
+  api-key: ${FUGLE_API_KEY:default-fugle-key}
+  websocket-url: wss://api.fugle.tw/marketdata/v1.0/stock/streaming
+  rest-base-url: https://api.fugle.tw/marketdata/v1.0
+  reconnect-delay: 5000
+  max-subscriptions: 5
+
+# ==========================================
+# 安全設定 - 管理員
+# ==========================================
+admin:
+  password-seed: ${ADMIN_PASSWORD_SEED:1103}
+
+# ==========================================
+# 日誌設定
+# ==========================================
+logging:
+  level:
+    root: INFO
+    com.acenexus.tata.nexusbot: INFO
+    com.linecorp.bot.client.wire: WARN
+    okhttp3: WARN
+
+# ==========================================
+# Spring Boot Actuator (健康檢查與監控)
+# ==========================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+      base-path: /actuator
+  endpoint:
+    health:
+      enabled: true
+      show-details: when-authorized
+  health:
+    defaults:
+      enabled: true
+    rabbit:
+      enabled: false
