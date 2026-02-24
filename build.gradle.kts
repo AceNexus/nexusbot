@@ -45,6 +45,7 @@ dependencies {
 
     // Database Migration
     implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-mysql")
 
     // LINE Bot SDK
     implementation("com.linecorp.bot:line-bot-spring-boot:6.0.0")

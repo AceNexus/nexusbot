@@ -1,14 +1,13 @@
--- V15__Add_timezone_to_chat_rooms.sql
--- 新增 ChatRoom 時區欄位
+-- V15: 新增時區欄位至 chat_rooms 資料表
+--
+-- 目的：支援各聊天室獨立設定時區，預設為台灣時區（Asia/Taipei）
+-- 確保提醒時間在不同時區環境下正確顯示
 
--- 新增 timezone 欄位（預設為台灣時區）
 ALTER TABLE chat_rooms
-ADD COLUMN timezone VARCHAR(50) DEFAULT 'Asia/Taipei';
+ADD COLUMN timezone VARCHAR(50) DEFAULT 'Asia/Taipei' COMMENT '聊天室時區設定，預設為 Asia/Taipei';
 
--- 為現有資料設定預設值
 UPDATE chat_rooms
 SET timezone = 'Asia/Taipei'
 WHERE timezone IS NULL;
 
--- 建立索引（頻繁查詢時區）
 CREATE INDEX idx_chat_rooms_timezone ON chat_rooms(timezone);

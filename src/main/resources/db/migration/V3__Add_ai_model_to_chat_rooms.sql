@@ -1,8 +1,9 @@
--- 在 chat_rooms 表中添加 ai_model 欄位，支援模型選擇功能
-ALTER TABLE chat_rooms ADD COLUMN ai_model VARCHAR(50) DEFAULT 'llama-3.1-8b-instant';
+-- V3: 新增 ai_model 欄位至 chat_rooms 資料表
+--
+-- 目的：支援每個聊天室獨立選擇 AI 模型，預設使用 llama-3.1-8b-instant
 
--- 為 ai_model 創建索引，提升查詢效能
+ALTER TABLE chat_rooms ADD COLUMN ai_model VARCHAR(50) DEFAULT 'llama-3.1-8b-instant' COMMENT '使用的 AI 模型名稱（如：llama-3.1-8b-instant）';
+
 CREATE INDEX idx_chat_rooms_ai_model ON chat_rooms(ai_model);
 
--- 更新現有記錄的預設模型（如果有的話）
 UPDATE chat_rooms SET ai_model = 'llama-3.1-8b-instant' WHERE ai_model IS NULL;

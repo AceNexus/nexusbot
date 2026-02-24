@@ -25,16 +25,17 @@ spring:
     console:
       enabled: true
       path: /h2-console
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.cloud.stream.binder.rabbit.config.RabbitServiceAutoConfiguration
+      - org.springframework.cloud.stream.config.BindingServiceConfiguration
+      - org.springframework.cloud.stream.function.FunctionConfiguration
   cloud:
     config:
       enabled: false  # 本地環境不連接 Config Server
     bus:
       enabled: false  # 本地環境不啟用 RabbitMQ Bus
-  rabbitmq:
-    host: ${RABBITMQ_HOST:localhost}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USERNAME:admin}
-    password: ${RABBITMQ_PASSWORD:password}
 
 # ==========================================
 # 微服務架構設定 (本地環境停用)
