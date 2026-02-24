@@ -18,9 +18,22 @@
 
 1. `File` → `Open` → 選擇專案根目錄，等待 Gradle 同步完成
 2. `Run` → `Edit Configurations` → `NexusbotApplication` → `Environment variables`
-   填入所需憑證（見[環境變數](#環境變數)；`local` profile 皆有預設值，可直接啟動，但 LINE 收發與 AI 功能需填入真實金鑰）
-3. 點擊 `NexusbotApplication` 旁的 ▶ 啟動
-4. 開啟 http://localhost:5001/actuator/health 確認回傳 `{"status":"UP"}`
+3. 輸入框貼上（填入實際值）：`LINE_CHANNEL_TOKEN=;LINE_CHANNEL_SECRET=;GROQ_API_KEY=;EMAIL_USERNAME=;EMAIL_PASSWORD=;EMAIL_FROM=;FUGLE_API_KEY=`
+
+| 變數                    | 說明                            |
+|-----------------------|-------------------------------|
+| `LINE_CHANNEL_TOKEN`  | LINE Bot Channel Access Token |
+| `LINE_CHANNEL_SECRET` | LINE Bot Channel Secret       |
+| `GROQ_API_KEY`        | Groq AI API Key               |
+| `EMAIL_USERNAME`      | SMTP 帳號（Gmail）                |
+| `EMAIL_PASSWORD`      | SMTP 密碼（Gmail App Password）   |
+| `EMAIL_FROM`          | 寄件人地址                         |
+| `FUGLE_API_KEY`       | Fugle 即時行情 API Key            |
+
+> `local` profile 所有變數皆有預設值，可不填直接啟動，但 LINE 收發與 AI 功能需填入真實金鑰。
+
+4. 點擊 `NexusbotApplication` 旁的 ▶ 啟動
+5. 開啟 http://localhost:5001/actuator/health 確認回傳 `{"status":"UP"}`
 
 **本地輔助端點**（`local` profile）：
 
