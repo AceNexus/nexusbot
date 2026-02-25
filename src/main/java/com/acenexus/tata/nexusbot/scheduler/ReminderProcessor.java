@@ -16,6 +16,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 
@@ -35,9 +36,15 @@ public class ReminderProcessor {
     private final AIService aiService;
 
     /**
-     * 處理單個提醒（具備交易與鎖定機制）
+     * 處理單個提醒（具備鎖定機制）
+     * 執行順序：
+     * - 取得分散式鎖
+     * - 更新 DB 狀態（handleRepeatLogic）
+     * - 啟動非同步通知
+     * - 等待通知完成後才釋放鎖（防止多實例在通知進行中重複取鎖）
+     * 不使用 @Transactional：各 Repository 操作已有自己的事務；
+     * 且持有 DB 連線等待非同步通知完成會浪費連線資源。
      */
-    @Transactional
     public void processReminder(Reminder reminder) {
         String lockKey = "reminder_" + reminder.getId();
 
@@ -47,46 +54,57 @@ public class ReminderProcessor {
             return;
         }
 
+        CompletableFuture<Void> notificationFuture = null;
         try {
             logger.info("Processing reminder [{}]: {}", reminder.getId(), reminder.getContent());
 
-            // 1. 發送提醒訊息
-            sendReminderMessage(reminder);
-
-            // 2. 處理重複邏輯
+            // 1. 先更新 DB 狀態（各自的 Repository 事務確保原子性）
             handleRepeatLogic(reminder);
 
-            logger.info("Reminder [{}] completed", reminder.getId());
+            // 2. DB 狀態確認更新後，啟動非同步通知
+            notificationFuture = buildNotificationFuture(reminder);
+
+            logger.info("Reminder [{}] state updated, notification dispatched", reminder.getId());
 
         } catch (Exception e) {
             logger.error("Failed to process reminder [{}]: {}", reminder.getId(), e.getMessage(), e);
-            throw e; // 丟出異常以觸發交易回滾（雖然目前主要操作是唯讀或更新狀態）
+            throw e; // 讓 Scheduler 層捕捉並記錄，下次排程重試
         } finally {
-            // 釋放分散式鎖
+            // 等待通知完成後再釋放鎖，確保鎖的保護範圍涵蓋整個通知流程
+            awaitNotification(notificationFuture, reminder.getId());
             distributedLock.releaseLock(lockKey);
         }
     }
 
     /**
-     * 發送提醒訊息（非同步處理，委派給通知服務）
+     * 建立非同步通知任務（AI 增強 + 發送）
      */
-    private void sendReminderMessage(Reminder reminder) {
+    private CompletableFuture<Void> buildNotificationFuture(Reminder reminder) {
         logger.info("Sending reminder [{}] for room [{}]: {}", reminder.getId(), reminder.getRoomId(), reminder.getContent());
 
-        CompletableFuture.runAsync(MdcTaskDecorator.wrap(() -> {
+        return CompletableFuture.runAsync(MdcTaskDecorator.wrap(() -> {
             try {
-                // AI 增強提醒內容
                 String enhancedContent = enhanceReminderWithAI(reminder.getContent());
-
-                // 委派給通知服務處理
                 reminderNotificationService.send(reminder, enhancedContent);
-
                 logger.info("Reminder [{}] notification completed", reminder.getId());
-
             } catch (Exception e) {
                 logger.error("Failed to send notification for reminder [{}]: {}", reminder.getId(), e.getMessage());
             }
         }));
+    }
+
+    /**
+     * 等待通知任務完成，忽略任務內部異常（已在任務內部記錄）
+     */
+    private void awaitNotification(CompletableFuture<Void> future, Long reminderId) {
+        if (future == null) {
+            return;
+        }
+        try {
+            future.join();
+        } catch (CompletionException e) {
+            logger.error("Notification future for reminder [{}] completed exceptionally: {}", reminderId, e.getMessage());
+        }
     }
 
     /**
