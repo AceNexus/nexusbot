@@ -36,4 +36,14 @@ public interface TimezoneInputStateRepository extends JpaRepository<TimezoneInpu
      */
     @Query("SELECT t FROM TimezoneInputState t WHERE t.roomId = :roomId AND t.expiresAt > :now")
     Optional<TimezoneInputState> findByRoomIdAndNotExpired(@Param("roomId") String roomId, @Param("now") LocalDateTime now);
+
+    /**
+     * 刪除已過期的狀態記錄
+     *
+     * @param now 當前時間
+     * @return 刪除的記錄數
+     */
+    @Modifying
+    @Query("DELETE FROM TimezoneInputState t WHERE t.expiresAt <= :now")
+    int deleteExpiredStates(@Param("now") LocalDateTime now);
 }

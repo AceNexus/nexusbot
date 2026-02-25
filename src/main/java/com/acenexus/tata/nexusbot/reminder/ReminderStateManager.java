@@ -56,10 +56,9 @@ public class ReminderStateManager {
     }
 
     /**
-     * 獲取提醒狀態（建議優先使用此方法以減少重複查詢）
+     * 獲取提醒狀態
      */
     public Optional<ReminderState> getState(String roomId) {
-        cleanupExpiredStates();
         return reminderStateRepository.findById(roomId);
     }
 
@@ -140,14 +139,6 @@ public class ReminderStateManager {
         return getState(roomId)
                 .map(ReminderState::getRepeatType)
                 .orElse("ONCE");
-    }
-
-    /**
-     * 清理過期的狀態記錄
-     */
-    @Transactional
-    public void cleanupExpiredStates() {
-        reminderStateRepository.deleteExpiredStates(LocalDateTime.now());
     }
 
     /**

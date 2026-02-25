@@ -224,8 +224,6 @@ git push && git push --tags        # 4. Push
 - [Spring Boot 官方文件](https://docs.spring.io/spring-boot/docs/current/reference/html/)
 - [Spring Cloud Config 官方文件](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/)
 - [Groq API 文件](https://console.groq.com/docs/openai)
-- [Fugle MarketData API](https://developer.fugle.tw/)
-- [FinMind API 文件](https://finmindtrade.com/analysis/#/Finish/api)
 - [Flyway 官方文件](https://documentation.red-gate.com/flyway/)
 
 ---
