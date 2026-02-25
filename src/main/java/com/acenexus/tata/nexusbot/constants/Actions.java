@@ -50,12 +50,17 @@ public final class Actions {
     public static final String CHANNEL_EMAIL = "channel=EMAIL";
     public static final String CHANNEL_BOTH = "channel=BOTH";
 
-    // ============= 時區設定動作 =============
+    // ============= 時區設定動作 (系統全域) =============
     public static final String TIMEZONE_SETTINGS = "action=timezone_settings";
     public static final String KEEP_TIMEZONE = "action=keep_timezone";
-    public static final String CHANGE_TIMEZONE = "action=change_timezone";
-    public static final String CONFIRM_TIMEZONE = "action=confirm_timezone";
-    public static final String CANCEL_TIMEZONE_CHANGE = "action=cancel_timezone_change";
+    public static final String SETTINGS_CHANGE_TIMEZONE = "action=settings_change_timezone";
+    public static final String SETTINGS_CONFIRM_TIMEZONE = "action=settings_confirm_timezone";
+    public static final String SETTINGS_CANCEL_TIMEZONE = "action=settings_cancel_timezone";
+
+    // 提醒流程專用的時區動作
+    public static final String REMINDER_CHANGE_TIMEZONE = "action=reminder_change_timezone";
+    public static final String REMINDER_CONFIRM_TIMEZONE = "action=reminder_confirm_timezone";
+    public static final String REMINDER_CANCEL_TIMEZONE = "action=reminder_cancel_timezone";
 
     // 提醒時間修改動作
     public static final String CHANGE_TIME = "action=change_time";

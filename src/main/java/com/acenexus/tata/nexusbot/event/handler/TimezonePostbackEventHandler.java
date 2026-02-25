@@ -10,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.KEEP_TIMEZONE;
+import static com.acenexus.tata.nexusbot.constants.Actions.SETTINGS_CANCEL_TIMEZONE;
+import static com.acenexus.tata.nexusbot.constants.Actions.SETTINGS_CHANGE_TIMEZONE;
+import static com.acenexus.tata.nexusbot.constants.Actions.SETTINGS_CONFIRM_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.TIMEZONE_SETTINGS;
 
 /**
@@ -29,7 +32,7 @@ public class TimezonePostbackEventHandler implements LineBotEventHandler {
         }
 
         // 檢查是否為時區設定相關動作（僅處理獨立時區設定選單的動作）
-        return event.hasAction(TIMEZONE_SETTINGS, KEEP_TIMEZONE);
+        return event.hasAction(TIMEZONE_SETTINGS, KEEP_TIMEZONE, SETTINGS_CHANGE_TIMEZONE, SETTINGS_CONFIRM_TIMEZONE, SETTINGS_CANCEL_TIMEZONE);
     }
 
     @Override
@@ -42,6 +45,9 @@ public class TimezonePostbackEventHandler implements LineBotEventHandler {
         return switch (action) {
             case TIMEZONE_SETTINGS -> timezoneFacade.showSettings(roomId);
             case KEEP_TIMEZONE -> timezoneFacade.keepTimezone(roomId);
+            case SETTINGS_CHANGE_TIMEZONE -> timezoneFacade.startChangingTimezone(roomId);
+            case SETTINGS_CONFIRM_TIMEZONE -> timezoneFacade.confirmTimezoneChange(roomId);
+            case SETTINGS_CANCEL_TIMEZONE -> timezoneFacade.cancelTimezoneChange(roomId);
             default -> null;
         };
     }

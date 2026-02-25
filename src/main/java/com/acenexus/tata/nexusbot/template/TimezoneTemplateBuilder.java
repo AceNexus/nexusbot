@@ -5,11 +5,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 
-import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_TIMEZONE_CHANGE;
-import static com.acenexus.tata.nexusbot.constants.Actions.CHANGE_TIMEZONE;
-import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.KEEP_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.SETTINGS_CANCEL_TIMEZONE;
+import static com.acenexus.tata.nexusbot.constants.Actions.SETTINGS_CHANGE_TIMEZONE;
+import static com.acenexus.tata.nexusbot.constants.Actions.SETTINGS_CONFIRM_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.TIMEZONE_SETTINGS;
 
 /**
@@ -27,7 +27,7 @@ public class TimezoneTemplateBuilder extends FlexMessageTemplateBuilder {
                 String.format("目前聊天室時區：\n%s\n\n時區設定會影響提醒時間的解析。例如，當您說「明天早上8點」時，系統將以此時區為準。", timezoneDisplay),
                 Arrays.asList(
                         createNeutralButton("維持不變", KEEP_TIMEZONE),
-                        createPrimaryButton("變更時區", CHANGE_TIMEZONE),
+                        createPrimaryButton("變更時區", SETTINGS_CHANGE_TIMEZONE),
                         createNavigateButton("返回主選單", MAIN_MENU)
                 )
         );
@@ -41,7 +41,7 @@ public class TimezoneTemplateBuilder extends FlexMessageTemplateBuilder {
                 "變更時區",
                 "請使用自然語言輸入您想要的時區。\n\n支援的輸入範例：\n• 台北、東京、紐約\n• Asia/Taipei、America/New_York\n• 上海、香港、倫敦\n\n請直接輸入時區名稱。",
                 Arrays.asList(
-                        createSecondaryButton("取消變更", CANCEL_TIMEZONE_CHANGE),
+                        createSecondaryButton("取消變更", SETTINGS_CANCEL_TIMEZONE),
                         createNavigateButton("返回時區設定", TIMEZONE_SETTINGS)
                 )
         );
@@ -55,8 +55,8 @@ public class TimezoneTemplateBuilder extends FlexMessageTemplateBuilder {
                 "確認時區變更",
                 String.format("您輸入的「%s」\n系統判定為：%s\n\n請確認是否要將聊天室時區變更為此時區？", originalInput, timezoneDisplay),
                 Arrays.asList(
-                        createSuccessButton("確認變更", CONFIRM_TIMEZONE),
-                        createSecondaryButton("取消", CANCEL_TIMEZONE_CHANGE),
+                        createSuccessButton("確認變更", SETTINGS_CONFIRM_TIMEZONE),
+                        createSecondaryButton("取消", SETTINGS_CANCEL_TIMEZONE),
                         createNavigateButton("返回時區設定", TIMEZONE_SETTINGS)
                 )
         );
@@ -70,8 +70,8 @@ public class TimezoneTemplateBuilder extends FlexMessageTemplateBuilder {
                 "無法識別時區",
                 String.format("抱歉，無法識別您輸入的「%s」。\n\n請嘗試使用以下格式：\n• 常用城市：台北、東京、紐約、倫敦\n• IANA 格式：Asia/Taipei、America/New_York\n• 中文名稱：台灣、日本、美國東岸", userInput),
                 Arrays.asList(
-                        createPrimaryButton("重新輸入", CHANGE_TIMEZONE),
-                        createSecondaryButton("取消變更", CANCEL_TIMEZONE_CHANGE),
+                        createPrimaryButton("重新輸入", SETTINGS_CHANGE_TIMEZONE),
+                        createSecondaryButton("取消變更", SETTINGS_CANCEL_TIMEZONE),
                         createNavigateButton("返回時區設定", TIMEZONE_SETTINGS)
                 )
         );

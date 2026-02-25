@@ -10,15 +10,15 @@ import java.util.Map;
 
 import static com.acenexus.tata.nexusbot.constants.Actions.ADD_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_REMINDER_INPUT;
-import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_TIMEZONE_CHANGE;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANGE_TIME;
-import static com.acenexus.tata.nexusbot.constants.Actions.CHANGE_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_BOTH;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_LINE;
-import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.LIST_REMINDERS;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_CANCEL_TIMEZONE;
+import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_CHANGE_TIMEZONE;
+import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_CONFIRM_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_DAILY;
 import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_ONCE;
@@ -94,7 +94,7 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
         if (step.equals("content")) {
             return createCard(title, description, Arrays.asList(
                     createNeutralButton("修改時間", CHANGE_TIME),
-                    createNeutralButton("修改時區", CHANGE_TIMEZONE),
+                    createNeutralButton("修改時區", REMINDER_CHANGE_TIMEZONE),
                     createSecondaryButton("取消設定", CANCEL_REMINDER_INPUT),
                     createNavigateButton("返回提醒管理", REMINDER_MENU)
             ));
@@ -252,7 +252,7 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
         );
 
         return createCard("修改提醒時區", description, Arrays.asList(
-                createSecondaryButton("取消修改", CANCEL_TIMEZONE_CHANGE),
+                createSecondaryButton("取消修改", REMINDER_CANCEL_TIMEZONE),
                 createNavigateButton("返回提醒管理", REMINDER_MENU)
         ));
     }
@@ -268,9 +268,9 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
         );
 
         return createCard("確認時區變更", description, Arrays.asList(
-                createPrimaryButton("確認使用", CONFIRM_TIMEZONE),
-                createSecondaryButton("重新輸入", CHANGE_TIMEZONE),
-                createSecondaryButton("取消修改", CANCEL_TIMEZONE_CHANGE)
+                createPrimaryButton("確認使用", REMINDER_CONFIRM_TIMEZONE),
+                createSecondaryButton("重新輸入", REMINDER_CHANGE_TIMEZONE),
+                createSecondaryButton("取消修改", REMINDER_CANCEL_TIMEZONE)
         ));
     }
 
@@ -284,8 +284,8 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
         );
 
         return createCard("時區格式錯誤", description, Arrays.asList(
-                createPrimaryButton("重新輸入", CHANGE_TIMEZONE),
-                createSecondaryButton("取消修改", CANCEL_TIMEZONE_CHANGE)
+                createPrimaryButton("重新輸入", REMINDER_CHANGE_TIMEZONE),
+                createSecondaryButton("取消修改", REMINDER_CANCEL_TIMEZONE)
         ));
     }
 }
