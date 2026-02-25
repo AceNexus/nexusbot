@@ -3,6 +3,7 @@ package com.acenexus.tata.nexusbot.event.handler;
 import com.acenexus.tata.nexusbot.event.EventType;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
 import com.acenexus.tata.nexusbot.facade.ReminderFacade;
+import com.acenexus.tata.nexusbot.facade.TimezoneFacade;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -28,7 +29,11 @@ import static com.acenexus.tata.nexusbot.constants.Actions.REPEAT_WEEKLY;
 import static com.acenexus.tata.nexusbot.constants.Actions.TODAY_REMINDERS;
 
 /**
- * 處理提醒相關的 Postback 事件
+ * 處理提醒相關的 Postback 事件。
+ * 同時負責 CHANGE_TIMEZONE / CONFIRM_TIMEZONE / CANCEL_TIMEZONE_CHANGE
+ * 在「提醒建立流程」與「獨立時區設定」兩種情境下的路由：
+ * 流程中 → 委派 {@link ReminderFacade}；流程外 → 委派 {@link TimezoneFacade}。
+ * 路由判斷放在 {@link #handle} 而非 {@link #canHandle}，確保 canHandle 維持純函數。
  */
 @Component
 @RequiredArgsConstructor
@@ -36,6 +41,7 @@ public class ReminderPostbackEventHandler implements LineBotEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(ReminderPostbackEventHandler.class);
 
     private final ReminderFacade reminderFacade;
+    private final TimezoneFacade timezoneFacade;
 
     @Override
     public boolean canHandle(LineBotEvent event) {
@@ -84,9 +90,13 @@ public class ReminderPostbackEventHandler implements LineBotEventHandler {
             case CHANNEL_BOTH -> reminderFacade.setNotificationChannelBoth(roomId);
             case CANCEL_REMINDER_INPUT -> reminderFacade.cancelCreation(roomId);
             case CHANGE_TIME -> reminderFacade.startTimeChange(roomId);
-            case CHANGE_TIMEZONE -> reminderFacade.startTimezoneChange(roomId);
-            case CONFIRM_TIMEZONE -> reminderFacade.confirmTimezoneChange(roomId);
-            case CANCEL_TIMEZONE_CHANGE -> reminderFacade.cancelTimezoneChange(roomId);
+            case CHANGE_TIMEZONE -> reminderFacade.isInReminderFlow(roomId)
+                    ? reminderFacade.startTimezoneChange(roomId)
+                    : timezoneFacade.startChangingTimezone(roomId);
+            case CONFIRM_TIMEZONE ->
+                    reminderFacade.isInReminderFlow(roomId) ? reminderFacade.confirmTimezoneChange(roomId) : timezoneFacade.confirmTimezoneChange(roomId);
+            case CANCEL_TIMEZONE_CHANGE ->
+                    reminderFacade.isInReminderFlow(roomId) ? reminderFacade.cancelTimezoneChange(roomId) : timezoneFacade.cancelTimezoneChange(roomId);
             default -> null;
         };
     }
