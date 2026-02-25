@@ -4,25 +4,18 @@ import com.acenexus.tata.nexusbot.ai.AIService;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.lock.DistributedLock;
 import com.acenexus.tata.nexusbot.notification.ReminderNotificationService;
-import com.acenexus.tata.nexusbot.repository.ReminderRepository;
 import com.acenexus.tata.nexusbot.util.MdcTaskDecorator;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
-
 /**
- * 提醒處理器
- * 負責單個提醒的執行邏輯，包含交易處理、鎖定機制與重複邏輯
+ * 提醒處理器，負責協調單個提醒的完整執行流程：
+ * 分散式鎖定 → 重複邏輯更新（委派 {@link ReminderRepeatHandler}）→ 非同步通知發送。
  */
 @Component
 @RequiredArgsConstructor
@@ -30,8 +23,8 @@ public class ReminderProcessor {
 
     private static final Logger logger = LoggerFactory.getLogger(ReminderProcessor.class);
 
-    private final ReminderRepository reminderRepository;
     private final DistributedLock distributedLock;
+    private final ReminderRepeatHandler reminderRepeatHandler;
     private final ReminderNotificationService reminderNotificationService;
     private final AIService aiService;
 
@@ -58,8 +51,8 @@ public class ReminderProcessor {
         try {
             logger.info("Processing reminder [{}]: {}", reminder.getId(), reminder.getContent());
 
-            // 1. 先更新 DB 狀態（各自的 Repository 事務確保原子性）
-            handleRepeatLogic(reminder);
+            // 1. 先更新 DB 狀態（委派給獨立 bean，@Transactional 透過 Proxy 正確生效）
+            reminderRepeatHandler.handle(reminder);
 
             // 2. DB 狀態確認更新後，啟動非同步通知
             notificationFuture = buildNotificationFuture(reminder);
@@ -133,52 +126,4 @@ public class ReminderProcessor {
         return originalContent;
     }
 
-    /**
-     * 處理重複邏輯
-     */
-    @Transactional
-    public void handleRepeatLogic(Reminder reminder) {
-        switch (reminder.getRepeatType().toUpperCase()) {
-            case "ONCE" -> {
-                reminder.setStatus("COMPLETED");
-                reminderRepository.save(reminder);
-                logger.debug("One-time reminder [{}] completed", reminder.getId());
-            }
-            case "DAILY" -> {
-                updateNextReminderTime(reminder, 1, ChronoUnit.DAYS);
-                logger.debug("Daily reminder [{}] updated to: {}", reminder.getId(), reminder.getLocalTime().format(STANDARD_TIME));
-            }
-            case "WEEKLY" -> {
-                updateNextReminderTime(reminder, 1, ChronoUnit.WEEKS);
-                logger.debug("Weekly reminder [{}] updated to: {}", reminder.getId(), reminder.getLocalTime().format(STANDARD_TIME));
-            }
-            default -> {
-                logger.warn("Unknown repeat type '{}' for reminder [{}], marking as completed", reminder.getRepeatType(), reminder.getId());
-                reminder.setStatus("COMPLETED");
-                reminderRepository.save(reminder);
-            }
-        }
-    }
-
-    /**
-     * 更新下一次提醒時間（具備自動補救機制，確保下次時間在未來）
-     */
-    private void updateNextReminderTime(Reminder reminder, long amount, ChronoUnit unit) {
-        String timezone = reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei";
-        ZoneId zoneId = ZoneId.of(timezone);
-
-        ZonedDateTime nextZonedTime = reminder.getLocalTime().atZone(zoneId).plus(amount, unit);
-        ZonedDateTime now = ZonedDateTime.now(zoneId);
-
-        // 如果計算出的下一次時間仍在過去（例如停機太久），持續推進直到進入未來
-        while (nextZonedTime.isBefore(now)) {
-            nextZonedTime = nextZonedTime.plus(amount, unit);
-        }
-
-        reminder.setReminderTimeInstant(nextZonedTime.toInstant().toEpochMilli());
-        reminderRepository.save(reminder);
-
-        logger.info("Updated repeating reminder [{}]: next execution set to {} ({})",
-                reminder.getId(), nextZonedTime.format(STANDARD_TIME), timezone);
-    }
 }
