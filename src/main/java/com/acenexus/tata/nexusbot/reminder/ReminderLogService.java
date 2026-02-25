@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.reminder;
 
+import com.acenexus.tata.nexusbot.dto.ConfirmationResult;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
 import com.acenexus.tata.nexusbot.repository.ReminderLogRepository;
@@ -143,6 +144,36 @@ public class ReminderLogService {
             }
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    /**
+     * 透過 Token 確認提醒
+     *
+     * @param token 確認 Token
+     * @return 確認結果
+     */
+    public ConfirmationResult confirmByToken(String token) {
+        try {
+            Optional<ReminderLog> optionalLog = reminderLogRepository.findByConfirmationToken(token);
+
+            if (optionalLog.isEmpty()) {
+                return new ConfirmationResult(false, "無效的確認連結", "此連結可能已過期或不存在", false);
+            }
+
+            ReminderLog log = optionalLog.get();
+
+            if (log.getConfirmedAt() != null) {
+                String detail = "確認時間: " + log.getConfirmedAt().format(java.time.format.DateTimeFormatter.ofPattern("yyyy年MM月dd日 HH:mm:ss"));
+                return new ConfirmationResult(true, "此提醒已確認", detail, true);
+            }
+
+            log.setConfirmedAt(LocalDateTime.now());
+            reminderLogRepository.save(log);
+
+            return new ConfirmationResult(true, "提醒確認成功", "您可以返回 LINE 查看提醒狀態", false);
+        } catch (Exception e) {
+            return new ConfirmationResult(false, "確認失敗", "系統發生錯誤，請稍後再試", false);
         }
     }
 }
