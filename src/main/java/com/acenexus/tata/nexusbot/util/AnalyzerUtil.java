@@ -3,9 +3,9 @@ package com.acenexus.tata.nexusbot.util;
 import com.acenexus.tata.nexusbot.ai.AIService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -17,19 +17,15 @@ import java.util.regex.Pattern;
 import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
 
 @Component
+@RequiredArgsConstructor
 public class AnalyzerUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(AnalyzerUtil.class);
-    private static final Pattern TIME_FORMAT = Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$");
-    private static final DateTimeFormatter FORMATTER = STANDARD_TIME;
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final Logger logger = LoggerFactory.getLogger(AnalyzerUtil.class);
+    private final Pattern TIME_FORMAT = Pattern.compile("^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}$");
+    private final DateTimeFormatter FORMATTER = STANDARD_TIME;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static AIService aiService;
-
-    @Autowired
-    public void setAiService(AIService aiService) {
-        AnalyzerUtil.aiService = aiService;
-    }
+    private final AIService aiService;
 
     /**
      * 使用 AI 解析時間，支援時區識別
@@ -38,7 +34,7 @@ public class AnalyzerUtil {
      * @param defaultTimezone 預設時區（當使用者未指定時區時使用）
      * @return ParsedTimeResult 包含解析後的時間與時區，失敗時返回 null
      */
-    public static ParsedTimeResult parseTimeWithTimezone(String input, String defaultTimezone) {
+    public ParsedTimeResult parseTimeWithTimezone(String input, String defaultTimezone) {
         if (input == null || input.isBlank()) return null;
 
         try {
@@ -96,7 +92,7 @@ public class AnalyzerUtil {
      * @param defaultTimezone IANA 時區 ID (例如 "Asia/Taipei")。
      * @return 供 AI 模型解析的完整 Prompt 文本。
      */
-    private static String buildPromptWithTimezone(String userInput, String defaultTimezone) {
+    private String buildPromptWithTimezone(String userInput, String defaultTimezone) {
 
         try {
             // 1. 取得目標時區 (ZoneId)

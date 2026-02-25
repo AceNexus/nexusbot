@@ -50,6 +50,7 @@ public class ReminderFacadeImpl implements ReminderFacade {
     private final ChatRoomAccessor chatRoomAccessor;
     private final EmailInputStateService emailInputStateService;
     private final TimezoneInputStateService timezoneInputStateService;
+    private final AnalyzerUtil analyzerUtil;
 
     @Override
     public Message showMenu() {
@@ -169,7 +170,7 @@ public class ReminderFacadeImpl implements ReminderFacade {
         }
 
         // 2. 使用 AI 解析時間與時區
-        ParsedTimeResult parseResult = AnalyzerUtil.parseTimeWithTimezone(input, defaultTimezone);
+        ParsedTimeResult parseResult = analyzerUtil.parseTimeWithTimezone(input, defaultTimezone);
 
         if (parseResult == null) {
             return messageTemplateProvider.reminderInputError(input, "無法解析時間格式");

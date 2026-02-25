@@ -1,12 +1,11 @@
 package com.acenexus.tata.nexusbot.util;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -20,20 +19,13 @@ import static org.mockito.Mockito.when;
 @TestPropertySource(properties = {
         "spring.profiles.active=test"
 })
-@SuppressWarnings("removal")
 class AnalyzerUtilTimezoneTest {
 
-    @MockBean
+    @MockitoBean
     private AIService aiService;
 
     @Autowired
     private AnalyzerUtil analyzerUtil;
-
-    @BeforeEach
-    void setUp() {
-        // 確保 AnalyzerUtil 的靜態 aiService 已注入
-        analyzerUtil.setAiService(aiService);
-    }
 
     @Test
     void shouldParseTimeWithoutTimezone() {
@@ -45,7 +37,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
 
         // Then
         assertThat(result).isNotNull();
@@ -66,7 +58,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("明天紐約時間下午3點", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天紐約時間下午3點", "Asia/Taipei");
 
         // Then
         assertThat(result).isNotNull();
@@ -86,7 +78,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("東京時間早上9點", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("東京時間早上9點", "Asia/Taipei");
 
         // Then
         assertThat(result).isNotNull();
@@ -107,7 +99,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("東京時間下午3點", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("東京時間下午3點", "Asia/Taipei");
 
         // Then: 應正確解析（移除 markdown 標記）
         assertThat(result).isNotNull();
@@ -125,7 +117,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("台北時間下午3點", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("台北時間下午3點", "Asia/Taipei");
 
         // Then: 應自動解析為標準 IANA ID
         assertThat(result).isNotNull();
@@ -143,7 +135,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
 
         // Then: 應忽略無效時區，時區欄位為 null
         assertThat(result).isNotNull();
@@ -154,7 +146,7 @@ class AnalyzerUtilTimezoneTest {
     @Test
     void shouldReturnNullForEmptyInput() {
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("", "Asia/Taipei");
 
         // Then
         assertThat(result).isNull();
@@ -163,7 +155,7 @@ class AnalyzerUtilTimezoneTest {
     @Test
     void shouldReturnNullForNullInput() {
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone(null, "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone(null, "Asia/Taipei");
 
         // Then
         assertThat(result).isNull();
@@ -176,7 +168,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse(null, "llama-3.1-8b-instant", 0, 0L, false));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
 
         // Then
         assertThat(result).isNull();
@@ -189,7 +181,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse("This is not JSON", "llama-3.1-8b-instant", 50, 100L, true));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
 
         // Then
         assertThat(result).isNull();
@@ -205,7 +197,7 @@ class AnalyzerUtilTimezoneTest {
                 .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
 
         // When
-        ParsedTimeResult result = AnalyzerUtil.parseTimeWithTimezone("明天下午3點半", "Asia/Taipei");
+        ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點半", "Asia/Taipei");
 
         // Then: 秒和納秒應為 0
         assertThat(result).isNotNull();
