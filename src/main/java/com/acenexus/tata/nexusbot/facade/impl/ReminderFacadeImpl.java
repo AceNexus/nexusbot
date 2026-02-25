@@ -183,10 +183,11 @@ public class ReminderFacadeImpl implements ReminderFacade {
             return messageTemplateProvider.reminderInputError(input, String.format("時間必須是未來\n%s (%s)", localTime.format(TIME_FORMATTER), timezoneDisplay));
         }
 
-        // 6. 儲存時間、時區、Instant 到狀態
-        reminderStateManager.setTime(roomId, localTime);
-        reminderStateManager.setTimezone(roomId, finalTimezone);
-        reminderStateManager.setInstant(roomId, instant);
+        // 6. 儲存時間、時區、Instant，再推進步驟
+        reminderStateManager.storeTime(roomId, localTime);
+        reminderStateManager.storeTimezone(roomId, finalTimezone);
+        reminderStateManager.storeInstant(roomId, instant);
+        reminderStateManager.transitionToContent(roomId);
 
         // 7. 顯示確認畫面（含時區）
         String timezoneDisplay = TimezoneValidator.getDisplayName(finalTimezone);
@@ -279,21 +280,24 @@ public class ReminderFacadeImpl implements ReminderFacade {
 
     @Override
     public Message setRepeatTypeOnce(String roomId) {
-        reminderStateManager.setRepeatType(roomId, "ONCE");
+        reminderStateManager.storeRepeatType(roomId, "ONCE");
+        reminderStateManager.transitionToNotificationChannel(roomId);
         logger.debug("Set repeat type to ONCE for room: {}", roomId);
         return messageTemplateProvider.reminderNotificationChannelMenu();
     }
 
     @Override
     public Message setRepeatTypeDaily(String roomId) {
-        reminderStateManager.setRepeatType(roomId, "DAILY");
+        reminderStateManager.storeRepeatType(roomId, "DAILY");
+        reminderStateManager.transitionToNotificationChannel(roomId);
         logger.debug("Set repeat type to DAILY for room: {}", roomId);
         return messageTemplateProvider.reminderNotificationChannelMenu();
     }
 
     @Override
     public Message setRepeatTypeWeekly(String roomId) {
-        reminderStateManager.setRepeatType(roomId, "WEEKLY");
+        reminderStateManager.storeRepeatType(roomId, "WEEKLY");
+        reminderStateManager.transitionToNotificationChannel(roomId);
         logger.debug("Set repeat type to WEEKLY for room: {}", roomId);
         return messageTemplateProvider.reminderNotificationChannelMenu();
     }
@@ -302,21 +306,24 @@ public class ReminderFacadeImpl implements ReminderFacade {
 
     @Override
     public Message setNotificationChannelLine(String roomId) {
-        reminderStateManager.setNotificationChannel(roomId, "LINE");
+        reminderStateManager.storeNotificationChannel(roomId, "LINE");
+        reminderStateManager.transitionToTime(roomId);
         logger.debug("Set notification channel to LINE for room: {}", roomId);
         return messageTemplateProvider.reminderInputMenu("time", "", "");
     }
 
     @Override
     public Message setNotificationChannelEmail(String roomId) {
-        reminderStateManager.setNotificationChannel(roomId, "EMAIL");
+        reminderStateManager.storeNotificationChannel(roomId, "EMAIL");
+        reminderStateManager.transitionToTime(roomId);
         logger.debug("Set notification channel to EMAIL for room: {}", roomId);
         return messageTemplateProvider.reminderInputMenu("time", "", "");
     }
 
     @Override
     public Message setNotificationChannelBoth(String roomId) {
-        reminderStateManager.setNotificationChannel(roomId, "BOTH");
+        reminderStateManager.storeNotificationChannel(roomId, "BOTH");
+        reminderStateManager.transitionToTime(roomId);
         logger.debug("Set notification channel to BOTH for room: {}", roomId);
         return messageTemplateProvider.reminderInputMenu("time", "", "");
     }
@@ -334,7 +341,7 @@ public class ReminderFacadeImpl implements ReminderFacade {
 
     @Override
     public Message startTimezoneChange(String roomId) {
-        reminderStateManager.startTimezoneChange(roomId);
+        reminderStateManager.transitionToTimezoneInput(roomId);
         String currentTimezone = reminderStateManager.getTimezone(roomId);
         String timezoneDisplay = TimezoneValidator.getDisplayName(currentTimezone);
         logger.info("Started timezone change for room: {}", roomId);
@@ -357,7 +364,7 @@ public class ReminderFacadeImpl implements ReminderFacade {
     @Override
     public Message confirmTimezoneChange(String roomId) {
         // 確認時區變更並將狀態改回等待內容步驟
-        reminderStateManager.confirmTimezoneChangeAndReturnToContent(roomId);
+        reminderStateManager.confirmTimezoneChange(roomId);
 
         LocalDateTime reminderTime = reminderStateManager.getTime(roomId);
         String timezone = reminderStateManager.getTimezone(roomId);
@@ -388,11 +395,10 @@ public class ReminderFacadeImpl implements ReminderFacade {
         ZonedDateTime newZonedTime = originalInstant.atZone(ZoneId.of(resolvedTimezone));
         LocalDateTime newLocalTime = newZonedTime.toLocalDateTime();
 
-        // 4. 進入確認步驟並更新時區與本地時間（Instant 保持不變）
-        reminderStateManager.moveToTimezoneConfirmation(roomId);
-        reminderStateManager.setTimezone(roomId, resolvedTimezone);
-        reminderStateManager.setTime(roomId, newLocalTime);
-        // Instant 保持不變，不需要重新設定
+        // 4. 先更新時區與換算後的本地時間，再推進步驟至確認（Instant 保持不變）
+        reminderStateManager.storeTimezone(roomId, resolvedTimezone);
+        reminderStateManager.storeTime(roomId, newLocalTime);
+        reminderStateManager.transitionToTimezoneConfirmation(roomId);
 
         // 5. 顯示確認畫面
         String timezoneDisplay = TimezoneValidator.getDisplayName(resolvedTimezone);
