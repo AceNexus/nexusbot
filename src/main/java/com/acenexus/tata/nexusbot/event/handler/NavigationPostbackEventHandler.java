@@ -2,7 +2,7 @@ package com.acenexus.tata.nexusbot.event.handler;
 
 import com.acenexus.tata.nexusbot.event.EventType;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
-import com.acenexus.tata.nexusbot.facade.NavigationFacade;
+import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -21,7 +21,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
 public class NavigationPostbackEventHandler implements LineBotEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(NavigationPostbackEventHandler.class);
 
-    private final NavigationFacade navigationFacade;
+    private final MessageTemplateProvider messageTemplateProvider;
 
     @Override
     public boolean canHandle(LineBotEvent event) {
@@ -36,9 +36,9 @@ public class NavigationPostbackEventHandler implements LineBotEventHandler {
         logger.info("NavigationPostbackEventHandler handling action: {} for room: {}", action, roomId);
 
         return switch (action) {
-            case MAIN_MENU -> navigationFacade.showMainMenu();
-            case HELP_MENU -> navigationFacade.showHelpMenu();
-            case ABOUT -> navigationFacade.showAbout();
+            case MAIN_MENU -> messageTemplateProvider.mainMenu();
+            case HELP_MENU -> messageTemplateProvider.helpMenu();
+            case ABOUT -> messageTemplateProvider.about();
             default -> null;
         };
     }
