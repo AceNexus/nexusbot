@@ -51,8 +51,6 @@ line:
   bot:
     channel-token: ${LINE_CHANNEL_TOKEN:default-token}
     channel-secret: ${LINE_CHANNEL_SECRET:default-secret}
-  liff:
-    id: ${LINE_LIFF_ID:}
 
 # ==========================================
 # 第三方服務整合 - Groq AI
@@ -100,23 +98,6 @@ osm:
     - shop=convenience         # 便利商店
     - shop=supermarket         # 超市
     - amenity=fuel             # 加油站
-
-# ==========================================
-# 第三方服務整合 - FinMind API (台灣金融數據)
-# ==========================================
-finmind:
-  api-token: ${FINMIND_API_TOKEN:}
-
-# ==========================================
-# 第三方服務整合 - Fugle API (即時成交明細)
-# 免費註冊：https://developer.fugle.tw/
-# ==========================================
-fugle:
-  api-key: ${FUGLE_API_KEY:default-fugle-key}
-  websocket-url: wss://api.fugle.tw/marketdata/v1.0/stock/streaming
-  rest-base-url: https://api.fugle.tw/marketdata/v1.0
-  reconnect-delay: 5000
-  max-subscriptions: 5
 
 # ==========================================
 # 安全設定 - 管理員

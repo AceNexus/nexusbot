@@ -20,10 +20,6 @@ public final class Actions {
     // ============= AI 模型選擇動作 =============
     public static final String MODEL_LLAMA_3_1_8B = "model=llama-3.1-8b-instant";
     public static final String MODEL_LLAMA_3_3_70B = "model=llama-3.3-70b-versatile";
-    public static final String MODEL_LLAMA3_70B = "model=llama3-70b-8192";
-    public static final String MODEL_GEMMA2_9B = "model=gemma2-9b-it";
-    public static final String MODEL_DEEPSEEK_R1 = "model=deepseek-r1-distill-llama-70b";
-    public static final String MODEL_QWEN3_32B = "model=qwen/qwen3-32b";
 
     // ============= 選單導航動作 =============
     public static final String MAIN_MENU = "action=main_menu";

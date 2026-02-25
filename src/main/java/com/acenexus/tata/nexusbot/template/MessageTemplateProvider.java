@@ -106,5 +106,4 @@ public interface MessageTemplateProvider {
 
     Message emailInvalidFormat();
 
-    Message stockAnalysisMenu();
 }

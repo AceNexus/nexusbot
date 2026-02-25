@@ -14,12 +14,8 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
-import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_DEEPSEEK_R1;
-import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMMA2_9B;
-import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
-import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_QWEN3_32B;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_AI;
 
@@ -46,8 +42,7 @@ public class AIPostbackEventHandler implements LineBotEventHandler {
 
         return switch (action) {
             case TOGGLE_AI, ENABLE_AI, DISABLE_AI, SELECT_MODEL,
-                    MODEL_LLAMA_3_1_8B, MODEL_LLAMA_3_3_70B, MODEL_LLAMA3_70B,
-                    MODEL_GEMMA2_9B, MODEL_DEEPSEEK_R1, MODEL_QWEN3_32B,
+                    MODEL_LLAMA_3_1_8B, MODEL_LLAMA_3_3_70B,
                     CLEAR_HISTORY, CONFIRM_CLEAR_HISTORY -> true;
             default -> false;
         };
@@ -70,12 +65,6 @@ public class AIPostbackEventHandler implements LineBotEventHandler {
                     aiFacade.selectModel(roomId, roomType, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)");
             case MODEL_LLAMA_3_3_70B ->
                     aiFacade.selectModel(roomId, roomType, "llama-3.3-70b-versatile", "Llama 3.3 70B (精準強力)");
-            case MODEL_LLAMA3_70B ->
-                    aiFacade.selectModel(roomId, roomType, "llama3-70b-8192", "Llama 3 70B (詳細平衡)");
-            case MODEL_GEMMA2_9B -> aiFacade.selectModel(roomId, roomType, "gemma2-9b-it", "Gemma2 9B (高度創意)");
-            case MODEL_DEEPSEEK_R1 ->
-                    aiFacade.selectModel(roomId, roomType, "deepseek-r1-distill-llama-70b", "DeepSeek R1 (邏輯推理)");
-            case MODEL_QWEN3_32B -> aiFacade.selectModel(roomId, roomType, "qwen/qwen3-32b", "Qwen3 32B (多語平衡)");
             case CLEAR_HISTORY -> aiFacade.showClearHistoryConfirmation();
             case CONFIRM_CLEAR_HISTORY -> aiFacade.clearHistory(roomId);
             default -> null;

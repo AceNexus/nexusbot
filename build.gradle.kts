@@ -56,9 +56,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("com.fasterxml.jackson.core:jackson-databind")
 
-    // WebSocket Client (for Fugle real-time data)
-    implementation("org.springframework.boot:spring-boot-starter-websocket")
-
     // Email
     implementation("org.springframework.boot:spring-boot-starter-mail")
 
@@ -71,10 +68,6 @@ dependencies {
 
     // OpenAPI / Swagger
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0")
-
-    // Cache
-    implementation("org.springframework.boot:spring-boot-starter-cache")
-    implementation("com.github.ben-manes.caffeine:caffeine")
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
