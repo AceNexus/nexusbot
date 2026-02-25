@@ -34,6 +34,6 @@ public class TimezoneInputEventHandler implements LineBotEventHandler {
 
     @Override
     public int getPriority() {
-        return 3; // 高優先級，在狀態流程處理
+        return 4; // 狀態流程處理
     }
 }

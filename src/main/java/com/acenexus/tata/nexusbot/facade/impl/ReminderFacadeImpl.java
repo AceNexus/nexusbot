@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.facade.impl;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomAccessor;
+import com.acenexus.tata.nexusbot.email.EmailInputStateService;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
@@ -10,6 +11,7 @@ import com.acenexus.tata.nexusbot.reminder.ReminderLogService;
 import com.acenexus.tata.nexusbot.reminder.ReminderService;
 import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.acenexus.tata.nexusbot.timezone.TimezoneInputStateService;
 import com.acenexus.tata.nexusbot.util.AnalyzerUtil;
 import com.acenexus.tata.nexusbot.util.ParsedTimeResult;
 import com.acenexus.tata.nexusbot.util.TimezoneValidator;
@@ -46,6 +48,8 @@ public class ReminderFacadeImpl implements ReminderFacade {
     private final ReminderLogService reminderLogService;
     private final MessageTemplateProvider messageTemplateProvider;
     private final ChatRoomAccessor chatRoomAccessor;
+    private final EmailInputStateService emailInputStateService;
+    private final TimezoneInputStateService timezoneInputStateService;
 
     @Override
     public Message showMenu() {
@@ -54,6 +58,10 @@ public class ReminderFacadeImpl implements ReminderFacade {
 
     @Override
     public Message startCreation(String roomId) {
+        // 互斥保護：清除其他流程狀態
+        emailInputStateService.clearWaitingForEmailInput(roomId);
+        timezoneInputStateService.clearWaitingForTimezoneInput(roomId);
+
         reminderStateManager.startAddingReminder(roomId);
         logger.info("Started reminder creation flow for room: {}", roomId);
         return messageTemplateProvider.reminderRepeatTypeMenu();

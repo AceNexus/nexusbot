@@ -34,6 +34,6 @@ public class EmailInputEventHandler implements LineBotEventHandler {
 
     @Override
     public int getPriority() {
-        return 3; // 高優先級，在狀態流程處理
+        return 5; // 狀態流程處理，順序次於提醒與時區流程
     }
 }

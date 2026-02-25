@@ -2,9 +2,11 @@ package com.acenexus.tata.nexusbot.facade.impl;
 
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomAccessor;
 import com.acenexus.tata.nexusbot.chatroom.ChatRoomManager;
+import com.acenexus.tata.nexusbot.email.EmailInputStateService;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.entity.TimezoneInputState;
 import com.acenexus.tata.nexusbot.facade.TimezoneFacade;
+import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.acenexus.tata.nexusbot.timezone.TimezoneInputStateService;
 import com.acenexus.tata.nexusbot.util.TimezoneValidator;
@@ -29,6 +31,8 @@ public class TimezoneFacadeImpl implements TimezoneFacade {
     private final ChatRoomManager chatRoomManager;
     private final TimezoneInputStateService timezoneInputStateService;
     private final MessageTemplateProvider messageTemplateProvider;
+    private final ReminderStateManager reminderStateManager;
+    private final EmailInputStateService emailInputStateService;
 
     @Override
     public Message showSettings(String roomId) {
@@ -53,6 +57,10 @@ public class TimezoneFacadeImpl implements TimezoneFacade {
 
     @Override
     public Message startChangingTimezone(String roomId) {
+        // 互斥保護：清除其他流程狀態
+        reminderStateManager.clearState(roomId);
+        emailInputStateService.clearWaitingForEmailInput(roomId);
+
         ChatRoom chatRoom = chatRoomAccessor.getOrCreateChatRoom(roomId, ChatRoom.RoomType.USER);
         String currentTimezone = chatRoom.getTimezone();
 

@@ -4,7 +4,9 @@ import com.acenexus.tata.nexusbot.email.EmailInputStateService;
 import com.acenexus.tata.nexusbot.email.EmailManager;
 import com.acenexus.tata.nexusbot.entity.Email;
 import com.acenexus.tata.nexusbot.facade.EmailFacade;
+import com.acenexus.tata.nexusbot.reminder.ReminderStateManager;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
+import com.acenexus.tata.nexusbot.timezone.TimezoneInputStateService;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -26,6 +28,8 @@ public class EmailFacadeImpl implements EmailFacade {
     private final EmailManager emailManager;
     private final EmailInputStateService emailInputStateService;
     private final MessageTemplateProvider messageTemplateProvider;
+    private final ReminderStateManager reminderStateManager;
+    private final TimezoneInputStateService timezoneInputStateService;
 
     @Override
     public Message showMenu(String roomId) {
@@ -36,6 +40,10 @@ public class EmailFacadeImpl implements EmailFacade {
 
     @Override
     public Message startAddingEmail(String roomId) {
+        // 互斥保護：清除其他流程狀態
+        reminderStateManager.clearState(roomId);
+        timezoneInputStateService.clearWaitingForTimezoneInput(roomId);
+
         emailInputStateService.setWaitingForEmailInput(roomId);
         logger.info("Room {} is now waiting for email input", roomId);
         return messageTemplateProvider.emailInputPrompt();
