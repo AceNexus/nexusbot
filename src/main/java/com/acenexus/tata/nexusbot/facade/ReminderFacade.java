@@ -1,6 +1,5 @@
 package com.acenexus.tata.nexusbot.facade;
 
-import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.linecorp.bot.model.message.Message;
 
 /**
@@ -19,8 +18,6 @@ public interface ReminderFacade {
     Message deleteReminder(Long reminderId, String roomId);
 
     Message confirmReminder(Long reminderId, String roomId);
-
-    void sendNotification(Reminder reminder, String enhancedContent);
 
     Message handleInteraction(String roomId, String messageText, String replyToken);
 

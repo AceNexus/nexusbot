@@ -114,12 +114,6 @@ public class ReminderFacadeImpl implements ReminderFacade {
         }
     }
 
-    @Override
-    public void sendNotification(Reminder reminder, String enhancedContent) {
-        // 此方法將在 Week 3 通知模組整合時實作
-        logger.debug("Sending notification for reminder: {}", reminder.getId());
-    }
-
     /**
      * 處理提醒互動流程
      */
