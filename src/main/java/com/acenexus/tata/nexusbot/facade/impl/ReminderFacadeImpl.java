@@ -110,7 +110,7 @@ public class ReminderFacadeImpl implements ReminderFacade {
             return messageTemplateProvider.success("已記錄您已執行此提醒。");
         } else {
             logger.warn("No sent log found for reminder [{}], cannot record user response", reminderId);
-            return messageTemplateProvider.success("已記錄您已執行此提醒。");
+            return messageTemplateProvider.error("記錄失敗，找不到對應的提醒發送紀錄。");
         }
     }
 
