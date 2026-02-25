@@ -223,7 +223,7 @@ public class ReminderStateManager {
     // ==================== get*：查詢 ====================
 
     public Optional<ReminderState> getState(String roomId) {
-        return reminderStateRepository.findById(roomId);
+        return reminderStateRepository.findByRoomIdAndNotExpired(roomId, LocalDateTime.now());
     }
 
     public ReminderState.Step getCurrentStep(String roomId) {
