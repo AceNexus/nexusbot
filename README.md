@@ -5,7 +5,7 @@
 ![Java Version](https://img.shields.io/badge/Java-17-orange.svg)
 ![LINE Bot SDK](https://img.shields.io/badge/LINE%20Bot%20SDK-6.0.0-00C300.svg)
 
-基於 Spring Boot 的 LINE Bot 服務，採用責任鏈模式處理事件，整合 AI 對話、智能提醒、Email 通知、股票監控與位置服務。
+基於 Spring Boot 的 LINE Bot 服務，採用責任鏈模式處理事件，整合 AI 對話、智能提醒、Email 通知與位置服務。
 
 ## 快速開始
 
@@ -18,7 +18,7 @@
 
 1. `File` → `Open` → 選擇專案根目錄，等待 Gradle 同步完成
 2. `Run` → `Edit Configurations` → `NexusbotApplication` → `Environment variables`
-3. 輸入框貼上（填入實際值）：`LINE_CHANNEL_TOKEN=;LINE_CHANNEL_SECRET=;GROQ_API_KEY=;EMAIL_USERNAME=;EMAIL_PASSWORD=;EMAIL_FROM=;FUGLE_API_KEY=`
+3. 輸入框貼上（填入實際值）：`LINE_CHANNEL_TOKEN=;LINE_CHANNEL_SECRET=;GROQ_API_KEY=;EMAIL_USERNAME=;EMAIL_PASSWORD=;EMAIL_FROM=`
 
 | 變數                    | 說明                            |
 |-----------------------|-------------------------------|
@@ -28,7 +28,6 @@
 | `EMAIL_USERNAME`      | SMTP 帳號（Gmail）                |
 | `EMAIL_PASSWORD`      | SMTP 密碼（Gmail App Password）   |
 | `EMAIL_FROM`          | 寄件人地址                         |
-| `FUGLE_API_KEY`       | Fugle 即時行情 API Key            |
 
 > `local` profile 所有變數皆有預設值，可不填直接啟動，但 LINE 收發與 AI 功能需填入真實金鑰。
 
@@ -89,8 +88,6 @@ Handler 由 `LineBotEventDispatcher` 依優先級排序，數字越小越優先�
 | 4   | `FollowHandler`、`UnfollowHandler`、`JoinGroupHandler`、`LeaveGroupHandler`、`MemberJoinedHandler`、`MemberLeftHandler`、`LocationPostbackEventHandler`、`ReminderPostbackEventHandler` | 生命週期事件與 Postback            |
 | 5   | `AudioMessageEventHandler`、`FileMessageEventHandler`、`ImageMessageEventHandler`、`LocationMessageEventHandler`、`StickerMessageEventHandler`、`VideoMessageEventHandler`            | 非文字訊息                       |
 | 10  | `NavigationPostbackEventHandler`                                                                                                                                                 | 導覽 Postback                 |
-| 20  | `StockCommandEventHandler`                                                                                                                                                       | 股票查詢指令                      |
-| 25  | `TickCommandHandler`                                                                                                                                                             | 即時成交監控指令                    |
 | 50  | `MenuCommandEventHandler`                                                                                                                                                        | 主選單指令                       |
 | 100 | `AIMessageEventHandler`                                                                                                                                                          | AI 對話（Fallback，處理所有未被攔截的文字） |
 
@@ -101,9 +98,9 @@ Handler 由 `LineBotEventDispatcher` 依優先級排序，數字越小越優先�
 
 | 變數                       | 預設值（local）              | 說明                              |
 |--------------------------|-------------------------|---------------------------------|
-| `SERVER_PORT`            | `5001`                  | 服務埠號                            |
+| `SERVER_PORT`            | `5002`                  | 服務埠號                            |
 | `SERVER_HOST`            | -                       | 實例對外主機位址（prod Eureka 自我註冊用）     |
-| `SPRING_PROFILES_ACTIVE` | `local`                 | 啟動環境（`local` / `prod`）          |
+| `SPRING_PROFILES_ACTIVE` | `local-eureka`          | 啟動環境（`local` / `local-eureka` / `prod`） |
 | `LINE_CHANNEL_TOKEN`     | `default-token`         | LINE Bot Channel Access Token   |
 | `LINE_CHANNEL_SECRET`    | `default-secret`        | LINE Bot Channel Secret         |
 | `LINE_LIFF_ID`           | _(空)_                   | LIFF App ID                     |
@@ -113,8 +110,6 @@ Handler 由 `LineBotEventDispatcher` 依優先級排序，數字越小越優先�
 | `EMAIL_PASSWORD`         | `default-password`      | SMTP 密碼（Gmail 需使用 App Password） |
 | `EMAIL_FROM`             | `default@gmail.com`     | 寄件人地址                           |
 | `EMAIL_FROM_NAME`        | `NexusBot 提醒通知`         | 寄件人顯示名稱                         |
-| `FUGLE_API_KEY`          | `default-fugle-key`     | Fugle 即時行情 API Key              |
-| `FINMIND_API_TOKEN`      | _(空)_                   | FinMind 台股資料 API Token          |
 | `ADMIN_PASSWORD_SEED`    | `1103`                  | 管理員動態密碼種子                       |
 | `NEXUSBOT_BASE_URL`      | `http://localhost:5001` | 服務本身的對外 URL（Email 確認連結用）        |
 | `RABBITMQ_HOST`          | `localhost`             | RabbitMQ 主機位址                   |
