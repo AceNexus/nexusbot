@@ -128,13 +128,14 @@ public class LineBotController {
             @RequestBody String payload,
             @Parameter(
                     description = "LINE 簽章驗證 Header (HMAC-SHA256)",
-                    example = "abcd1234efgh5678ijkl9012mnop3456qrst7890uvwx1234yz56"
+                    example = "abcd1234efgh5678ijkl9012mnop3456qrst7890uvwx1234yz56",
+                    required = true
             )
-            @RequestHeader(value = "X-Line-Signature", required = false) String signature) throws Exception {
+            @RequestHeader(value = "X-Line-Signature") String signature) throws Exception {
 
         logger.info("Received LINE webhook request, payload size: {} bytes", payload.length());
 
-        if (signature != null && !signatureValidator.validate(payload, signature)) {
+        if (!signatureValidator.validate(payload, signature)) {
             logger.warn("Invalid webhook signature");
             return ResponseEntity.ok("OK");
         }
