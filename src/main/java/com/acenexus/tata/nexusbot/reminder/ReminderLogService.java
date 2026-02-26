@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -67,46 +66,31 @@ public class ReminderLogService {
         // 3. 批量查詢所有相關的 Reminder（只需 1 次查詢）
         List<Reminder> reminders = reminderRepository.findAllById(reminderIds);
 
-        // 4. 建立 Map 用於快速查找
+        // 4. 建立 reminderMap 與 logsByReminderId
         Map<Long, Reminder> reminderMap = reminders.stream()
                 .collect(Collectors.toMap(Reminder::getId, r -> r));
 
-        // 5. 處理每個唯一的 reminder
-        List<TodayReminderLog> result = new ArrayList<>();
-        Set<Long> processedReminderIds = new HashSet<>();
+        Map<Long, List<ReminderLog>> logsByReminderId = logs.stream()
+                .collect(Collectors.groupingBy(ReminderLog::getReminderId));
 
-        for (ReminderLog log : logs) {
-            // 如果這個提醒已經處理過，跳過
-            if (processedReminderIds.contains(log.getReminderId())) {
+        // 5. 每個 reminderId 只處理一次，直接取對應的 logs 判斷確認狀態
+        List<TodayReminderLog> result = new ArrayList<>();
+
+        for (Map.Entry<Long, List<ReminderLog>> entry : logsByReminderId.entrySet()) {
+            Reminder reminder = reminderMap.get(entry.getKey());
+            if (reminder == null) {
                 continue;
             }
 
-            // 從 Map 中獲取 Reminder（無需查詢數據庫）
-            Reminder reminder = reminderMap.get(log.getReminderId());
+            List<ReminderLog> reminderLogs = entry.getValue();
+            LocalDateTime sentTime = reminderLogs.get(0).getSentTime();
 
-            if (reminder != null) {
-                // 檢查是否已確認（遍歷同一 reminderId 的所有 logs）
-                boolean isConfirmed = false;
-                LocalDateTime sentTime = log.getSentTime();
+            boolean isConfirmed = reminderLogs.stream().anyMatch(l ->
+                    ("LINE".equalsIgnoreCase(l.getDeliveryMethod()) && "COMPLETED".equals(l.getUserResponseStatus())) ||
+                            ("EMAIL".equalsIgnoreCase(l.getDeliveryMethod()) && l.getConfirmedAt() != null)
+            );
 
-                for (ReminderLog l : logs) {
-                    if (l.getReminderId().equals(reminder.getId())) {
-                        // LINE 確認
-                        if ("LINE".equalsIgnoreCase(l.getDeliveryMethod()) && "COMPLETED".equals(l.getUserResponseStatus())) {
-                            isConfirmed = true;
-                            break;
-                        }
-                        // Email 確認
-                        if ("EMAIL".equalsIgnoreCase(l.getDeliveryMethod()) && l.getConfirmedAt() != null) {
-                            isConfirmed = true;
-                            break;
-                        }
-                    }
-                }
-
-                result.add(new TodayReminderLog(reminder.getId(), reminder.getContent(), sentTime, reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei", isConfirmed));
-                processedReminderIds.add(reminder.getId());
-            }
+            result.add(new TodayReminderLog(reminder.getId(), reminder.getContent(), sentTime, reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei", isConfirmed));
         }
 
         return result;
