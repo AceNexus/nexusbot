@@ -2,9 +2,9 @@ package com.acenexus.tata.nexusbot.event.handler;
 
 import com.acenexus.tata.nexusbot.event.EventType;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
-import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
+import com.linecorp.bot.model.message.TextMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +20,6 @@ import java.util.List;
 public class MemberJoinedHandler implements LineBotEventHandler {
     private static final Logger logger = LoggerFactory.getLogger(MemberJoinedHandler.class);
     private final MessageTemplateProvider messageTemplateProvider;
-    private final MessageService messageService;
 
     @Override
     public boolean canHandle(LineBotEvent event) {
@@ -36,10 +35,8 @@ public class MemberJoinedHandler implements LineBotEventHandler {
 
         logger.info("{} members joined group: {}", memberCount, event.getRoomId());
 
-        // 使用 MessageService.sendReply 發送純文字訊息
         String welcomeMessage = messageTemplateProvider.memberJoinedMessage(memberCount);
-        messageService.sendReply(event.getReplyToken(), welcomeMessage);
-        return null; // 已經透過 MessageService 發送，不需要再回傳 Message
+        return new TextMessage(welcomeMessage);
     }
 
     @Override

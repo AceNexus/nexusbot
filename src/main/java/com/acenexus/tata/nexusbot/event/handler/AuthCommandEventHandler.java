@@ -4,8 +4,8 @@ import com.acenexus.tata.nexusbot.admin.AdminService;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.event.EventType;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
-import com.acenexus.tata.nexusbot.service.MessageService;
 import com.linecorp.bot.model.message.Message;
+import com.linecorp.bot.model.message.TextMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -17,7 +17,6 @@ import org.springframework.stereotype.Component;
 public class AuthCommandEventHandler implements LineBotEventHandler {
 
     private final AdminService adminService;
-    private final MessageService messageService;
 
     @Override
     public boolean canHandle(LineBotEvent event) {
@@ -43,11 +42,10 @@ public class AuthCommandEventHandler implements LineBotEventHandler {
 
         String response = adminService.processAuthCommand(event.getRoomId(), roomType, text);
 
-        if (response != null) {
-            messageService.sendReply(event.getReplyToken(), response);
+        if (response == null) {
+            return null;
         }
-
-        return null; // 已透過 MessageService 發送
+        return new TextMessage(response);
     }
 
     @Override
