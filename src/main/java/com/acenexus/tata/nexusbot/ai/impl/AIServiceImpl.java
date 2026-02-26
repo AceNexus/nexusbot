@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -88,6 +89,7 @@ public class AIServiceImpl implements AIService {
                     .retrieve()
                     .bodyToMono(Map.class)
                     .timeout(Duration.ofSeconds(15))
+                    .subscribeOn(Schedulers.boundedElastic())
                     .block();
 
             long processingTime = System.currentTimeMillis() - startTime;
