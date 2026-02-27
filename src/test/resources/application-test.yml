@@ -29,6 +29,8 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
       - org.springframework.cloud.stream.binder.rabbit.config.RabbitServiceAutoConfiguration
+      - org.springframework.cloud.stream.config.BindingServiceConfiguration
+      - org.springframework.cloud.stream.function.FunctionConfiguration
 
 line:
   bot:
@@ -55,6 +57,9 @@ ai:
 
 admin:
   password-seed: 1103
+
+timezone:
+  default-timezone: Asia/Taipei
 
 eureka:
   client:
