@@ -18,8 +18,8 @@ public final class Actions {
     public static final String CONFIRM_CLEAR_HISTORY = "action=confirm_clear_history";
 
     // ============= AI 模型選擇動作 =============
-    public static final String MODEL_LLAMA_3_1_8B = "model=llama-3.1-8b-instant";
-    public static final String MODEL_LLAMA_3_3_70B = "model=llama-3.3-70b-versatile";
+    public static final String MODEL_LLAMA_3_1_8B = "action=model_llama_3_1_8b";
+    public static final String MODEL_LLAMA_3_3_70B = "action=model_llama_3_3_70b";
 
     // ============= 選單導航動作 =============
     public static final String MAIN_MENU = "action=main_menu";
@@ -41,14 +41,14 @@ public final class Actions {
     public static final String REMINDER_COMPLETED = "action=reminder_completed";
 
     // 重複類型選擇
-    public static final String REPEAT_ONCE = "repeat=ONCE";
-    public static final String REPEAT_DAILY = "repeat=DAILY";
-    public static final String REPEAT_WEEKLY = "repeat=WEEKLY";
+    public static final String REPEAT_ONCE = "action=repeat_once";
+    public static final String REPEAT_DAILY = "action=repeat_daily";
+    public static final String REPEAT_WEEKLY = "action=repeat_weekly";
 
     // 通知管道選擇
-    public static final String CHANNEL_LINE = "channel=LINE";
-    public static final String CHANNEL_EMAIL = "channel=EMAIL";
-    public static final String CHANNEL_BOTH = "channel=BOTH";
+    public static final String CHANNEL_LINE = "action=channel_line";
+    public static final String CHANNEL_EMAIL = "action=channel_email";
+    public static final String CHANNEL_BOTH = "action=channel_both";
 
     // ============= 時區設定動作 (系統全域) =============
     public static final String TIMEZONE_SETTINGS = "action=timezone_settings";
