@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.template;
 
+import com.acenexus.tata.nexusbot.constants.AiModel;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.flex.component.Button;
 import org.springframework.stereotype.Component;
@@ -57,8 +58,8 @@ public class AISettingsTemplateBuilder extends FlexMessageTemplateBuilder {
                 "AI 模型選擇",
                 "目前使用：" + modelDisplayName + "\n\n請選擇您希望使用的 AI 模型",
                 Arrays.asList(
-                        createModelButton("Llama 3.1 8B", "快速回應", MODEL_LLAMA_3_1_8B, currentModel.equals("llama-3.1-8b-instant")),
-                        createModelButton("Llama 3.3 70B", "高精度回應", MODEL_LLAMA_3_3_70B, currentModel.equals("llama-3.3-70b-versatile")),
+                        createModelButton("Llama 3.1 8B", "快速回應", MODEL_LLAMA_3_1_8B, currentModel.equals(AiModel.LLAMA_3_1_8B.id)),
+                        createModelButton("Llama 3.3 70B", "高精度回應", MODEL_LLAMA_3_3_70B, currentModel.equals(AiModel.LLAMA_3_3_70B.id)),
                         createNavigateButton("返回 AI 設定", TOGGLE_AI),
                         createNavigateButton("返回主選單", MAIN_MENU)
                 )
@@ -90,10 +91,6 @@ public class AISettingsTemplateBuilder extends FlexMessageTemplateBuilder {
      * 取得模型顯示名稱
      */
     private String getModelDisplayName(String modelId) {
-        return switch (modelId) {
-            case "llama-3.1-8b-instant" -> "Llama 3.1 8B";
-            case "llama-3.3-70b-versatile" -> "Llama 3.3 70B";
-            default -> modelId;
-        };
+        return AiModel.fromId(modelId).displayName;
     }
 }

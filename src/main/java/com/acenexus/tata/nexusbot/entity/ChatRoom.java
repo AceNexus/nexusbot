@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.entity;
 
+import com.acenexus.tata.nexusbot.constants.AiModel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -59,12 +60,11 @@ public class ChatRoom {
     private Boolean aiEnabled = false;
 
     /**
-     * 選擇的AI模型
-     * 預設：llama-3.1-8b-instant
+     * 選擇的AI模型，預設為 {@link com.acenexus.tata.nexusbot.constants.AiModel#LLAMA_3_1_8B}
      */
     @Column(name = "ai_model", length = 50)
     @Builder.Default
-    private String aiModel = "llama-3.1-8b-instant";
+    private String aiModel = AiModel.LLAMA_3_1_8B.id;
 
     /**
      * 是否為管理員聊天室

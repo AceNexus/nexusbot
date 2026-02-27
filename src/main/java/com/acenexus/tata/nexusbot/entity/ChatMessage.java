@@ -88,8 +88,7 @@ public class ChatMessage {
     private Integer processingTimeMs = 0;
 
     /**
-     * 使用的 AI 模型名稱
-     * 例如：llama-3.1-8b-instant
+     * 使用的 AI 模型名稱，對應 {@link com.acenexus.tata.nexusbot.constants.AiModel#id}
      */
     @Column(name = "ai_model", length = 50)
     private String aiModel;

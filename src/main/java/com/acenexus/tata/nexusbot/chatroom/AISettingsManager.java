@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.chatroom;
 
+import com.acenexus.tata.nexusbot.config.properties.GroqProperties;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.repository.ChatRoomRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class AISettingsManager {
 
     private static final Logger logger = LoggerFactory.getLogger(AISettingsManager.class);
-    private static final String DEFAULT_AI_MODEL = "llama-3.1-8b-instant";
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomAccessor chatRoomAccessor;
+    private final GroqProperties groqProperties;
 
     /**
      * 檢查聊天室的 AI 是否啟用
@@ -92,11 +93,11 @@ public class AISettingsManager {
      */
     public String getAiModel(String roomId, ChatRoom.RoomType roomType) {
         if (roomId == null || roomId.trim().isEmpty()) {
-            return DEFAULT_AI_MODEL;
+            return groqProperties.getDefaultModel();
         }
 
         ChatRoom chatRoom = chatRoomAccessor.getOrCreateChatRoom(roomId, roomType);
-        return chatRoom.getAiModel() != null ? chatRoom.getAiModel() : DEFAULT_AI_MODEL;
+        return chatRoom.getAiModel() != null ? chatRoom.getAiModel() : groqProperties.getDefaultModel();
     }
 
     /**

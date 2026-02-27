@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.scheduler;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
+import com.acenexus.tata.nexusbot.config.properties.GroqProperties;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.lock.DistributedLock;
 import com.acenexus.tata.nexusbot.notification.ReminderNotificationService;
@@ -27,6 +28,7 @@ public class ReminderProcessor {
     private final ReminderRepeatHandler reminderRepeatHandler;
     private final ReminderNotificationService reminderNotificationService;
     private final AIService aiService;
+    private final GroqProperties groqProperties;
 
     /**
      * 處理單個提醒（具備鎖定機制）
@@ -115,7 +117,7 @@ public class ReminderProcessor {
 
         try {
             String prompt = String.format(promptTemplate, originalContent);
-            AIService.ChatResponse response = aiService.chatWithContext("reminder_enhancement", prompt, "llama-3.1-8b-instant");
+            AIService.ChatResponse response = aiService.chatWithContext("reminder_enhancement", prompt, groqProperties.getDefaultModel());
 
             if (response != null && response.success() && response.content() != null && !response.content().trim().isEmpty()) {
                 return response.content().trim();

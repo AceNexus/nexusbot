@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.util;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
+import com.acenexus.tata.nexusbot.config.properties.GroqProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class AnalyzerUtil {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final AIService aiService;
+    private final GroqProperties groqProperties;
 
     /**
      * 使用 AI 解析時間，支援時區識別
@@ -39,7 +41,7 @@ public class AnalyzerUtil {
 
         try {
             String prompt = buildPromptWithTimezone(input.trim(), defaultTimezone);
-            AIService.ChatResponse response = aiService.chatWithContext("system", prompt, "llama-3.1-8b-instant");
+            AIService.ChatResponse response = aiService.chatWithContext("system", prompt, groqProperties.getDefaultModel());
 
             if (response.success() && response.content() != null) {
                 String result = response.content().trim();

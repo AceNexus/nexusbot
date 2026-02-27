@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.ai.impl;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
+import com.acenexus.tata.nexusbot.constants.AiModel;
 import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import jakarta.annotation.PostConstruct;
@@ -27,7 +28,7 @@ public class AIServiceImpl implements AIService {
     @Value("${groq.api-key:}")
     private String apiKey;
 
-    @Value("${groq.model:llama-3.1-8b-instant}")
+    @Value("${groq.default-model:llama-3.1-8b-instant}")
     private String model;
 
     @Value("${ai.conversation.history-limit:15}")
@@ -114,26 +115,8 @@ public class AIServiceImpl implements AIService {
      * 根據模型獲取最佳配置參數
      */
     private ModelConfiguration getModelConfiguration(String model) {
-        return switch (model) {
-            // 快速模型 - 較高創意性，適中長度
-            case "llama-3.1-8b-instant" -> new ModelConfiguration(0.8, 800);
-
-            // 大型強力模型 - 較低溫度確保準確性，更長輸出
-            case "llama-3.3-70b-versatile" -> new ModelConfiguration(0.6, 1200);
-            case "llama3-70b-8192" -> new ModelConfiguration(0.65, 1500);
-
-            // 創意模型 - 高創意性，中等長度
-            case "gemma2-9b-it" -> new ModelConfiguration(0.9, 1000);
-
-            // 推理模型 - 低溫度確保邏輯性，較長輸出
-            case "deepseek-r1-distill-llama-70b" -> new ModelConfiguration(0.4, 1500);
-
-            // 多語言模型 - 平衡設定
-            case "qwen/qwen3-32b" -> new ModelConfiguration(0.7, 1200);
-
-            // 預設設定
-            default -> new ModelConfiguration(0.7, 1000);
-        };
+        AiModel aiModel = AiModel.fromId(model);
+        return new ModelConfiguration(aiModel.temperature, aiModel.maxTokens);
     }
 
     /**

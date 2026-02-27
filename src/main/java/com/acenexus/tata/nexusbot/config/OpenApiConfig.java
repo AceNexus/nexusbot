@@ -1,7 +1,6 @@
 package com.acenexus.tata.nexusbot.config;
 
 import io.swagger.v3.oas.models.OpenAPI;
-import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.servers.Server;
@@ -76,7 +75,7 @@ public class OpenApiConfig {
                         ## 技術棧
                         - **後端框架**: Spring Boot 3.4.3 + Java 17
                         - **LINE SDK**: LINE Bot SDK 6.0.0
-                        - **AI 整合**: Groq API (llama-3.1-8b-instant)
+                        - **AI 整合**: Groq API（多模型支援，見 AiModel enum）
                         - **資料庫**: MySQL 8.3 + Flyway 遷移
                         - **架構模式**: DDD + Strategy + Facade Pattern
 

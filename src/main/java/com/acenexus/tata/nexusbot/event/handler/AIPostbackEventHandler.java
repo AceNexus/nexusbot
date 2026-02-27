@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.event.handler;
 
+import com.acenexus.tata.nexusbot.constants.AiModel;
 import com.acenexus.tata.nexusbot.entity.ChatRoom;
 import com.acenexus.tata.nexusbot.event.EventType;
 import com.acenexus.tata.nexusbot.event.LineBotEvent;
@@ -62,9 +63,9 @@ public class AIPostbackEventHandler implements LineBotEventHandler {
             case DISABLE_AI -> aiFacade.disableAI(roomId, roomType);
             case SELECT_MODEL -> aiFacade.showModelSelectionMenu(roomId, roomType);
             case MODEL_LLAMA_3_1_8B ->
-                    aiFacade.selectModel(roomId, roomType, "llama-3.1-8b-instant", "Llama 3.1 8B (快速創意)");
+                    aiFacade.selectModel(roomId, roomType, AiModel.LLAMA_3_1_8B.id, "Llama 3.1 8B (快速創意)");
             case MODEL_LLAMA_3_3_70B ->
-                    aiFacade.selectModel(roomId, roomType, "llama-3.3-70b-versatile", "Llama 3.3 70B (精準強力)");
+                    aiFacade.selectModel(roomId, roomType, AiModel.LLAMA_3_3_70B.id, "Llama 3.3 70B (精準強力)");
             case CLEAR_HISTORY -> aiFacade.showClearHistoryConfirmation();
             case CONFIRM_CLEAR_HISTORY -> aiFacade.clearHistory(roomId);
             default -> null;

@@ -1,6 +1,7 @@
 package com.acenexus.tata.nexusbot.util;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
+import com.acenexus.tata.nexusbot.constants.AiModel;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,8 +34,8 @@ class AnalyzerUtilTimezoneTest {
         String aiResponse = """
                 {"datetime": "2025-12-11 15:00", "timezone": null}
                 """;
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse(aiResponse, AiModel.LLAMA_3_1_8B.id, 50, 100L, true));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
@@ -54,8 +55,8 @@ class AnalyzerUtilTimezoneTest {
         String aiResponse = """
                 {"datetime": "2025-12-11 15:00", "timezone": "America/New_York"}
                 """;
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse(aiResponse, AiModel.LLAMA_3_1_8B.id, 50, 100L, true));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天紐約時間下午3點", "Asia/Taipei");
@@ -74,8 +75,8 @@ class AnalyzerUtilTimezoneTest {
         String aiResponse = """
                 {"datetime": "2025-12-11 09:00", "timezone": "Asia/Tokyo"}
                 """;
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse(aiResponse, AiModel.LLAMA_3_1_8B.id, 50, 100L, true));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("東京時間早上9點", "Asia/Taipei");
@@ -95,8 +96,8 @@ class AnalyzerUtilTimezoneTest {
                 {"datetime": "2025-12-11 15:00", "timezone": "Asia/Tokyo"}
                 ```
                 """;
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse(aiResponse, AiModel.LLAMA_3_1_8B.id, 50, 100L, true));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("東京時間下午3點", "Asia/Taipei");
@@ -113,8 +114,8 @@ class AnalyzerUtilTimezoneTest {
         String aiResponse = """
                 {"datetime": "2025-12-11 15:00", "timezone": "台北"}
                 """;
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse(aiResponse, AiModel.LLAMA_3_1_8B.id, 50, 100L, true));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("台北時間下午3點", "Asia/Taipei");
@@ -131,8 +132,8 @@ class AnalyzerUtilTimezoneTest {
         String aiResponse = """
                 {"datetime": "2025-12-11 15:00", "timezone": "Invalid/Timezone"}
                 """;
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse(aiResponse, AiModel.LLAMA_3_1_8B.id, 50, 100L, true));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
@@ -164,8 +165,8 @@ class AnalyzerUtilTimezoneTest {
     @Test
     void shouldReturnNullWhenAIFails() {
         // Given: AI 服務失敗
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse(null, "llama-3.1-8b-instant", 0, 0L, false));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse(null, AiModel.LLAMA_3_1_8B.id, 0, 0L, false));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
@@ -177,8 +178,8 @@ class AnalyzerUtilTimezoneTest {
     @Test
     void shouldReturnNullForInvalidJsonResponse() {
         // Given: AI 返回無效的 JSON
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse("This is not JSON", "llama-3.1-8b-instant", 50, 100L, true));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse("This is not JSON", AiModel.LLAMA_3_1_8B.id, 50, 100L, true));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點", "Asia/Taipei");
@@ -193,8 +194,8 @@ class AnalyzerUtilTimezoneTest {
         String aiResponse = """
                 {"datetime": "2025-12-11 15:30", "timezone": null}
                 """;
-        when(aiService.chatWithContext(eq("system"), anyString(), eq("llama-3.1-8b-instant")))
-                .thenReturn(new AIService.ChatResponse(aiResponse, "llama-3.1-8b-instant", 50, 100L, true));
+        when(aiService.chatWithContext(eq("system"), anyString(), eq(AiModel.LLAMA_3_1_8B.id)))
+                .thenReturn(new AIService.ChatResponse(aiResponse, AiModel.LLAMA_3_1_8B.id, 50, 100L, true));
 
         // When
         ParsedTimeResult result = analyzerUtil.parseTimeWithTimezone("明天下午3點半", "Asia/Taipei");

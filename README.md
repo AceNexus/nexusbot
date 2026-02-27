@@ -18,7 +18,8 @@
 
 1. `File` → `Open` → 選擇專案根目錄，等待 Gradle 同步完成
 2. `Run` → `Edit Configurations` → `NexusbotApplication` → `Environment variables`
-3. 輸入框貼上（填入實際值）：`LINE_CHANNEL_TOKEN=;LINE_CHANNEL_SECRET=;GROQ_API_KEY=;EMAIL_USERNAME=;EMAIL_PASSWORD=;EMAIL_FROM=`
+3.
+輸入框貼上（填入實際值）：`LINE_CHANNEL_TOKEN=;LINE_CHANNEL_SECRET=;GROQ_API_KEY=;EMAIL_USERNAME=;EMAIL_PASSWORD=;EMAIL_FROM=`
 
 | 變數                    | 說明                            |
 |-----------------------|-------------------------------|
@@ -96,36 +97,36 @@ Handler 由 `LineBotEventDispatcher` 依優先級排序，數字越小越優先�
 
 ## 環境變數
 
-| 變數                       | 預設值（local）              | 說明                              |
-|--------------------------|-------------------------|---------------------------------|
-| `SERVER_PORT`            | `5002`                  | 服務埠號                            |
-| `SERVER_HOST`            | -                       | 實例對外主機位址（prod Eureka 自我註冊用）     |
+| 變數                       | 預設值（local）              | 說明                                      |
+|--------------------------|-------------------------|-----------------------------------------|
+| `SERVER_PORT`            | `5002`                  | 服務埠號                                    |
+| `SERVER_HOST`            | -                       | 實例對外主機位址（prod Eureka 自我註冊用）             |
 | `SPRING_PROFILES_ACTIVE` | `local-eureka`          | 啟動環境（`local` / `local-eureka` / `prod`） |
-| `LINE_CHANNEL_TOKEN`     | `default-token`         | LINE Bot Channel Access Token   |
-| `LINE_CHANNEL_SECRET`    | `default-secret`        | LINE Bot Channel Secret         |
-| `LINE_LIFF_ID`           | _(空)_                   | LIFF App ID                     |
-| `GROQ_API_KEY`           | `default-groq-key`      | Groq AI API Key                 |
-| `AI_HISTORY_LIMIT`       | `15`                    | AI 對話歷史保留則數                     |
-| `EMAIL_USERNAME`         | `default@gmail.com`     | SMTP 帳號                         |
-| `EMAIL_PASSWORD`         | `default-password`      | SMTP 密碼（Gmail 需使用 App Password） |
-| `EMAIL_FROM`             | `default@gmail.com`     | 寄件人地址                           |
-| `EMAIL_FROM_NAME`        | `NexusBot 提醒通知`         | 寄件人顯示名稱                         |
-| `ADMIN_PASSWORD_SEED`    | `1103`                  | 管理員動態密碼種子                       |
-| `NEXUSBOT_BASE_URL`      | `http://localhost:5001` | 服務本身的對外 URL（Email 確認連結用）        |
-| `RABBITMQ_HOST`          | `localhost`             | RabbitMQ 主機位址                   |
-| `RABBITMQ_PORT`          | `5672`                  | RabbitMQ 連接埠                    |
-| `RABBITMQ_USERNAME`      | `admin`                 | RabbitMQ 帳號                     |
-| `RABBITMQ_PASSWORD`      | `password`              | RabbitMQ 密碼                     |
-| `CONFIG_SERVER_URI`      | -                       | Config Server 位址（prod）          |
-| `CONFIG_SERVER_USERNAME` | -                       | Config Server 帳號（prod）          |
-| `CONFIG_SERVER_PASSWORD` | -                       | Config Server 密碼（prod）          |
-| `MYSQL_HOST`             | -                       | MySQL 主機位址（prod）                |
-| `MYSQL_PORT`             | `3306`                  | MySQL 連接埠（prod）                 |
-| `MYSQL_DATABASE`         | `nexusbot`              | MySQL 資料庫名稱（prod）               |
-| `MYSQL_USERNAME`         | -                       | MySQL 帳號（prod）                  |
-| `MYSQL_PASSWORD`         | -                       | MySQL 密碼（prod）                  |
-| `EUREKA_SERVER_HOST`     | -                       | Eureka Server 主機位址（prod）        |
-| `EUREKA_SERVER_PORT`     | `8761`                  | Eureka Server 連接埠（prod）         |
+| `LINE_CHANNEL_TOKEN`     | `default-token`         | LINE Bot Channel Access Token           |
+| `LINE_CHANNEL_SECRET`    | `default-secret`        | LINE Bot Channel Secret                 |
+| `GROQ_API_KEY`           | `default-groq-key`      | Groq AI API Key                         |
+| `GROQ_DEFAULT_MODEL`     | `llama-3.1-8b-instant`  | Groq 預設 AI 模型（對應 AiModel enum）          |
+| `AI_HISTORY_LIMIT`       | `15`                    | AI 對話歷史保留則數                             |
+| `EMAIL_USERNAME`         | `default@gmail.com`     | SMTP 帳號                                 |
+| `EMAIL_PASSWORD`         | `default-password`      | SMTP 密碼（Gmail 需使用 App Password）         |
+| `EMAIL_FROM`             | `default@gmail.com`     | 寄件人地址                                   |
+| `EMAIL_FROM_NAME`        | `NexusBot 提醒通知`         | 寄件人顯示名稱                                 |
+| `ADMIN_PASSWORD_SEED`    | `1103`                  | 管理員動態密碼種子                               |
+| `NEXUSBOT_BASE_URL`      | `http://localhost:5001` | 服務本身的對外 URL（Email 確認連結用）                |
+| `RABBITMQ_HOST`          | `localhost`             | RabbitMQ 主機位址                           |
+| `RABBITMQ_PORT`          | `5672`                  | RabbitMQ 連接埠                            |
+| `RABBITMQ_USERNAME`      | `admin`                 | RabbitMQ 帳號                             |
+| `RABBITMQ_PASSWORD`      | `password`              | RabbitMQ 密碼                             |
+| `CONFIG_SERVER_URI`      | -                       | Config Server 位址（prod）                  |
+| `CONFIG_SERVER_USERNAME` | -                       | Config Server 帳號（prod）                  |
+| `CONFIG_SERVER_PASSWORD` | -                       | Config Server 密碼（prod）                  |
+| `MYSQL_HOST`             | -                       | MySQL 主機位址（prod）                        |
+| `MYSQL_PORT`             | `3306`                  | MySQL 連接埠（prod）                         |
+| `MYSQL_DATABASE`         | `nexusbot`              | MySQL 資料庫名稱（prod）                       |
+| `MYSQL_USERNAME`         | -                       | MySQL 帳號（prod）                          |
+| `MYSQL_PASSWORD`         | -                       | MySQL 密碼（prod）                          |
+| `EUREKA_SERVER_HOST`     | -                       | Eureka Server 主機位址（prod）                |
+| `EUREKA_SERVER_PORT`     | `8761`                  | Eureka Server 連接埠（prod）                 |
 
 `local` profile 不需要 Config Server、MySQL、Eureka 連線，使用 H2 in-memory 資料庫，所有變數皆有預設值。
 
