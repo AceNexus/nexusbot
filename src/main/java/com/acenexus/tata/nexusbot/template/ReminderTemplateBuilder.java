@@ -1,7 +1,9 @@
 package com.acenexus.tata.nexusbot.template;
 
+import com.acenexus.tata.nexusbot.config.properties.TimezoneProperties;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.linecorp.bot.model.message.Message;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -31,7 +33,10 @@ import static com.acenexus.tata.nexusbot.constants.TimeFormatters.STANDARD_TIME;
  * Reminder 提醒相關的訊息範本建構器
  */
 @Component
+@RequiredArgsConstructor
 public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
+
+    private final TimezoneProperties timezoneProperties;
 
     /**
      * 提醒管理主選單
@@ -160,7 +165,7 @@ public class ReminderTemplateBuilder extends FlexMessageTemplateBuilder {
             String statusDisplay = "COMPLETED".equals(userStatus) ? "已執行" : "無回應";
 
             // 取得時區顯示名稱
-            String timezone = reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei";
+            String timezone = reminder.getTimezone() != null ? reminder.getTimezone() : timezoneProperties.getDefaultTimezone();
             String timezoneDisplay = com.acenexus.tata.nexusbot.util.TimezoneValidator.getDisplayName(timezone);
 
             contentBuilder.append(String.format(

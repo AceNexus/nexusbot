@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.scheduler;
 
+import com.acenexus.tata.nexusbot.config.properties.TimezoneProperties;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.repository.ReminderRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ public class ReminderRepeatHandler {
     private static final Logger logger = LoggerFactory.getLogger(ReminderRepeatHandler.class);
 
     private final ReminderRepository reminderRepository;
+    private final TimezoneProperties timezoneProperties;
 
     /**
      * 根據重複類型更新提醒狀態：
@@ -61,7 +63,7 @@ public class ReminderRepeatHandler {
      * 若因停機導致下次時間仍在過去，持續推進直到進入未來（自愈機制）。
      */
     private void updateNextReminderTime(Reminder reminder, long amount, ChronoUnit unit) {
-        String timezone = reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei";
+        String timezone = reminder.getTimezone() != null ? reminder.getTimezone() : timezoneProperties.getDefaultTimezone();
         ZoneId zoneId = ZoneId.of(timezone);
 
         ZonedDateTime nextZonedTime = reminder.getLocalTime().atZone(zoneId).plus(amount, unit);

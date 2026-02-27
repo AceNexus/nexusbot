@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.entity;
 
+import com.acenexus.tata.nexusbot.config.properties.TimezoneProperties;
 import com.acenexus.tata.nexusbot.constants.AiModel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -97,7 +98,7 @@ public class ChatRoom {
      */
     @Column(name = "timezone", length = 50)
     @Builder.Default
-    private String timezone = "Asia/Taipei";
+    private String timezone = TimezoneProperties.FALLBACK_DEFAULT;
 
     /**
      * 建立時間

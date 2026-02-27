@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.reminder;
 
+import com.acenexus.tata.nexusbot.config.properties.TimezoneProperties;
 import com.acenexus.tata.nexusbot.dto.ConfirmationResult;
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.entity.ReminderLog;
@@ -28,6 +29,7 @@ public class ReminderLogService {
 
     private final ReminderLogRepository reminderLogRepository;
     private final ReminderRepository reminderRepository;
+    private final TimezoneProperties timezoneProperties;
 
     /**
      * 今日提醒記錄 DTO
@@ -90,7 +92,7 @@ public class ReminderLogService {
                             ("EMAIL".equalsIgnoreCase(l.getDeliveryMethod()) && l.getConfirmedAt() != null)
             );
 
-            result.add(new TodayReminderLog(reminder.getId(), reminder.getContent(), sentTime, reminder.getTimezone() != null ? reminder.getTimezone() : "Asia/Taipei", isConfirmed));
+            result.add(new TodayReminderLog(reminder.getId(), reminder.getContent(), sentTime, reminder.getTimezone() != null ? reminder.getTimezone() : timezoneProperties.getDefaultTimezone(), isConfirmed));
         }
 
         return result;

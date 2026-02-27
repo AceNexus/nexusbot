@@ -5,6 +5,7 @@ import com.acenexus.tata.nexusbot.config.properties.EmailProperties;
 import com.acenexus.tata.nexusbot.config.properties.GroqProperties;
 import com.acenexus.tata.nexusbot.config.properties.LineBotProperties;
 import com.acenexus.tata.nexusbot.config.properties.OsmProperties;
+import com.acenexus.tata.nexusbot.config.properties.TimezoneProperties;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +19,8 @@ import org.springframework.util.StringUtils;
         GroqProperties.class,
         AdminProperties.class,
         OsmProperties.class,
-        EmailProperties.class
+        EmailProperties.class,
+        TimezoneProperties.class
 })
 public class ConfigValidator {
     private static final Logger logger = LoggerFactory.getLogger(ConfigValidator.class);

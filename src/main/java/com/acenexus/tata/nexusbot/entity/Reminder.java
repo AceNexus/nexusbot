@@ -1,5 +1,6 @@
 package com.acenexus.tata.nexusbot.entity;
 
+import com.acenexus.tata.nexusbot.config.properties.TimezoneProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -46,7 +47,7 @@ public class Reminder {
      */
     @Column(name = "timezone", length = 50)
     @Builder.Default
-    private String timezone = "Asia/Taipei";
+    private String timezone = TimezoneProperties.FALLBACK_DEFAULT;
 
     /**
      * 提醒時間的 UTC 時間戳（毫秒）
@@ -101,7 +102,7 @@ public class Reminder {
             throw new IllegalStateException("reminderTimeInstant cannot be null");
         }
         Instant instant = Instant.ofEpochMilli(reminderTimeInstant);
-        String tz = timezone != null ? timezone : "Asia/Taipei";
+        String tz = timezone != null ? timezone : TimezoneProperties.FALLBACK_DEFAULT;
         return instant.atZone(ZoneId.of(tz)).toLocalDateTime();
     }
 
