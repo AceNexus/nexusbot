@@ -1,8 +1,10 @@
 package com.acenexus.tata.nexusbot.template;
 
 import com.acenexus.tata.nexusbot.constants.AiModel;
+import com.acenexus.tata.nexusbot.constants.AiProvider;
 import com.linecorp.bot.model.message.Message;
 import com.linecorp.bot.model.message.flex.component.Button;
+import com.linecorp.bot.model.message.flex.container.Bubble;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -14,6 +16,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMINI_25_FLASH;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
@@ -49,21 +52,35 @@ public class AISettingsTemplateBuilder extends FlexMessageTemplateBuilder {
     }
 
     /**
-     * AI 模型選擇選單
+     * AI 模型選擇選單（輪播：Groq｜Gemini）
      */
     public Message aiModelSelectionMenu(String currentModel) {
-        String modelDisplayName = getModelDisplayName(currentModel);
+        AiProvider currentProvider = AiModel.fromId(currentModel).provider;
+        String modelDisplayName = AiModel.fromId(currentModel).displayName;
 
-        return createCard(
-                "AI 模型選擇",
-                "目前使用：" + modelDisplayName + "\n\n請選擇您希望使用的 AI 模型",
+        String groqDesc = currentProvider == AiProvider.GROQ ? "目前：" + modelDisplayName : "高速推理，免費額度充足";
+        String geminiDesc = currentProvider == AiProvider.GEMINI_PROXY ? "目前：" + modelDisplayName : "Google 最新模型，支援長文本";
+
+        Bubble groqBubble = createBubble(
+                "Groq 模型",
+                groqDesc,
                 Arrays.asList(
-                        createModelButton("Llama 3.1 8B", "快速回應", MODEL_LLAMA_3_1_8B, currentModel.equals(AiModel.LLAMA_3_1_8B.id)),
-                        createModelButton("Llama 3.3 70B", "高精度回應", MODEL_LLAMA_3_3_70B, currentModel.equals(AiModel.LLAMA_3_3_70B.id)),
-                        createNavigateButton("返回 AI 設定", TOGGLE_AI),
-                        createNavigateButton("返回主選單", MAIN_MENU)
+                        createSelectionButton("Llama 3.1 8B｜快速", MODEL_LLAMA_3_1_8B, currentModel.equals(AiModel.LLAMA_3_1_8B.id)),
+                        createSelectionButton("Llama 3.3 70B｜精準", MODEL_LLAMA_3_3_70B, currentModel.equals(AiModel.LLAMA_3_3_70B.id)),
+                        createNavigateButton("返回 AI 設定", TOGGLE_AI)
                 )
         );
+
+        Bubble geminiBubble = createBubble(
+                "Gemini 模型",
+                geminiDesc,
+                Arrays.asList(
+                        createSelectionButton("Gemini 2.5 Flash", MODEL_GEMINI_25_FLASH, currentModel.equals(AiModel.GEMINI_25_FLASH.id)),
+                        createNavigateButton("返回 AI 設定", TOGGLE_AI)
+                )
+        );
+
+        return createCarousel("選擇 AI 模型", Arrays.asList(groqBubble, geminiBubble));
     }
 
     /**
@@ -78,19 +95,5 @@ public class AISettingsTemplateBuilder extends FlexMessageTemplateBuilder {
                         createPrimaryButton("取消操作", TOGGLE_AI)
                 )
         );
-    }
-
-    /**
-     * 建立模型選擇按鈕
-     */
-    private Button createModelButton(String name, String description, String action, boolean isSelected) {
-        return createSelectionButton(name, action, isSelected);
-    }
-
-    /**
-     * 取得模型顯示名稱
-     */
-    private String getModelDisplayName(String modelId) {
-        return AiModel.fromId(modelId).displayName;
     }
 }

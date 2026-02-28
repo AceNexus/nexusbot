@@ -17,9 +17,12 @@ public final class Actions {
     public static final String CLEAR_HISTORY = "action=clear_history";
     public static final String CONFIRM_CLEAR_HISTORY = "action=confirm_clear_history";
 
-    // ============= AI 模型選擇動作 =============
+    // ============= AI 模型選擇動作 - Groq =============
     public static final String MODEL_LLAMA_3_1_8B = "action=model_llama_3_1_8b";
     public static final String MODEL_LLAMA_3_3_70B = "action=model_llama_3_3_70b";
+
+    // ============= AI 模型選擇動作 - Gemini Proxy =============
+    public static final String MODEL_GEMINI_25_FLASH = "action=model_gemini_25_flash";
 
     // ============= 選單導航動作 =============
     public static final String MAIN_MENU = "action=main_menu";

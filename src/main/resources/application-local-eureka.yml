@@ -60,8 +60,15 @@ line:
 # 第三方服務整合 - Groq AI
 # ==========================================
 groq:
-  api-key: ${GROQ_API_KEY:default-groq-key}
-  default-model: ${GROQ_DEFAULT_MODEL:llama-3.1-8b-instant}
+  url: ${GROQ_URL:https://api.groq.com/openai/v1}
+  api-key: ${GROQ_API_KEY:}
+
+# ==========================================
+# 第三方服務整合 - Gemini Proxy (AIClient-2-API)
+# ==========================================
+gemini-proxy:
+  url: ${GEMINI_PROXY_URL:}
+  api-key: ${GEMINI_PROXY_API_KEY:}
 
 # ==========================================
 # 第三方服務整合 - Email (SMTP)

@@ -75,7 +75,7 @@ public class OpenApiConfig {
                         ## 技術棧
                         - **後端框架**: Spring Boot 3.4.3 + Java 17
                         - **LINE SDK**: LINE Bot SDK 6.0.0
-                        - **AI 整合**: Groq API（多模型支援，見 AiModel enum）
+                        - **AI 整合**: Groq + Gemini Proxy（多廠商支援，見 AiModel / AiProvider enum）
                         - **資料庫**: MySQL 8.3 + Flyway 遷移
                         - **架構模式**: DDD + Strategy + Facade Pattern
 

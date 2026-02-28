@@ -1,7 +1,10 @@
 package com.acenexus.tata.nexusbot.ai.impl;
 
 import com.acenexus.tata.nexusbot.ai.AIService;
+import com.acenexus.tata.nexusbot.config.properties.GeminiProxyProperties;
+import com.acenexus.tata.nexusbot.config.properties.GroqProperties;
 import com.acenexus.tata.nexusbot.constants.AiModel;
+import com.acenexus.tata.nexusbot.constants.AiProvider;
 import com.acenexus.tata.nexusbot.entity.ChatMessage;
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import jakarta.annotation.PostConstruct;
@@ -17,6 +20,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,42 +29,44 @@ import java.util.Map;
 public class AIServiceImpl implements AIService {
     private static final Logger logger = LoggerFactory.getLogger(AIServiceImpl.class);
 
-    @Value("${groq.api-key:}")
-    private String apiKey;
-
-    @Value("${groq.default-model:llama-3.1-8b-instant}")
-    private String model;
+    private final GroqProperties groqProperties;
+    private final GeminiProxyProperties geminiProxyProperties;
+    private final ChatMessageRepository chatMessageRepository;
 
     @Value("${ai.conversation.history-limit:15}")
     private int historyLimit;
 
-    private volatile WebClient webClient;
-    private volatile boolean isConfigured = false;
-
-    private final ChatMessageRepository chatMessageRepository;
+    private final Map<AiProvider, WebClient> clientMap = new EnumMap<>(AiProvider.class);
 
     @PostConstruct
     public void init() {
-        if (!apiKey.isEmpty()) {
-            webClient = WebClient.builder()
-                    .baseUrl("https://api.groq.com/openai/v1")
-                    .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                    .build();
-            isConfigured = true;
-            logger.info("GroqService initialized with model: {}", model);
-        } else {
-            logger.warn("Groq API key not configured, AI responses disabled");
-        }
+        clientMap.put(AiProvider.GROQ, WebClient.builder()
+                .baseUrl(groqProperties.getUrl())
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + groqProperties.getApiKey())
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build());
+        logger.info("AIService registered provider: GROQ, url: {}", groqProperties.getUrl());
+
+        clientMap.put(AiProvider.GEMINI_PROXY, WebClient.builder()
+                .baseUrl(geminiProxyProperties.getUrl())
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + geminiProxyProperties.getApiKey())
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .build());
+        logger.info("AIService registered provider: GEMINI_PROXY, url: {}", geminiProxyProperties.getUrl());
     }
 
     @Override
     public ChatResponse chatWithContext(String roomId, String message, String selectedModel) {
-        if (!isConfigured) {
+        if (message == null || message.trim().isEmpty()) {
             return new ChatResponse(null, selectedModel, 0, 0L, false);
         }
 
-        if (message == null || message.trim().isEmpty()) {
+        AiModel aiModel = AiModel.fromId(selectedModel);
+        AiProvider targetProvider = aiModel.provider;
+        WebClient client = clientMap.get(targetProvider);
+
+        if (client == null) {
+            logger.warn("No WebClient for provider: {}, model: {}", targetProvider, selectedModel);
             return new ChatResponse(null, selectedModel, 0, 0L, false);
         }
 
@@ -73,17 +79,14 @@ public class AIServiceImpl implements AIService {
             // 建立包含歷史對話的訊息列表
             List<Map<String, String>> messages = buildMessagesWithHistory(recentHistory, message);
 
-            // 根據不同模型設定最適合的參數
-            var modelConfig = getModelConfiguration(selectedModel);
-
             var request = Map.of(
                     "model", selectedModel,
                     "messages", messages,
-                    "temperature", modelConfig.temperature(),
-                    "max_tokens", modelConfig.maxTokens()
+                    "temperature", aiModel.temperature,
+                    "max_tokens", aiModel.maxTokens
             );
 
-            var response = webClient
+            var response = client
                     .post()
                     .uri("/chat/completions")
                     .bodyValue(request)
@@ -94,29 +97,15 @@ public class AIServiceImpl implements AIService {
                     .block();
 
             long processingTime = System.currentTimeMillis() - startTime;
-            logger.debug("Groq API response with context using model {}: {}", selectedModel, response);
+            logger.debug("AI response - provider: {}, model: {}", targetProvider, selectedModel);
 
-            return parseGroqResponse(response, processingTime, selectedModel);
+            return parseAiResponse(response, processingTime, selectedModel);
 
         } catch (Exception e) {
             long processingTime = System.currentTimeMillis() - startTime;
-            logger.error("Groq API call failed - Model: {}, Time: {}ms, Error: {}", selectedModel, processingTime, e.getMessage(), e);
+            logger.error("AI call failed - Provider: {}, Model: {}, Time: {}ms, Error: {}", targetProvider, selectedModel, processingTime, e.getMessage(), e);
             return new ChatResponse(null, selectedModel, 0, processingTime, false);
         }
-    }
-
-    /**
-     * 模型配置記錄
-     */
-    private record ModelConfiguration(double temperature, int maxTokens) {
-    }
-
-    /**
-     * 根據模型獲取最佳配置參數
-     */
-    private ModelConfiguration getModelConfiguration(String model) {
-        AiModel aiModel = AiModel.fromId(model);
-        return new ModelConfiguration(aiModel.temperature, aiModel.maxTokens);
     }
 
     /**
@@ -164,14 +153,9 @@ public class AIServiceImpl implements AIService {
     }
 
     /**
-     * 解析 Groq API 回應，一次性提取所有需要的資料
-     *
-     * @param response       Groq API 原始回應
-     * @param processingTime 處理時間
-     * @param usedModel      使用的模型
-     * @return ChatResponse 物件
+     * 解析 AI API 回應（OpenAI Chat Completions 通用格式）
      */
-    private ChatResponse parseGroqResponse(Map<?, ?> response, long processingTime, String usedModel) {
+    private ChatResponse parseAiResponse(Map<?, ?> response, long processingTime, String usedModel) {
         if (response == null) {
             return new ChatResponse(null, usedModel, 0, processingTime, false);
         }
@@ -203,7 +187,7 @@ public class AIServiceImpl implements AIService {
             return new ChatResponse(content, usedModel, tokensUsed, processingTime, content != null);
 
         } catch (Exception e) {
-            logger.error("Failed to parse Groq response: {}", e.getMessage());
+            logger.error("Failed to parse AI response: {}", e.getMessage());
             return new ChatResponse(null, usedModel, 0, processingTime, false);
         }
     }

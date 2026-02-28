@@ -15,6 +15,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY;
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMINI_25_FLASH;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
@@ -43,7 +44,7 @@ public class AIPostbackEventHandler implements LineBotEventHandler {
 
         return switch (action) {
             case TOGGLE_AI, ENABLE_AI, DISABLE_AI, SELECT_MODEL,
-                    MODEL_LLAMA_3_1_8B, MODEL_LLAMA_3_3_70B,
+                    MODEL_LLAMA_3_1_8B, MODEL_LLAMA_3_3_70B, MODEL_GEMINI_25_FLASH,
                     CLEAR_HISTORY, CONFIRM_CLEAR_HISTORY -> true;
             default -> false;
         };
@@ -61,11 +62,13 @@ public class AIPostbackEventHandler implements LineBotEventHandler {
             case TOGGLE_AI -> aiFacade.showSettingsMenu(roomId, roomType);
             case ENABLE_AI -> aiFacade.enableAI(roomId, roomType);
             case DISABLE_AI -> aiFacade.disableAI(roomId, roomType);
-            case SELECT_MODEL -> aiFacade.showModelSelectionMenu(roomId, roomType);
+            case SELECT_MODEL -> aiFacade.showProviderAndModelMenu(roomId, roomType);
             case MODEL_LLAMA_3_1_8B ->
-                    aiFacade.selectModel(roomId, roomType, AiModel.LLAMA_3_1_8B.id, "Llama 3.1 8B (快速創意)");
+                    aiFacade.selectModel(roomId, roomType, AiModel.LLAMA_3_1_8B.id, AiModel.LLAMA_3_1_8B.displayName);
             case MODEL_LLAMA_3_3_70B ->
-                    aiFacade.selectModel(roomId, roomType, AiModel.LLAMA_3_3_70B.id, "Llama 3.3 70B (精準強力)");
+                    aiFacade.selectModel(roomId, roomType, AiModel.LLAMA_3_3_70B.id, AiModel.LLAMA_3_3_70B.displayName);
+            case MODEL_GEMINI_25_FLASH ->
+                    aiFacade.selectModel(roomId, roomType, AiModel.GEMINI_25_FLASH.id, AiModel.GEMINI_25_FLASH.displayName);
             case CLEAR_HISTORY -> aiFacade.showClearHistoryConfirmation();
             case CONFIRM_CLEAR_HISTORY -> aiFacade.clearHistory(roomId);
             default -> null;

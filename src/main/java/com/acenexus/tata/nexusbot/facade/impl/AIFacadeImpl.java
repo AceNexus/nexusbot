@@ -54,7 +54,7 @@ public class AIFacadeImpl implements AIFacade {
     }
 
     @Override
-    public Message showModelSelectionMenu(String roomId, ChatRoom.RoomType roomType) {
+    public Message showProviderAndModelMenu(String roomId, ChatRoom.RoomType roomType) {
         String currentModel = chatRoomManager.getAiModel(roomId, roomType);
         logger.debug("Current AI model for room {}: {}", roomId, currentModel);
         return messageTemplateProvider.aiModelSelectionMenu(currentModel);

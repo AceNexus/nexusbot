@@ -24,9 +24,9 @@ public interface AIFacade {
     Message disableAI(String roomId, ChatRoom.RoomType roomType);
 
     /**
-     * 顯示模型選擇選單
+     * 顯示廠商與模型選擇 Carousel
      */
-    Message showModelSelectionMenu(String roomId, ChatRoom.RoomType roomType);
+    Message showProviderAndModelMenu(String roomId, ChatRoom.RoomType roomType);
 
     /**
      * 選擇 AI 模型

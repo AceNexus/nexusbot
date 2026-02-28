@@ -9,6 +9,7 @@ import com.linecorp.bot.model.message.flex.component.FlexComponent;
 import com.linecorp.bot.model.message.flex.component.Separator;
 import com.linecorp.bot.model.message.flex.component.Text;
 import com.linecorp.bot.model.message.flex.container.Bubble;
+import com.linecorp.bot.model.message.flex.container.Carousel;
 import com.linecorp.bot.model.message.flex.unit.FlexFontSize;
 import com.linecorp.bot.model.message.flex.unit.FlexLayout;
 import com.linecorp.bot.model.message.flex.unit.FlexMarginSize;
@@ -88,6 +89,50 @@ public abstract class FlexMessageTemplateBuilder {
         return FlexMessage.builder()
                 .altText(altText)
                 .contents(bubble)
+                .build();
+    }
+
+    /**
+     * 建立氣泡容器（用於輪播）
+     */
+    protected Bubble createBubble(String title, String description, List<Button> buttons) {
+        List<FlexComponent> components = new ArrayList<>();
+
+        components.add(createTitleComponent(title));
+
+        if (description != null && !description.trim().isEmpty()) {
+            components.add(createDescriptionComponent(description));
+        }
+
+        if (buttons != null && !buttons.isEmpty()) {
+            components.add(createSeparator());
+            components.add(createButtonContainer(buttons));
+        }
+
+        Box mainBox = Box.builder()
+                .layout(FlexLayout.VERTICAL)
+                .contents(components)
+                .paddingAll(FlexPaddingSize.LG)
+                .backgroundColor(Colors.BACKGROUND)
+                .spacing(FlexMarginSize.MD)
+                .build();
+
+        return Bubble.builder()
+                .body(mainBox)
+                .build();
+    }
+
+    /**
+     * 建立輪播訊息（多個氣泡橫向排列）
+     */
+    protected FlexMessage createCarousel(String altText, List<Bubble> bubbles) {
+        Carousel carousel = Carousel.builder()
+                .contents(bubbles)
+                .build();
+
+        return FlexMessage.builder()
+                .altText(altText)
+                .contents(carousel)
                 .build();
     }
 

@@ -2,6 +2,7 @@ package com.acenexus.tata.nexusbot.config;
 
 import com.acenexus.tata.nexusbot.config.properties.AdminProperties;
 import com.acenexus.tata.nexusbot.config.properties.EmailProperties;
+import com.acenexus.tata.nexusbot.config.properties.GeminiProxyProperties;
 import com.acenexus.tata.nexusbot.config.properties.GroqProperties;
 import com.acenexus.tata.nexusbot.config.properties.LineBotProperties;
 import com.acenexus.tata.nexusbot.config.properties.OsmProperties;
@@ -17,6 +18,7 @@ import org.springframework.util.StringUtils;
 @EnableConfigurationProperties({
         LineBotProperties.class,
         GroqProperties.class,
+        GeminiProxyProperties.class,
         AdminProperties.class,
         OsmProperties.class,
         EmailProperties.class,
@@ -26,10 +28,14 @@ public class ConfigValidator {
     private static final Logger logger = LoggerFactory.getLogger(ConfigValidator.class);
     private final LineBotProperties lineBotProperties;
     private final GroqProperties groqProperties;
+    private final GeminiProxyProperties geminiProxyProperties;
 
-    public ConfigValidator(LineBotProperties lineBotProperties, GroqProperties groqProperties) {
+    public ConfigValidator(LineBotProperties lineBotProperties,
+                           GroqProperties groqProperties,
+                           GeminiProxyProperties geminiProxyProperties) {
         this.lineBotProperties = lineBotProperties;
         this.groqProperties = groqProperties;
+        this.geminiProxyProperties = geminiProxyProperties;
     }
 
     @PostConstruct
@@ -37,9 +43,9 @@ public class ConfigValidator {
         logger.info("Starting configuration validation...");
 
         validateLineBotConfig();
-        validateGroqConfig();
+        validateAiConfig();
 
-        logger.info("Configuration validation completed, all required configurations are properly set");
+        logger.info("Configuration validation completed");
     }
 
     private void validateLineBotConfig() {
@@ -54,11 +60,11 @@ public class ConfigValidator {
         logger.info("LINE Bot configuration validation passed");
     }
 
-    private void validateGroqConfig() {
+    private void validateAiConfig() {
         if (!StringUtils.hasText(groqProperties.getApiKey())) {
-            throw new IllegalStateException("Groq API key is not configured or empty");
+            throw new IllegalStateException("Groq API key (GROQ_API_KEY) is not configured");
         }
-
-        logger.info("Groq configuration validation passed");
+        logger.info("AI provider GROQ enabled, url: {}", groqProperties.getUrl());
+        logger.info("AI provider GEMINI_PROXY enabled, url: {}", geminiProxyProperties.getUrl());
     }
 }
