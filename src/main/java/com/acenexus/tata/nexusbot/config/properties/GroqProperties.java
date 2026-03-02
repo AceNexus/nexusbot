@@ -11,5 +11,5 @@ public class GroqProperties {
 
     private String url = "https://api.groq.com/openai/v1";
 
-    private String defaultModel = AiModel.LLAMA_3_1_8B.id;
+    private String defaultModel = AiModel.LLAMA_3_3_70B.id;
 }

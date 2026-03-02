@@ -17,6 +17,8 @@ import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.MAIN_MENU;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMINI_25_FLASH;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMINI_31_PRO_PREVIEW;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMINI_3_FLASH_PREVIEW;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
@@ -65,8 +67,8 @@ public class AISettingsTemplateBuilder extends FlexMessageTemplateBuilder {
                 "Groq 模型",
                 groqDesc,
                 Arrays.asList(
-                        createSelectionButton("Llama 3.1 8B｜快速", MODEL_LLAMA_3_1_8B, currentModel.equals(AiModel.LLAMA_3_1_8B.id)),
-                        createSelectionButton("Llama 3.3 70B｜精準", MODEL_LLAMA_3_3_70B, currentModel.equals(AiModel.LLAMA_3_3_70B.id)),
+                        createSelectionButton("Llama 3.1 8B", MODEL_LLAMA_3_1_8B, currentModel.equals(AiModel.LLAMA_3_1_8B.id)),
+                        createSelectionButton("Llama 3.3 70B", MODEL_LLAMA_3_3_70B, currentModel.equals(AiModel.LLAMA_3_3_70B.id)),
                         createNavigateButton("返回 AI 設定", TOGGLE_AI)
                 )
         );
@@ -76,6 +78,8 @@ public class AISettingsTemplateBuilder extends FlexMessageTemplateBuilder {
                 geminiDesc,
                 Arrays.asList(
                         createSelectionButton("Gemini 2.5 Flash", MODEL_GEMINI_25_FLASH, currentModel.equals(AiModel.GEMINI_25_FLASH.id)),
+                        createSelectionButton("Gemini 3 Flash", MODEL_GEMINI_3_FLASH_PREVIEW, currentModel.equals(AiModel.GEMINI_3_FLASH_PREVIEW.id)),
+                        createSelectionButton("Gemini 3.1 Pro", MODEL_GEMINI_31_PRO_PREVIEW, currentModel.equals(AiModel.GEMINI_31_PRO_PREVIEW.id)),
                         createNavigateButton("返回 AI 設定", TOGGLE_AI)
                 )
         );

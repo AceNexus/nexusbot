@@ -16,6 +16,8 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CONFIRM_CLEAR_HISTORY
 import static com.acenexus.tata.nexusbot.constants.Actions.DISABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.ENABLE_AI;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMINI_25_FLASH;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMINI_31_PRO_PREVIEW;
+import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_GEMINI_3_FLASH_PREVIEW;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_1_8B;
 import static com.acenexus.tata.nexusbot.constants.Actions.MODEL_LLAMA_3_3_70B;
 import static com.acenexus.tata.nexusbot.constants.Actions.SELECT_MODEL;
@@ -44,7 +46,8 @@ public class AIPostbackEventHandler implements LineBotEventHandler {
 
         return switch (action) {
             case TOGGLE_AI, ENABLE_AI, DISABLE_AI, SELECT_MODEL,
-                    MODEL_LLAMA_3_1_8B, MODEL_LLAMA_3_3_70B, MODEL_GEMINI_25_FLASH,
+                    MODEL_LLAMA_3_1_8B, MODEL_LLAMA_3_3_70B,
+                    MODEL_GEMINI_25_FLASH, MODEL_GEMINI_3_FLASH_PREVIEW, MODEL_GEMINI_31_PRO_PREVIEW,
                     CLEAR_HISTORY, CONFIRM_CLEAR_HISTORY -> true;
             default -> false;
         };
@@ -69,6 +72,10 @@ public class AIPostbackEventHandler implements LineBotEventHandler {
                     aiFacade.selectModel(roomId, roomType, AiModel.LLAMA_3_3_70B.id, AiModel.LLAMA_3_3_70B.displayName);
             case MODEL_GEMINI_25_FLASH ->
                     aiFacade.selectModel(roomId, roomType, AiModel.GEMINI_25_FLASH.id, AiModel.GEMINI_25_FLASH.displayName);
+            case MODEL_GEMINI_3_FLASH_PREVIEW ->
+                    aiFacade.selectModel(roomId, roomType, AiModel.GEMINI_3_FLASH_PREVIEW.id, AiModel.GEMINI_3_FLASH_PREVIEW.displayName);
+            case MODEL_GEMINI_31_PRO_PREVIEW ->
+                    aiFacade.selectModel(roomId, roomType, AiModel.GEMINI_31_PRO_PREVIEW.id, AiModel.GEMINI_31_PRO_PREVIEW.displayName);
             case CLEAR_HISTORY -> aiFacade.showClearHistoryConfirmation();
             case CONFIRM_CLEAR_HISTORY -> aiFacade.clearHistory(roomId);
             default -> null;

@@ -8,24 +8,28 @@ package com.acenexus.tata.nexusbot.constants;
 public enum AiModel {
 
     // Groq 模型
-    LLAMA_3_1_8B("llama-3.1-8b-instant", "Llama 3.1 8B", 0.8, 800, AiProvider.GROQ),
-    LLAMA_3_3_70B("llama-3.3-70b-versatile", "Llama 3.3 70B", 0.6, 1200, AiProvider.GROQ),
+    LLAMA_3_1_8B("llama-3.1-8b-instant", "Llama 3.1 8B", 0.8, 800, AiProvider.GROQ, 15),
+    LLAMA_3_3_70B("llama-3.3-70b-versatile", "Llama 3.3 70B", 0.6, 1200, AiProvider.GROQ, 15),
 
     // Gemini 模型（透過 gemini-proxy 使用）
-    GEMINI_25_FLASH("gemini-2.5-flash", "Gemini 2.5 Flash", 0.8, 2048, AiProvider.GEMINI_PROXY);
+    GEMINI_25_FLASH("gemini-2.5-flash", "Gemini 2.5 Flash", 0.8, 2048, AiProvider.GEMINI_PROXY, 20),
+    GEMINI_3_FLASH_PREVIEW("gemini-3-flash-preview", "Gemini 3 Flash", 0.8, 2048, AiProvider.GEMINI_PROXY, 60),
+    GEMINI_31_PRO_PREVIEW("gemini-3.1-pro-preview", "Gemini 3.1 Pro", 0.6, 4096, AiProvider.GEMINI_PROXY, 180);
 
     public final String id;
     public final String displayName;
     public final double temperature;
     public final int maxTokens;
     public final AiProvider provider;
+    public final int timeoutSeconds;
 
-    AiModel(String id, String displayName, double temperature, int maxTokens, AiProvider provider) {
+    AiModel(String id, String displayName, double temperature, int maxTokens, AiProvider provider, int timeoutSeconds) {
         this.id = id;
         this.displayName = displayName;
         this.temperature = temperature;
         this.maxTokens = maxTokens;
         this.provider = provider;
+        this.timeoutSeconds = timeoutSeconds;
     }
 
     /**

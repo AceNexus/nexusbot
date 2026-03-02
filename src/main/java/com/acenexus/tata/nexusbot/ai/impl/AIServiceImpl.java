@@ -92,7 +92,7 @@ public class AIServiceImpl implements AIService {
                     .bodyValue(request)
                     .retrieve()
                     .bodyToMono(Map.class)
-                    .timeout(Duration.ofSeconds(15))
+                    .timeout(Duration.ofSeconds(aiModel.timeoutSeconds))
                     .subscribeOn(Schedulers.boundedElastic())
                     .block();
 

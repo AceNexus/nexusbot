@@ -23,6 +23,8 @@ public final class Actions {
 
     // ============= AI 模型選擇動作 - Gemini Proxy =============
     public static final String MODEL_GEMINI_25_FLASH = "action=model_gemini_25_flash";
+    public static final String MODEL_GEMINI_3_FLASH_PREVIEW = "action=model_gemini_3_flash_preview";
+    public static final String MODEL_GEMINI_31_PRO_PREVIEW = "action=model_gemini_31_pro_preview";
 
     // ============= 選單導航動作 =============
     public static final String MAIN_MENU = "action=main_menu";

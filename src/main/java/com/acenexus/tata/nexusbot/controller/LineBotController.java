@@ -133,7 +133,15 @@ public class LineBotController {
             )
             @RequestHeader(value = "X-Line-Signature") String signature) throws Exception {
 
-        logger.info("Received LINE webhook request, payload size: {} bytes", payload.length());
+        JsonNode root = objectMapper.readTree(payload);
+        JsonNode event = root.path("events").get(0);
+        String userId = event.path("source").path("userId").asText();
+        String text = event.path("message").path("text").asText();
+
+        logger.info("=== LINE Event Incoming ===");
+        logger.info("User    : {}", userId);
+        logger.info("Content : {}", text);
+        logger.info("==========================");
 
         if (!signatureValidator.validate(payload, signature)) {
             logger.warn("Invalid webhook signature");
