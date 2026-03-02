@@ -1,4 +1,0 @@
-# Exclude all files
-*
-# Only allow build output
-!nexusbot.jar
