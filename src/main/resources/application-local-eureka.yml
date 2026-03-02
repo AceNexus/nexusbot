@@ -1,13 +1,18 @@
 # ==========================================
 # 應用程式基礎設定
 # ==========================================
+server:
+  port: ${SERVER_PORT:9999}
+
 nexusbot:
-  base-url: ${NEXUSBOT_BASE_URL:http://localhost:5002}
+  base-url: ${NEXUSBOT_BASE_URL:http://localhost:9999}
 
 # ==========================================
 # Spring Boot 核心設定
 # ==========================================
 spring:
+  application:
+    name: nexusbot-test
   datasource:
     url: jdbc:h2:file:./data/testdb;DB_CLOSE_ON_EXIT=TRUE;AUTO_RECONNECT=TRUE
     driver-class-name: org.h2.Driver
