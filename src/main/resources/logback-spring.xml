@@ -4,13 +4,13 @@
     <!-- 引入 Spring Boot 預設配置 -->
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
 
-    <!-- 定義日誌輸出格式 -->
+    <!-- 定義日誌輸出格式（與 configservice/eurekaservice/gatewayservice 統一：level [thread] [traceId] [spanId] [logger]） -->
     <property name="LOG_PATTERN"
-              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%X{traceId:-NO_TRACE_ID}] [%thread] %-5level %logger{36} - %msg%n"/>
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%t] [%X{traceId:-}] [%X{spanId:-}] [%logger] %m%n%wEx"/>
 
-    <!-- 彩色日誌輸出格式（用於 Console） -->
+    <!-- 彩色日誌輸出格式（用於 Console，與 application.yml logging.pattern.console 一致） -->
     <property name="CONSOLE_LOG_PATTERN"
-              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr([%X{traceId:-NO_TRACE_ID}]){yellow} %clr([%thread]){magenta} %clr(%-5level){highlight} %clr(%logger{36}){cyan} %clr(-){faint} %msg%n"/>
+              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(%-5level) [%clr(%t){faint}] [%clr(%X{traceId:-}){magenta}] [%clr(%X{spanId:-}){blue}] [%clr(%logger){cyan}] %m%n%wEx"/>
 
     <!-- Console Appender -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
