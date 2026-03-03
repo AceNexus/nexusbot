@@ -64,46 +64,6 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     }
 
     @Override
-    public Message postbackResponse(String data) {
-        return navigationBuilder.postbackResponse(data);
-    }
-
-    @Override
-    public String imageResponse(String messageId) {
-        return navigationBuilder.imageResponse(messageId);
-    }
-
-    @Override
-    public String stickerResponse(String packageId, String stickerId) {
-        return navigationBuilder.stickerResponse(packageId, stickerId);
-    }
-
-    @Override
-    public String videoResponse(String messageId) {
-        return navigationBuilder.videoResponse(messageId);
-    }
-
-    @Override
-    public String audioResponse(String messageId) {
-        return navigationBuilder.audioResponse(messageId);
-    }
-
-    @Override
-    public String fileResponse(String fileName, long fileSize) {
-        return navigationBuilder.fileResponse(fileName, fileSize);
-    }
-
-    @Override
-    public String locationResponse(String title, String address, double latitude, double longitude) {
-        return navigationBuilder.locationResponse(title, address, latitude, longitude);
-    }
-
-    @Override
-    public String unknownMessage() {
-        return navigationBuilder.unknownMessage();
-    }
-
-    @Override
     public String defaultTextResponse(String messageText) {
         return navigationBuilder.defaultTextResponse(messageText);
     }

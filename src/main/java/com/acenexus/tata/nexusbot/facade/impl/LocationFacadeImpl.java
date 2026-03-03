@@ -8,7 +8,6 @@ import com.acenexus.tata.nexusbot.service.MessageService;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.acenexus.tata.nexusbot.util.MdcTaskDecorator;
 import com.linecorp.bot.model.message.Message;
-import com.linecorp.bot.model.message.TextMessage;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,19 +50,18 @@ public class LocationFacadeImpl implements LocationFacade {
 
             // 非同步搜尋廁所（使用 MdcTaskDecorator 自動傳遞 traceId）
             CompletableFuture.runAsync(
-                    MdcTaskDecorator.wrap(() -> searchToilets(latitude, longitude, replyToken, title, address))
+                    MdcTaskDecorator.wrap(() -> searchToilets(latitude, longitude, replyToken))
             );
 
             return null; // 非同步處理,不需要立即回傳訊息
         } else {
-            // 一般位置訊息處理,僅回覆位置資訊
+            // 一般位置訊息靜默忽略
             logger.info("General location message processed for room {}", roomId);
-            String response = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
-            return TextMessage.builder().text(response).build();
+            return null;
         }
     }
 
-    private void searchToilets(double latitude, double longitude, String replyToken, String title, String address) {
+    private void searchToilets(double latitude, double longitude, String replyToken) {
         try {
             locationService.findNearbyToilets(latitude, longitude, 1000)
                     .thenAccept(toilets -> {
@@ -72,14 +70,12 @@ public class LocationFacadeImpl implements LocationFacade {
                     })
                     .exceptionally(throwable -> {
                         logger.error("Error finding nearby toilets", throwable);
-                        String fallbackResponse = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
-                        messageService.sendReply(replyToken, fallbackResponse);
+                        messageService.sendMessage(replyToken, messageTemplateProvider.error("附近廁所搜尋失敗，請稍後再試。"));
                         return null;
                     });
         } catch (Exception e) {
             logger.error("Error processing location for toilet search", e);
-            String fallbackResponse = messageTemplateProvider.locationResponse(title, address, latitude, longitude);
-            messageService.sendReply(replyToken, fallbackResponse);
+            messageService.sendMessage(replyToken, messageTemplateProvider.error("附近廁所搜尋失敗，請稍後再試。"));
         }
     }
 }

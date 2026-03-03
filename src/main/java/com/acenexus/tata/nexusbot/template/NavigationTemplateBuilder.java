@@ -134,63 +134,6 @@ public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
     // ==================== 純文字回應方法 ====================
 
     /**
-     * 圖片回應
-     */
-    public String imageResponse(String messageId) {
-        return "收到您的圖片\n圖片ID: " + messageId;
-    }
-
-    /**
-     * 貼圖回應
-     */
-    public String stickerResponse(String packageId, String stickerId) {
-        return String.format("很可愛的貼圖\n貼圖包ID: %s\n貼圖ID: %s", packageId, stickerId);
-    }
-
-    /**
-     * 影片回應
-     */
-    public String videoResponse(String messageId) {
-        return "收到您的影片\n影片ID: " + messageId;
-    }
-
-    /**
-     * 音檔回應
-     */
-    public String audioResponse(String messageId) {
-        return "收到您的音檔\n音檔ID: " + messageId;
-    }
-
-    /**
-     * 檔案回應
-     */
-    public String fileResponse(String fileName, long fileSize) {
-        return String.format("收到您的檔案\n檔名: %s\n大小: %d bytes", fileName, fileSize);
-    }
-
-    /**
-     * 位置回應
-     */
-    public String locationResponse(String title, String address, double latitude, double longitude) {
-        StringBuilder response = new StringBuilder("收到您的位置資訊");
-        if (title != null && !title.trim().isEmpty()) {
-            response.append("\n地點名稱: ").append(title);
-        }
-        if (address != null && !address.trim().isEmpty()) {
-            response.append("\n地址: ").append(address);
-        }
-        response.append(String.format("\n座標: %.6f, %.6f", latitude, longitude));
-        return response.toString();
-    }
-
-    /**
-     * 未知訊息類型
-     */
-    public String unknownMessage() {
-        return "收到您的訊息，但目前無法識別此類型。";
-    }
-
-    /**
      * 預設文字回應
      */
     public String defaultTextResponse(String messageText) {

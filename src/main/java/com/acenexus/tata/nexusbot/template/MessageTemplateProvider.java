@@ -30,25 +30,9 @@ public interface MessageTemplateProvider {
 
     Message clearHistoryConfirmation();
 
-    Message postbackResponse(String data);
-
-    String imageResponse(String messageId);
-
-    String stickerResponse(String packageId, String stickerId);
-
-    String videoResponse(String messageId);
-
-    String audioResponse(String messageId);
-
-    String fileResponse(String fileName, long fileSize);
-
-    String locationResponse(String title, String address, double latitude, double longitude);
-
     Message nearbyToiletsResponse(List<ToiletLocation> toilets, double userLatitude, double userLongitude);
 
     Message findToiletsInstruction();
-
-    String unknownMessage();
 
     String defaultTextResponse(String messageText);
 
