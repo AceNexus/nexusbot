@@ -72,7 +72,7 @@ groq:
 # 第三方服務整合 - Gemini Proxy (AIClient-2-API)
 # ==========================================
 gemini-proxy:
-  url: ${GEMINI_PROXY_URL:http://localhost:3000/v1}
+  url: ${GEMINI_PROXY_URL:http://localhost:3100/v1}
   api-key: ${GEMINI_PROXY_API_KEY:123456}
 
 # ==========================================
