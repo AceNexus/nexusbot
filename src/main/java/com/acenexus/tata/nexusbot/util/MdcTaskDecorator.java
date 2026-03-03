@@ -1,83 +1,53 @@
 package com.acenexus.tata.nexusbot.util;
 
-import org.slf4j.MDC;
+import io.micrometer.context.ContextSnapshot;
+import io.micrometer.context.ContextSnapshotFactory;
 
-import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
 /**
  * MDC 任務裝飾器
  * 功能：
- * - 在非同步任務執行前捕獲當前執行緒的 MDC context
- * - 在非同步執行緒中恢復 MDC context
- * - 執行完畢後清理 MDC，避免記憶體洩漏
+ * - 在非同步任務執行前捕獲當前執行緒的完整 context（MDC + OTel trace context）
+ * - 在非同步執行緒中恢復 context，確保 traceId 在 log 中連續可見
+ * - 非同步 Span 作為當前 Span 的子 Span，trace 關係在 Grafana 中正確呈現
  * 使用場景：
- * - CompletableFuture 非同步操作
- * - ExecutorService 執行緒池任務
- * - @Async 方法
+ * - CompletableFuture.runAsync(MdcTaskDecorator.wrap(...))
+ * - CompletableFuture.supplyAsync(MdcTaskDecorator.wrapSupplier(...))
  * 設計原則：
- * - 線程安全
- * - 自動清理，避免 MDC 污染
- * - 支援巢狀呼叫
+ * - 使用 Micrometer ContextSnapshotFactory 同時傳播 MDC 與 OTel ThreadLocal context
+ * - ContextSnapshot.Scope 在 try-with-resources 關閉時自動還原前一個 context，無需手動清理
  */
 public class MdcTaskDecorator {
 
+    private static final ContextSnapshotFactory SNAPSHOT_FACTORY = ContextSnapshotFactory.builder().build();
+
     /**
-     * 包裝 Runnable 任務，自動傳遞 MDC context
+     * 包裝 Runnable，自動傳遞 MDC + OTel trace context 到非同步執行緒
      * 使用範例：
      * CompletableFuture.runAsync(MdcTaskDecorator.wrap(() -> {
-     *     // 這裡可以正確取得 traceId
-     *     log.info("Processing...");
+     * log.info("traceId 在此處仍可見，且 Span 為父 Span 的子 Span");
      * }));
      */
     public static Runnable wrap(Runnable task) {
-        // 在當前執行緒捕獲 MDC context
-        Map<String, String> contextMap = MDC.getCopyOfContextMap();
-
+        ContextSnapshot snapshot = SNAPSHOT_FACTORY.captureAll();
         return () -> {
-            // 在非同步執行緒恢復 MDC context
-            if (contextMap != null) {
-                MDC.setContextMap(contextMap);
-            }
-
-            try {
-                // 執行實際任務
+            try (ContextSnapshot.Scope ignored = snapshot.setThreadLocals()) {
                 task.run();
-            } finally {
-                // 清理 MDC，避免污染執行緒池
-                MDC.clear();
             }
         };
     }
 
     /**
-     * 包裝 Supplier 任務，自動傳遞 MDC context
-     *
+     * 包裝 Supplier，自動傳遞 MDC + OTel trace context 到非同步執行緒
      * 使用範例：
-     * <pre>
-     * CompletableFuture.supplyAsync(MdcTaskDecorator.wrapSupplier(() -> {
-     *     // 這裡可以正確取得 traceId
-     *     return processData();
-     * }));
-     * </pre>
+     * CompletableFuture.supplyAsync(MdcTaskDecorator.wrapSupplier(() -> processData()));
      */
     public static <T> Supplier<T> wrapSupplier(Supplier<T> task) {
-        // 在當前執行緒捕獲 MDC context
-        Map<String, String> contextMap = MDC.getCopyOfContextMap();
-
+        ContextSnapshot snapshot = SNAPSHOT_FACTORY.captureAll();
         return () -> {
-            // 在非同步執行緒恢復 MDC context
-            if (contextMap != null) {
-                MDC.setContextMap(contextMap);
-            }
-
-            try {
-                // 執行實際任務
+            try (ContextSnapshot.Scope ignored = snapshot.setThreadLocals()) {
                 return task.get();
-            } finally {
-                // 清理 MDC，避免污染執行緒池
-                MDC.clear();
             }
         };
     }

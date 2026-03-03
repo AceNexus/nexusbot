@@ -2,6 +2,8 @@ package com.acenexus.tata.nexusbot.scheduler;
 
 import com.acenexus.tata.nexusbot.entity.Reminder;
 import com.acenexus.tata.nexusbot.repository.ReminderRepository;
+import io.micrometer.observation.Observation;
+import io.micrometer.observation.ObservationRegistry;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,6 +19,7 @@ import java.util.List;
  * - 只發送已到期（reminderTimeInstant <= now）的提醒，絕不提前發送
  * - 通知邏輯完全委派給 ReminderNotificationService
  * - 排程器專注於「何時發送」，通知服務負責「如何發送」
+ * - 每次觸發建立獨立 Observation，使 Grafana Tempo 可見排程執行的完整 trace
  */
 @Component
 @RequiredArgsConstructor
@@ -26,6 +29,7 @@ public class ReminderScheduler {
 
     private final ReminderRepository reminderRepository;
     private final ReminderProcessor reminderProcessor;
+    private final ObservationRegistry observationRegistry;
 
     /**
      * 每秒執行一次，掃描並發送到期提醒
@@ -33,13 +37,17 @@ public class ReminderScheduler {
      */
     @Scheduled(fixedRate = 1000)
     public void processReminders() {
-        try {
-            List<Reminder> dueReminders = findDueReminders();
+        List<Reminder> dueReminders = findDueReminders();
+        if (dueReminders.isEmpty()) {
+            return;
+        }
 
-            if (dueReminders.isEmpty()) {
-                return;
-            }
+        // 有到期提醒時才建立 Observation，避免每秒產生空 trace 污染追蹤資料
+        Observation observation = Observation.createNotStarted("reminder.scheduler", observationRegistry)
+                .lowCardinalityKeyValue("reminder.count", String.valueOf(dueReminders.size()))
+                .start();
 
+        try (Observation.Scope ignored = observation.openScope()) {
             logger.info("Found {} due reminders", dueReminders.size());
 
             for (Reminder reminder : dueReminders) {
@@ -50,9 +58,11 @@ public class ReminderScheduler {
                     // 繼續處理下一個提醒，不影響其他提醒
                 }
             }
-
         } catch (Exception e) {
+            observation.error(e);
             logger.error("Reminder processing failed: {}", e.getMessage(), e);
+        } finally {
+            observation.stop();
         }
     }
 
@@ -61,7 +71,6 @@ public class ReminderScheduler {
         // 上限：now + 1ms 搭配 < 查詢，等同 <= now
         // 不再設置 5 分鐘下限，確保停機期間錯過的提醒在啟動後能被補發（由 Processor 處理重複邏輯推進）
         long endMillis = now.plusMillis(1).toEpochMilli();
-
         return reminderRepository.findDueRemindersByInstantBefore(endMillis);
     }
 }
