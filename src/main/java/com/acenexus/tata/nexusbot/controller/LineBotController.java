@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -138,10 +139,7 @@ public class LineBotController {
         String userId = event.path("source").path("userId").asText();
         String text = event.path("message").path("text").asText();
 
-        logger.info("=== LINE Event Incoming ===");
-        logger.info("User    : {}", userId);
-        logger.info("Content : {}", text);
-        logger.info("==========================");
+        logger.info("LINE_EVENT userId={} content={} traceId={}", userId, text, MDC.get("traceId"));
 
         if (!signatureValidator.validate(payload, signature)) {
             logger.warn("Invalid webhook signature");
