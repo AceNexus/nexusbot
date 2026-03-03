@@ -17,6 +17,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.CHANNEL_LINE;
 import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_REMINDER;
 import static com.acenexus.tata.nexusbot.constants.Actions.LIST_REMINDERS;
+import static com.acenexus.tata.nexusbot.constants.Actions.PARAM_ID;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_CANCEL_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_CHANGE_TIMEZONE;
 import static com.acenexus.tata.nexusbot.constants.Actions.REMINDER_COMPLETED;
@@ -93,12 +94,12 @@ public class ReminderPostbackEventHandler implements LineBotEventHandler {
     }
 
     private Message handleDeleteReminder(LineBotEvent event, String roomId) {
-        Long reminderId = event.getPayloadParameterAsLong("action", "id");
+        Long reminderId = event.getPayloadParameterAsLong("action", PARAM_ID);
         return reminderFacade.deleteReminder(reminderId, roomId);
     }
 
     private Message handleReminderCompleted(LineBotEvent event, String roomId) {
-        Long reminderId = event.getPayloadParameterAsLong("action", "id");
+        Long reminderId = event.getPayloadParameterAsLong("action", PARAM_ID);
         return reminderFacade.confirmReminder(reminderId, roomId);
     }
 

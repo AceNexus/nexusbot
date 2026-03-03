@@ -13,6 +13,7 @@ import static com.acenexus.tata.nexusbot.constants.Actions.ADD_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.CANCEL_EMAIL_INPUT;
 import static com.acenexus.tata.nexusbot.constants.Actions.DELETE_EMAIL;
 import static com.acenexus.tata.nexusbot.constants.Actions.EMAIL_MENU;
+import static com.acenexus.tata.nexusbot.constants.Actions.PARAM_ID;
 import static com.acenexus.tata.nexusbot.constants.Actions.TOGGLE_EMAIL_STATUS;
 
 /**
@@ -66,12 +67,12 @@ public class EmailPostbackEventHandler implements LineBotEventHandler {
     }
 
     private Message handleDeleteEmail(LineBotEvent event, String roomId) {
-        Long emailId = event.getPayloadParameterAsLong("action", "id");
+        Long emailId = event.getPayloadParameterAsLong("action", PARAM_ID);
         return emailFacade.deleteEmail(emailId, roomId);
     }
 
     private Message handleToggleEmailStatus(LineBotEvent event, String roomId) {
-        Long emailId = event.getPayloadParameterAsLong("action", "id");
+        Long emailId = event.getPayloadParameterAsLong("action", PARAM_ID);
         return emailFacade.toggleEmailStatus(emailId, roomId);
     }
 

@@ -77,7 +77,17 @@ public final class Actions {
     public static final String TOGGLE_EMAIL_STATUS = "action=toggle_email_status";
     public static final String CANCEL_EMAIL_INPUT = "action=cancel_email_input";
 
+    // ============= Postback 共用參數名稱 =============
+    public static final String PARAM_ID = "id";
+
     // ============= 動態參數工具方法 =============
+
+    /**
+     * 構建刪除提醒的 action 字串
+     */
+    public static String deleteReminder(Long id) {
+        return DELETE_REMINDER + "&id=" + id;
+    }
 
     /**
      * 構建提醒已完成的 action 字串
