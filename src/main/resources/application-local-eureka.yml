@@ -129,16 +129,6 @@ admin:
   password-seed: ${ADMIN_PASSWORD_SEED:1103}
 
 # ==========================================
-# 日誌設定
-# ==========================================
-logging:
-  level:
-    root: INFO
-    com.acenexus.tata.nexusbot: INFO
-    com.linecorp.bot.client.wire: WARN
-    okhttp3: WARN
-
-# ==========================================
 # Spring Boot Actuator (健康檢查與監控)
 # ==========================================
 management:
