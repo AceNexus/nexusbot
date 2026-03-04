@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.ServletWebRequest;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -162,6 +163,30 @@ public class GlobalExceptionHandler {
 
         logger.warn("[UNSUPPORTED_EVENT] [{}] [{}] {}", traceId, path, e.getMessage());
         return ResponseEntity.ok("OK");
+    }
+
+    /**
+     * 處理資源未找到異常（例如 404）
+     * <p>
+     * 1. 針對 LINE webhook 路徑回傳 200 OK 以避免重試。
+     * 2. 其他路徑（如 H2 Console, Swagger, Favicon）則記錄 WARN 並回傳 404。
+     * 3. 這樣既能減少 ERROR 日誌，又不會干擾開發工具的正常顯示。
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<String> handleNoResourceFoundException(NoResourceFoundException e, WebRequest request) {
+        String traceId = getTraceId();
+        String path = getRequestPath(request);
+
+        // 降低日誌級別為 WARN
+        logger.warn("[RESOURCE_NOT_FOUND] [{}] [{}] {}", traceId, path, e.getMessage());
+
+        // 如果是 LINE Webhook 相關路徑，回傳 200 OK
+        if (path.contains("/webhook")) {
+            return ResponseEntity.ok("OK");
+        }
+
+        // 對於其他路徑，回傳標準的 404 狀態碼
+        return ResponseEntity.status(404).body("Resource Not Found: " + path);
     }
 
     /**

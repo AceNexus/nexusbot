@@ -35,4 +35,4 @@ management:
       probability: ${TRACING_SAMPLING_PROBABILITY:0.0}   # 預設關閉；Docker 部署在 .env 設 1.0 開啟
   otlp:
     tracing:
-      endpoint: ${MANAGEMENT_OTLP_TRACING_ENDPOINT:http://tempo:4318/v1/traces}
+      endpoint: ${MANAGEMENT_OTLP_TRACING_ENDPOINT:http://127.0.0.1:4318/v1/traces}
