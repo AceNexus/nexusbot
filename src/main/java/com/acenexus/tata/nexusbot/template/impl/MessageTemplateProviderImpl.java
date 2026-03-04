@@ -81,10 +81,14 @@ public class MessageTemplateProviderImpl implements MessageTemplateProvider {
     @Override
     public Message systemStats(long totalRooms, long aiEnabledRooms, long adminRooms,
                                long totalMessages, long userMessages, long aiMessages,
-                               long todayActiveRooms, long weekActiveRooms, String avgProcessingTime) {
+                               long todayActiveRooms, long weekActiveRooms,
+                               String avgProcessingTime, long totalTokensUsed,
+                               long activeReminders, long activeEmails) {
         return navigationBuilder.systemStats(totalRooms, aiEnabledRooms, adminRooms,
                 totalMessages, userMessages, aiMessages,
-                todayActiveRooms, weekActiveRooms, avgProcessingTime);
+                todayActiveRooms, weekActiveRooms,
+                avgProcessingTime, totalTokensUsed,
+                activeReminders, activeEmails);
     }
 
     // ==================== AI 設定範本 ====================

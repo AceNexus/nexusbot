@@ -51,4 +51,10 @@ public interface EmailRepository extends JpaRepository<Email, Long> {
      */
     @Query("UPDATE Email e SET e.isActive = false WHERE e.id = :id AND e.roomId = :roomId")
     void softDeleteByIdAndRoomId(@Param("id") Long id, @Param("roomId") String roomId);
+
+    /**
+     * 統計系統內已綁定的有效 Email 總數
+     */
+    @Query("SELECT COUNT(e) FROM Email e WHERE e.isActive = true")
+    long countActiveEmails();
 }

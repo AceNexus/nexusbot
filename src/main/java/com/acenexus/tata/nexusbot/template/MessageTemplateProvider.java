@@ -42,7 +42,9 @@ public interface MessageTemplateProvider {
 
     Message systemStats(long totalRooms, long aiEnabledRooms, long adminRooms,
                         long totalMessages, long userMessages, long aiMessages,
-                        long todayActiveRooms, long weekActiveRooms, String avgProcessingTime);
+                        long todayActiveRooms, long weekActiveRooms,
+                        String avgProcessingTime, long totalTokensUsed,
+                        long activeReminders, long activeEmails);
 
     Message reminderMenu();
 

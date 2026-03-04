@@ -2,11 +2,16 @@ package com.acenexus.tata.nexusbot.admin;
 
 import com.acenexus.tata.nexusbot.repository.ChatMessageRepository;
 import com.acenexus.tata.nexusbot.repository.ChatRoomRepository;
+import com.acenexus.tata.nexusbot.repository.EmailRepository;
+import com.acenexus.tata.nexusbot.repository.ReminderRepository;
 import com.acenexus.tata.nexusbot.template.MessageTemplateProvider;
 import com.linecorp.bot.model.message.Message;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -15,6 +20,8 @@ public class SystemStatsService {
 
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ReminderRepository reminderRepository;
+    private final EmailRepository emailRepository;
     private final MessageTemplateProvider messageTemplateProvider;
 
     /**
@@ -33,17 +40,28 @@ public class SystemStatsService {
             long userMessages = chatMessageRepository.countUserMessages();
 
             // 活躍度統計
-            long todayActiveRooms = chatMessageRepository.countTodayActiveRooms();
-            long weekActiveRooms = chatMessageRepository.countThisWeekActiveRooms();
+            LocalDateTime todayStart = LocalDate.now().atStartOfDay();
+            LocalDateTime weekStart = LocalDateTime.now().minusDays(7);
+            long todayActiveRooms = chatMessageRepository.countActiveRoomsSince(todayStart);
+            long weekActiveRooms = chatMessageRepository.countActiveRoomsSince(weekStart);
 
-            // AI 性能統計
+            // AI 性能與成本統計
             Double avgProcessingTime = chatMessageRepository.getAverageProcessingTime();
             String avgTimeStr = avgProcessingTime != null ? String.format("%.1f ms", avgProcessingTime) : "無數據";
+            long totalTokensUsed = chatMessageRepository.sumTotalTokensUsed();
+
+            // 提醒統計
+            long activeReminders = reminderRepository.countActiveReminders();
+
+            // Email 統計
+            long activeEmails = emailRepository.countActiveEmails();
 
             return messageTemplateProvider.systemStats(
                     totalRooms, aiEnabledRooms, adminRooms,
                     totalMessages, userMessages, aiMessages,
-                    todayActiveRooms, weekActiveRooms, avgTimeStr
+                    todayActiveRooms, weekActiveRooms,
+                    avgTimeStr, totalTokensUsed,
+                    activeReminders, activeEmails
             );
 
         } catch (Exception e) {

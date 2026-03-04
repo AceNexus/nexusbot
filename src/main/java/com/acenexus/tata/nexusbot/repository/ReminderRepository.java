@@ -22,4 +22,10 @@ public interface ReminderRepository extends JpaRepository<Reminder, Long> {
      */
     @Query("SELECT r FROM Reminder r WHERE r.status = 'ACTIVE' AND r.reminderTimeInstant < :endInstant ORDER BY r.reminderTimeInstant ASC")
     List<Reminder> findDueRemindersByInstantBefore(@Param("endInstant") Long endInstant);
+
+    /**
+     * 統計活躍提醒總數
+     */
+    @Query("SELECT COUNT(r) FROM Reminder r WHERE r.status = 'ACTIVE'")
+    long countActiveReminders();
 }

@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -65,23 +66,14 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     Double getAverageProcessingTime();
 
     /**
-     * 統計今日活躍聊天室數量
+     * 統計指定時間點之後的活躍聊天室數量
      */
-    @Query(value = """
-            SELECT COUNT(DISTINCT room_id) 
-            FROM chat_messages 
-            WHERE created_at >= CURRENT_DATE AND deleted_at IS NULL
-            """, nativeQuery = true)
-    long countTodayActiveRooms();
+    @Query("SELECT COUNT(DISTINCT m.roomId) FROM ChatMessage m WHERE m.createdAt >= :since AND m.deletedAt IS NULL")
+    long countActiveRoomsSince(@Param("since") LocalDateTime since);
 
     /**
-     * 統計本週活躍聊天室數量（使用 H2 相容語法）
+     * 統計 AI Token 總消耗量
      */
-    @Query(value = """
-            SELECT COUNT(DISTINCT room_id) 
-            FROM chat_messages 
-            WHERE created_at >= DATEADD('DAY', -7, CURRENT_DATE)
-            AND deleted_at IS NULL
-            """, nativeQuery = true)
-    long countThisWeekActiveRooms();
+    @Query("SELECT COALESCE(SUM(m.tokensUsed), 0) FROM ChatMessage m WHERE m.deletedAt IS NULL")
+    long sumTotalTokensUsed();
 }

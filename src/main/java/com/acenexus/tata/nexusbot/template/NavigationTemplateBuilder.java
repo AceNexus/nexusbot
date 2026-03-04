@@ -89,18 +89,23 @@ public class NavigationTemplateBuilder extends FlexMessageTemplateBuilder {
      */
     public Message systemStats(long totalRooms, long aiEnabledRooms, long adminRooms,
                                long totalMessages, long userMessages, long aiMessages,
-                               long todayActiveRooms, long weekActiveRooms, String avgProcessingTime) {
+                               long todayActiveRooms, long weekActiveRooms,
+                               String avgProcessingTime, long totalTokensUsed,
+                               long activeReminders, long activeEmails) {
 
         double aiEnabledPercent = totalRooms > 0 ? (aiEnabledRooms * 100.0 / totalRooms) : 0.0;
 
         String statsText = String.format(
                 "聊天室統計\n總計：%,d 間｜AI啟用：%,d 間 (%.1f%%)｜管理員：%,d 間\n\n" +
                         "訊息統計\n總計：%,d 條｜用戶：%,d 條｜AI回應：%,d 條\n\n" +
-                        "活躍度\n今日：%,d 間｜本週：%,d 間\n\n" +
-                        "AI 性能\n平均響應時間：%s",
+                        "活躍度\n今日：%,d 間｜近 7 日：%,d 間\n\n" +
+                        "AI 性能\n平均響應時間：%s｜Token 消耗：%,d\n\n" +
+                        "功能使用\n活躍提醒：%,d 個｜綁定 Email：%,d 個",
                 totalRooms, aiEnabledRooms, aiEnabledPercent, adminRooms,
                 totalMessages, userMessages, aiMessages,
-                todayActiveRooms, weekActiveRooms, avgProcessingTime
+                todayActiveRooms, weekActiveRooms,
+                avgProcessingTime, totalTokensUsed,
+                activeReminders, activeEmails
         );
 
         return createCard("NexusBot 系統狀態", statsText, Arrays.asList(
